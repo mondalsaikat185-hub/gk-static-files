@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "‘ভামাকালাপম’ নৃত্যনাট্য সম্পর্কে নিচের কোন বিবৃতিটি সঠিক?",
+    "options_bn": [
+      "এটি সিদ্ধেন্দ্র যোগী তৈরি করেছিলেন দুর্গা ও মহিষাসুরের মধ্যকার প্রতীকী যুদ্ধ তুলে ধরার জন্য।",
+      "এটি সত্যভামার ঈর্ষা ও কৃষ্ণের প্রতি গভীর ভালোবাসার গল্প তুলে ধরে এবং এটি কুচিপুড়ি নৃত্যশৈলীর জনকের সৃষ্টি।",
+      "এটি একটি লাঠি নৃত্য যা মহিলারা বোনালু উৎসবের সময় বৃত্তাকার ছন্দে পরিবেশন করেন।",
+      "এটি একটি কৃষিভিত্তিক নৃত্য যেখানে শিল্পীরা কাঠ, শুকনো ঘাস এবং গোবর দিয়ে তৈরি মুখোশ পরেন।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে যে, ভামাকালাপম সত্যভামার ঈর্ষা এবং কৃষ্ণের প্রতি ভালোবাসার গল্প উপস্থাপন করে। এটি সিদ্ধেন্দ্র যোগী তৈরি করেছিলেন, যিনি ছিলেন কুচিপুড়ি নৃত্যশৈলীর জনক।",
+    "question_en": "Which statement about the 'Bhamakalapam' dance is accurate?",
+    "options_en": [
+      "It was created by Sidhyendra Yogi to depict the mock fight between Durga and Mahishasura.",
+      "It presents the jealousy and deep love of Satyabhama towards Krishna and was created by the father of the Kuchipudi dance style.",
+      "It is a stick dance performed by women in a circular rhythm during the Bonalu festival.",
+      "It is an agricultural dance where dancers wear masks made of wood, dry grass, and cow dung."
+    ],
+    "explanation_en": "The document states that Bhamakalapam presents the story of Satyabhama's jealousy and deep love for Krishna. It was created by Sidhyendra Yogi, who was the father of the Kuchipudi dance style.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "ঐতিহাসিকভাবে 'বুর্রাকথা' পরিবেশনার সামাজিক তাৎপর্য কী ছিল?",
+    "options_bn": [
+      "এটি শুধুমাত্র উপজাতি সম্প্রদায়ের মধ্যে কৃষি সম্পর্কিত জ্ঞান বিনিময়ের মাধ্যম ছিল।",
+      "এটি একটি \"চলমান সংবাদপত্র\" হিসেবে কাজ করত, যার মাধ্যমে রাজার আদেশ এবং সামাজিক বার্তা সাধারণ মানুষের কাছে পৌঁছানো হতো।",
+      "এটি একটি গোপন নৃত্য ছিল যা মধ্যরাতে লোক দেবতার সন্তুষ্টির জন্য পরিবেশিত হতো।",
+      "এটি পোর্তুগিজ এবং কোঙ্কানি ভাষার সংমিশ্রণে উচ্চবর্গীয় সমাজের মধ্যে প্রেম ও রোমান্স প্রচার করত।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে যুগে যুগে যখন সাধারণ মানুষ পড়তে পারত না, তখন বুর্রাকথা একটি \"চলমান সংবাদপত্র\" হিসেবে কাজ করত, যা রাজার আদেশ, সামাজিক নিয়ম এবং গুরুত্বপূর্ণ খবর গ্রামে গ্রামে পৌঁছে দিত।",
+    "question_en": "What was the historical social significance of the 'Burrakatha' performance?",
+    "options_en": [
+      "It was purely a medium for exchanging agricultural knowledge among tribal communities.",
+      "It served as an ancient media channel or \"moving newspaper\" to broadcast royal decrees and social rules to villagers.",
+      "It was a secret dance performed at midnight to appease local deities.",
+      "It promoted love and romance among the upper classes using a mixture of Portuguese and Konkani languages."
+    ],
+    "explanation_en": "The document notes that in eras when common people could not read, Burrakatha acted as a \"moving newspaper,\" delivering royal decrees, social rules, and important news from village to village.",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_bn": "'আজি লামু' এবং 'বার্দো চ্ছাম' নৃত্যের মধ্যে কোন সাধারণ বৈশিষ্ট্যটি পরিলক্ষিত হয়?",
+    "options_bn": [
+      "উভয় নৃত্যই আদি উপজাতি দ্বারা ফসল কাটার মৌসুমে পরিবেশিত হয়।",
+      "উভয় নৃত্যেই 12টি রাশিচক্রের প্রতীকী উপস্থাপনা রয়েছে এবং এগুলো তিব্বতীয়-বৌদ্ধ সংস্কৃতির প্রভাব বহন করে।",
+      "উভয় নৃত্যেই শিল্পীদের ইয়াক পশুর পোশাক পরতে হয়।",
+      "উভয় নৃত্যই মহিলাদের দ্বারা শৃঙ্খল তৈরি করে অভং গানের তালে পরিবেশিত হয়।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, মনপা/শেরডুকপেনদের আজি লামু নৃত্যে 12টি রাশিচক্রের উপস্থাপনা করা হয় এবং এটি তিব্বতীয়-বৌদ্ধ সংস্কৃতির সাথে যুক্ত। একইভাবে, বার্দো চ্ছাম নৃত্যেও 12টি রাশিচক্রের প্রাণীর মুখোশ পরা হয় এবং এতে তিব্বতীয়-বৌদ্ধ সংস্কৃতির প্রভাব রয়েছে।",
+    "question_en": "What is a shared characteristic between the 'Aji Lamu' and 'Bardo Chham' dances?",
+    "options_en": [
+      "Both are performed by the Adi tribe during the harvesting season.",
+      "Both incorporate the symbolic representation of 12 zodiac signs and bear the influence of Tibetan-Buddhist culture.",
+      "Both require performers to wear Yak costumes.",
+      "Both are performed by women forming a chain and dancing to Abhang songs."
+    ],
+    "explanation_en": "The document explains that the Aji Lamu dance presents 12 zodiac signs and is linked to Tibetan-Buddhist culture. Similarly, the Bardo Chham dance uses animal masks of the 12 zodiac signs and carries the same cultural influence.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "‘আলি আই লিগাং’ শব্দটির অর্থ কী এবং এটি কারা পরিবেশন করে?",
+    "options_bn": [
+      "এর অর্থ \"প্রজাপতি নৃত্য\" এবং এটি বোডো সম্প্রদায় পরিবেশন করে।",
+      "এর অর্থ \"চলো আসো\" এবং এটি নকটে উপজাতির একটি ফসল কাটার পরের উৎসব।",
+      "এর অর্থ \"বীজ বপনের উৎসব\" (আলি = বীজ, আই = ফল, লিগাং = উৎসব) এবং এটি মিশিং উপজাতি পরিবেশন করে।",
+      "এর অর্থ \"সাপের দেবী\" এবং এটি মনসার ভক্তরা পরিবেশন করে।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে, মিশিং উপজাতি ফেব্রুয়ারি-মার্চ মাসে এই নৃত্য করে, যেখানে 'আলি' মানে বীজ, 'আই' মানে ফল এবং 'লিগাং' মানে উৎসব। এটি কৃষিকাজের ধাপগুলো প্রদর্শন করে।",
+    "question_en": "What does the term 'Ali Ai Ligang' signify, and who performs it?",
+    "options_en": [
+      "It means \"butterfly dance\" and is performed by the Bodo community.",
+      "It means \"come join\" and is a post-harvest festival of the Nocte tribe.",
+      "It signifies a \"seed sowing festival\" (Ali = seed, Ai = fruit, Ligang = festival) and is performed by the Mishing tribe.",
+      "It means \"snake goddess\" and is performed by the devotees of Manasa."
+    ],
+    "explanation_en": "The document explicitly states that the Mishing tribe performs this dance in February-March, where 'Ali' means seed, 'Ai' means fruit, and 'Ligang' means festival. It showcases the steps of agriculture.",
+    "correctIndex": 2
+  },
+  {
+    "id": 5,
+    "question_bn": "আসামের 'ওজাপালি' নৃত্যনাটকে 'ওজা' এবং 'পালি'-র ভূমিকা কী?",
+    "options_bn": [
+      "ওজা করতাল বাজান এবং পালি বাঁশি বাজান।",
+      "ওজা হলেন প্রধান শিল্পী যিনি গান গান এবং গল্প বলেন, আর পালি হলেন সহযোগী যারা নৃত্য করেন।",
+      "ওজা শ্রীকৃষ্ণকে প্রতিনিধিত্ব করেন এবং পালি গোপীদের প্রতিনিধিত্ব করেন।",
+      "ওজা হলেন মুখোশ নির্মাতা এবং পালি হলেন মূল নর্তক।"
+    ],
+    "explanation_bn": "নথি অনুসারে, ওজাপালি একটি নৃত্যনাটক যেখানে \"ওজা\" মানে প্রধান শিল্পী (যিনি গান গান ও গল্প বলেন) এবং \"পালি\" মানে সহযোগী (যারা নৃত্য করেন)।",
+    "question_en": "In the 'Ojapali' dance-drama of Assam, what roles do 'Oja' and 'Pali' play?",
+    "options_en": [
+      "Oja plays the cymbals, while Pali plays the flute.",
+      "Oja is the lead performer who sings and tells the story, while Pali refers to the assistants who dance.",
+      "Oja represents Lord Krishna, and Pali represents the Gopis.",
+      "Oja is the mask maker, and Pali is the lead dancer."
+    ],
+    "explanation_en": "According to the document, Ojapali is a dance-drama where \"Oja\" is the lead performer who sings and tells the story, and \"Pali\" are the assistants who perform the dance.",
+    "correctIndex": 1
+  },
+  {
+    "id": 6,
+    "question_bn": "জাট-জাটিন' নৃত্যটি ঐতিহ্যগতভাবে কোন বিশেষ ভৌগোলিক ও প্রাকৃতিক পরিবেশে পরিবেশিত হয়?",
+    "options_bn": [
+      "বাস্তারের ঘন জঙ্গলে নতুন ফসল আসার সময়।",
+      "মিথিলা অঞ্চলে বর্ষা মৌসুমে জ্যোৎস্না রাতে।",
+      "চরওয়াদ জেলায় শুধুমাত্র মহিলাদের দ্বারা ফসল কাটার সময়।",
+      "ভারত-নেপাল সীমান্তে গ্রীষ্মের প্রখর তাপে।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে জাট-জাটিন মিথিলা অঞ্চলে বর্ষা মৌসুমে জ্যোৎস্না রাতে (Moonlit nights during monsoon) পরিবেশিত হয়, যেখানে বৃষ্টির রাতে স্বামী জাটের জন্য জাটিনের অপেক্ষার আবেগ ফুটে ওঠে।",
+    "question_en": "Under what specific geographic and environmental setting is the 'Jat-Jatin' dance traditionally performed?",
+    "options_en": [
+      "In the dense forests of Bastar during the arrival of new crops.",
+      "In the Mithila region on moonlit nights during the monsoon season.",
+      "In the Chorwad district exclusively by women during the harvest season.",
+      "In the Indo-Nepal border during the scorching summer heat."
+    ],
+    "explanation_en": "The document notes that Jat-Jatin is performed in the Mithila region on moonlit nights during the monsoon season, portraying the emotion of Jatin waiting for her husband Jat on a rainy night.",
+    "correctIndex": 1
+  },
+  {
+    "id": 7,
+    "question_bn": "ভিকারি ঠাকুর দ্বারা জনপ্রিয় হওয়া 'বিদেশিয়া' নৃত্যে কোন মূল সামাজিক সংকট প্রতিফলিত হয়?",
+    "options_bn": [
+      "ব্রিটিশদের দ্বারা আনা চা বাগান শ্রমিকদের সংগ্রাম।",
+      "ফসল কাটার উৎসবে উপজাতিদের মধ্যকার ঐক্য ও সংহতি।",
+      "কাজের সন্ধানে অন্য রাজ্যে চলে যাওয়া স্বামীদের স্ত্রীদের একাকীত্ব ও সামাজিক কষ্ট।",
+      "নতুন সন্তান জন্মের পর একটি পরিবারের আনন্দ।"
+    ],
+    "explanation_bn": "বিদেশিয়া নৃত্য 19শ শতাব্দীতে কাজের জন্য বাইরে (বিদেশে/অন্য রাজ্যে) যাওয়া পুরুষদের স্ত্রীদের একাকীত্ব, অপেক্ষা এবং সামাজিক কষ্ট প্রকাশ করে, যা ভিকারি ঠাকুর জনপ্রিয় করেছিলেন।",
+    "question_en": "What core social crisis is reflected in the 'Bidesia' dance popularized by Bhikari Thakur?",
+    "options_en": [
+      "The struggles of tea garden workers brought by the British.",
+      "The unity and solidarity among tribes during the harvest festival.",
+      "The loneliness, wait, and social hardships of wives whose husbands migrated to other states for work.",
+      "The joy of a family upon the birth of a new child."
+    ],
+    "explanation_en": "The Bidesia dance reflects the loneliness, wait, and social suffering of wives whose husbands went away for work in the 19th century, an emotion popularized through dance by Bhikari Thakur.",
+    "correctIndex": 2
+  },
+  {
+    "id": 8,
+    "question_bn": "ছত্তিশগড়ের উপজাতি এবং তাদের নিজস্ব নৃত্যের সঠিক মিল কোনটি?",
+    "options_bn": [
+      "আবুজমারিয়া উপজাতি গেন্ডি করে এবং বাইগা উপজাতি কাকসার করে।",
+      "কামার উপজাতি গেন্ডি করে এবং মারিয়া উপজাতি কাকসার করে।",
+      "বাইগা উপজাতি লম্বা বাঁশের ওপর গেন্ডি করে এবং আবুজমারিয়া উপজাতি নতুন ফসলের জন্য কাকসার করে।",
+      "ভীল উপজাতি গেন্ডি করে এবং সত্নামি পন্থ কাকসার করে।"
+    ],
+    "explanation_bn": "নথির তথ্য অনুযায়ী, বাইগা উপজাতি বাঁশের ওপর দাঁড়িয়ে 'গেন্ডি' নৃত্য পরিবেশন করে এবং আবুজমারিয়া উপজাতি নতুন ফসলের আগমনে 'কাকসার' নৃত্য পরিবেশন করে।",
+    "question_en": "Which is the correct match between the tribes of Chhattisgarh and their respective dances?",
+    "options_en": [
+      "Abujmaria tribe performs Gendi, and Baiga tribe performs Kaksar.",
+      "Kamar tribe performs Gendi, and Maria tribe performs Kaksar.",
+      "Baiga tribe performs Gendi on tall bamboo sticks, and Abujmaria tribe performs Kaksar for new harvest.",
+      "Bhil tribe performs Gendi, and Satnami Panth performs Kaksar."
+    ],
+    "explanation_en": "According to the document, the Baiga tribe performs 'Gendi' standing on bamboo sticks, and the Abujmaria tribe performs 'Kaksar' to welcome the new harvest.",
+    "correctIndex": 2
+  },
+  {
+    "id": 9,
+    "question_bn": "নবরাত্রির সময় 'গর্বা' এবং 'ডান্ডিয়া রাস'-এর ক্রম এবং প্রতীকী পার্থক্য কী?",
+    "options_bn": [
+      "ডান্ডিয়া আরতির আগে পরিবেশিত হয়, এবং গর্বা আরতির পরে মহিষাসুরের প্রতীকী যুদ্ধ হিসেবে করা হয়।",
+      "গর্বা আরতির আগে দেবী পূজার অংশ হিসেবে করা হয়, এবং ডান্ডিয়া আরতির পরে দুর্গা-মহিষাসুরের যুদ্ধের প্রতীক হিসেবে পরিবেশিত হয়।",
+      "উভয়ই একসাথে পরিবেশিত হয়; পুরুষরা ডান্ডিয়া এবং মহিলারা গর্বা করেন।",
+      "গর্বা নবরাত্রির প্রথম দিন এবং ডান্ডিয়া শেষ দিন পরিবেশিত হয়।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে, গর্বা হলো আরতির আগে শান্ত প্রার্থনা বা দেবী পূজা, আর ডান্ডিয়া হলো আরতির পরে, যা দুর্গা এবং মহিষাসুরের যুদ্ধের প্রতীকী উপস্থাপনা।",
+    "question_en": "What is the chronological order and symbolic difference between 'Garba' and 'Dandiya Raas' during Navratri?",
+    "options_en": [
+      "Dandiya is performed before the aarti, while Garba is performed after the aarti as a mock fight.",
+      "Garba is performed before the aarti as a prayer to the goddess, while Dandiya is performed after the aarti symbolizing Durga's fight against Mahishasura.",
+      "Both are performed simultaneously, where men do Dandiya and women do Garba.",
+      "Garba is performed on the first day and Dandiya on the last day of Navratri."
+    ],
+    "explanation_en": "The document clearly states that Garba is performed before the aarti as a calm prayer/devotion to the goddess, while Dandiya is performed after the aarti, representing the mock fight between Durga and Mahishasura.",
+    "correctIndex": 1
+  },
+  {
+    "id": 10,
+    "question_bn": "গোয়ার 'মান্ডো' নৃত্যে কোন সাংস্কৃতিক সংমিশ্রণ দেখা যায়?",
+    "options_bn": [
+      "এটি আফ্রিকান এবং ভারতীয় ছন্দের মিশ্রণে সিদ্দি সম্প্রদায়ের দ্বারা পরিবেশিত হয়।",
+      "এটি পোর্তুগিজ এবং কোঙ্কানি ভাষার মিশ্রণে গাওয়া গানের সাথে হিন্দু উচ্চবর্গীয় সমাজের প্রেম ও রোমান্সের নৃত্য।",
+      "এটি ভারতীয় সঙ্গীতে খ্রিস্টান মেয়েদের দ্বারা পরিবেশিত একটি নৃত্য।",
+      "এটি পোর্তুগিজ রণসংগীতের সাথে মারাঠা যোদ্ধাদের একটি নৃত্য।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে মান্ডো গোয়ার উচ্চবর্গীয় হিন্দু সমাজের প্রেম ও রোমান্সের নৃত্য, যার গান পোর্তুগিজ এবং কোঙ্কানি ভাষার মিশ্রণে রচিত।",
+    "question_en": "What cultural synthesis is evident in the 'Mando' dance of Goa?",
+    "options_en": [
+      "It is performed by the Siddi community blending African and Indian rhythms.",
+      "It is a dance of love and romance of the upper-class Hindu society accompanied by songs mixing Portuguese and Konkani languages.",
+      "It is a dance performed by Christian girls to Indian music.",
+      "It is a Maratha warrior dance performed to Portuguese martial tunes."
+    ],
+    "explanation_en": "The document notes that Mando is a dance of love and romance of Goa's upper-class Hindu society, with songs composed in a mixture of Portuguese and Konkani languages.",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "‘জাগর’ নৃত্যের সময়কাল এবং ধরন সম্পর্কে কোন বিবৃতিটি নিখুঁত?",
+    "options_bn": [
+      "এটি সূর্যোদয়ের সময় শুরু হয় এবং সারাদিন ধরে চলে।",
+      "এটি মধ্যরাতে শুরু হয়ে ভোর পর্যন্ত চলে এবং এটি লোক দেবতার সম্মানে পরিবেশিত একটি লোক থিয়েটার।",
+      "এটি ঠিক দুপুরে মারাঠা যোদ্ধাদের সম্মান জানাতে পরিবেশিত হয়।",
+      "এটি হোলি উৎসবের সন্ধ্যায় পরিবেশিত একটি রঙের নৃত্য।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, জাগর একটি রহস্যময় লোক থিয়েটার নৃত্য যা রাতের অন্ধকারে লোক দেবতার সম্মানে মধ্যরাতে শুরু হয়ে ভোর পর্যন্ত চলে।",
+    "question_en": "Which statement perfectly describes the timing and nature of the 'Jagor' dance?",
+    "options_en": [
+      "It starts at sunrise and continues throughout the day.",
+      "It starts at midnight, continues till dawn, and acts as a folk theater in honor of the Lok Devta.",
+      "It is performed exactly at noon to honor Maratha warriors.",
+      "It is an evening dance performed during the Holi festival."
+    ],
+    "explanation_en": "The document mentions that Jagor is a mysterious folk theater dance that starts at midnight and continues till dawn in honor of the Lok Devta in the dark of night.",
+    "correctIndex": 1
+  },
+  {
+    "id": 12,
+    "question_bn": "‘ভোরতাল’ নৃত্য কে তৈরি করেছিলেন এবং এটি মূলত কোথায় পালিত হয়?",
+    "options_bn": [
+      "সিদ্ধেন্দ্র যোগী, অরাকু উপত্যকায়।",
+      "ভিকারি ঠাকুর, ভোজপুর অঞ্চলে।",
+      "নারহরি বুড়া ভকত, বারপেটায়।",
+      "শ্রীমন্ত শংকরদেব, কার্বি আংলং অঞ্চলে।"
+    ],
+    "explanation_bn": "আসামের ভোরতাল নৃত্যটি মহান শিল্পী নারহরি বুড়া ভকত তৈরি করেছিলেন এবং এটি মূলত বারপেটায় (Barpeta) পরিবেশিত হয়, যেখানে শিল্পীরা দ্রুত করতাল বাজান।",
+    "question_en": "Who created the 'Bhortal' dance, and where is it primarily celebrated?",
+    "options_en": [
+      "Sidhyendra Yogi in the Araku Valley.",
+      "Bhikari Thakur in the Bhojpur region.",
+      "Narhari Burha Bhakat in Barpeta.",
+      "Srimanta Sankardev in the Karbi Anglong region."
+    ],
+    "explanation_en": "The Bhortal dance of Assam was created by the great artist Narhari Burha Bhakat and is primarily celebrated in Barpeta, where performers play cymbals rapidly.",
+    "correctIndex": 2
+  },
+  {
+    "id": 13,
+    "question_bn": "নকটে উপজাতির চালো লোকু নৃত্যের প্রসঙ্গে \"চালো\" শব্দটির অর্থ কী?",
+    "options_bn": [
+      "এর অর্থ \"যোদ্ধা\", যা বীরত্বের প্রতীক।",
+      "এর অর্থ \"চলো আসো\", যা ফসল কাটার পরের আনন্দে সবাইকে যোগ দেওয়ার আমন্ত্রণ জানায়।",
+      "এর অর্থ \"বীজ বপন\", যা কৃষিচক্রের সূচনা বোঝায়।",
+      "এর অর্থ \"মাটির পাত্র\", যা দেবীর পূজায় ব্যবহৃত হয়।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, নকটে উপজাতি অক্টোবর-নভেম্বর মাসে এই নৃত্য করে এবং \"চালো\" মানে হলো \"চলো আসো\"—অর্থাৎ এটি সবাইকে ফসল কাটার পরের আনন্দ উৎসবে যোগ দেওয়ার আমন্ত্রণ।",
+    "question_en": "What does the word \"Chalo\" mean in the context of the Chalo Loku dance of the Nocte tribe?",
+    "options_en": [
+      "It means \"warrior,\" representing bravery.",
+      "It means \"come join,\" acting as an invitation for everyone to participate in the post-harvest celebration.",
+      "It means \"seed sowing,\" marking the beginning of the agricultural cycle.",
+      "It means \"earthen pot,\" used in goddess worship."
+    ],
+    "explanation_en": "The document explains that the Nocte tribe performs this in October-November, and \"Chalo\" means \"come join\"—an invitation for everyone to join the post-harvest celebration.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "‘ধিমসা’ নৃত্যের গঠনগত বা শারীরিক বিন্যাসের অনন্য দিক কোনটি?",
+    "options_bn": [
+      "15 থেকে 20 জন মহিলা একে অপরের কাঁধে হাত রেখে একটি শৃঙ্খল (Chain) তৈরি করেন।",
+      "পুরুষ ও মহিলা দুটি সমান্তরাল সারিতে দাঁড়িয়ে একে অপরের বাহু জড়িয়ে ধরেন।",
+      "শিল্পীরা মাথায় জ্বলন্ত লন্ঠন নিয়ে একটি নিখুঁত বৃত্ত তৈরি করেন।",
+      "শিল্পীরা দুটি লম্বা বাঁশের মাঝখানে লাফিয়ে লাফিয়ে নৃত্য করেন।"
+    ],
+    "explanation_bn": "অরাকু উপত্যকায় পরিবেশিত ধিমসা নৃত্যে 15 থেকে 20 জন মহিলা একে অপরের কাঁধে হাত রেখে একটি শৃঙ্খল (Chain) তৈরি করে নৃত্য করেন।",
+    "question_en": "What is a unique structural or physical formation of the 'Dhimsa' dance?",
+    "options_en": [
+      "15 to 20 women create a chain by placing their hands on each other's shoulders.",
+      "Men and women stand in two parallel rows interlocking their arms.",
+      "Dancers form a perfect circle while balancing lit lanterns on their heads.",
+      "Dancers jump back and forth between two long bamboo poles."
+    ],
+    "explanation_en": "In the Dhimsa dance performed in the Araku Valley, 15 to 20 women form a chain by placing their hands on each other's shoulders.",
+    "correctIndex": 0
+  },
+  {
+    "id": 15,
+    "question_bn": "দেখনি' নৃত্যে কীভাবে সাংস্কৃতিক বৈচিত্র্য ফুটে উঠেছে?",
+    "options_bn": [
+      "এটি আফ্রিকান বংশোদ্ভূত সিদ্দি সম্প্রদায় ভারতীয় বাদ্যযন্ত্রের সাহায্যে পরিবেশন করে।",
+      "এটি হিন্দু মহিলারা পোর্তুগিজ বাদ্যযন্ত্র ব্যবহার করে পরিবেশন করেন।",
+      "এটি গোয়ার খ্রিস্টান মেয়েরা ভারতীয় সঙ্গীতে পরিবেশন করেন, যা ভারতীয় ও পশ্চিমা শৈলীর মিশ্রণ।",
+      "এটি পোর্তুগিজদের দ্বারা অভিযোজিত মারাঠা যোদ্ধাদের একটি বিশেষ নৃত্য।"
+    ],
+    "explanation_bn": "নথির তথ্য অনুযায়ী, গোয়ার 'দেখনি' নৃত্য খ্রিস্টান মেয়েরা ভারতীয় সঙ্গীতে পরিবেশন করেন, যা ভারতীয় এবং পশ্চিমা নৃত্যশৈলীর অসাধারণ মিশ্রণ প্রদর্শন করে।",
+    "question_en": "How is cultural diversity highlighted in the 'Dekhni' dance?",
+    "options_en": [
+      "It is performed by the African-descended Siddi community using Indian instruments.",
+      "It is performed by Hindu women using Portuguese musical instruments.",
+      "It is performed by Christian girls of Goa to Indian music, blending Indian and Western styles.",
+      "It is an exclusive Maratha warrior dance adapted by the Portuguese."
+    ],
+    "explanation_en": "According to the document, Goa's 'Dekhni' dance is performed by Christian girls to Indian music, showcasing an extraordinary blend of Indian and Western dance styles.",
+    "correctIndex": 2
+  },
+  {
+    "id": 16,
+    "question_bn": "তীজন বাই কোন নৃত্যশৈলীর জন্য 2019 সালে পদ্মবিভূষণ পেয়েছিলেন এবং এই নৃত্যের মূল বিষয়বস্তু কী?",
+    "options_bn": [
+      "পন্থী নাচা; সত্নামি পন্থের আধ্যাত্মিক বিশ্বাস।",
+      "পান্ডাবানি; মহাভারতের পান্ডবদের কাহিনী বলা।",
+      "গৌর মারিয়া; প্রকৃতির শক্তি এবং উপজাতীয় বীরত্ব।",
+      "সুয়া নাচা; তোতাপাখির লোককাহিনী।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে ছত্তিশগড়ের বিখ্যাত শিল্পী তীজন বাই 'পান্ডাবানি' নৃত্যের মাধ্যমে মহাভারতের পান্ডবদের গল্প বলেন এবং এই শিল্পের জন্যই তিনি 2019 সালে পদ্মবিভূষণ পান।",
+    "question_en": "For which dance style did Teejan Bai receive the Padma Vibhushan in 2019, and what is its core theme?",
+    "options_en": [
+      "Panthi Nacha; the spiritual beliefs of the Satnami Panth.",
+      "Pandavani; storytelling of the Pandavas from the Mahabharata.",
+      "Gaur Maria; the strength of nature and tribal heroism.",
+      "Suwa Nacha; the folklore of the parrot."
+    ],
+    "explanation_en": "The document states that the famous artist Teejan Bai from Chhattisgarh narrates the story of the Pandavas of the Mahabharata through the 'Pandavani' dance, for which she received the Padma Vibhushan in 2019.",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_bn": "আসামের 'ঝুমুর' নৃত্যের ঐতিহাসিক উৎস কী?",
+    "options_bn": [
+      "এটি বোডো সম্প্রদায় বিসাগু উৎসব উদযাপনের জন্য তৈরি করেছিল।",
+      "ব্রিটিশ আমলে ঝাড়খণ্ড, ছত্তিশগড় ও ওড়িশা থেকে চা বাগানে আনা আদিবাসী শ্রমিকরা এটি নিয়ে এসেছিলেন।",
+      "এটি ডিমাসা উপজাতির কৃষিচক্রের একটি ঐতিহ্যবাহী অঙ্গ।",
+      "বৈষ্ণব সন্তরা এটি নৃত্যনাট্যের একটি অংশ হিসেবে প্রবর্তন করেছিলেন।"
+    ],
+    "explanation_bn": "নথি অনুসারে, ব্রিটিশ আমলে ঝাড়খণ্ড, ছত্তিশগড় এবং ওড়িশা থেকে যে আদিবাসী শ্রমিকদের আসামের চা বাগানে আনা হয়েছিল, তারাই এই ঝুমুর নৃত্য সাথে করে নিয়ে আসেন।",
+    "question_en": "What is the historical origin of the 'Jhumur' dance in Assam?",
+    "options_en": [
+      "It was created by the Bodo community to celebrate the Bwisagu festival.",
+      "It was brought by tribal workers from Jharkhand, Chhattisgarh, and Odisha who were brought by the British to work in tea gardens.",
+      "It is a traditional part of the agricultural cycle of the Dimasa tribe.",
+      "It was introduced by Vaishnava saints as part of a dance-drama."
+    ],
+    "explanation_en": "According to the document, the tribal workers brought from Jharkhand, Chhattisgarh, and Odisha by the British to work in Assam's tea gardens brought the Jhumur dance with them.",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "বিহারের 'ঝিঝিয়া' এবং 'ঝর্নি' নৃত্যের সঠিক বৈশিষ্ট্য নির্দেশক জোড় কোনটি?",
+    "options_bn": [
+      "ঝিঝিয়াতে মহিলারা মাথায় প্রজ্বলিত লন্ঠন নিয়ে নৃত্য করেন, অন্যদিকে ঝর্নিতে জুলাহা (তাঁতি) সম্প্রদায়ের কাজের ছন্দ ফুটে ওঠে।",
+      "ঝিঝিয়া চামার সম্প্রদায় পরিবেশন করে, অন্যদিকে ঝর্নি হলো একটি বর্ষাকালের নৃত্য।",
+      "ঝিঝিয়া পরিযায়ী স্বামীদের কাহিনী বলে, অন্যদিকে ঝর্নি নতুন সন্তানের জন্মের সময় পরিবেশিত হয়।",
+      "ঝিঝিয়া একটি প্রতীকী যুদ্ধ, অন্যদিকে ঝর্নিতে মাথায় পাত্রের স্তূপ রাখা হয়।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা আছে, ঝিঝিয়া নৃত্যে মহিলারা মাথায় প্রজ্বলিত লন্ঠন নিয়ে নৃত্য করেন এবং ঝর্নি নৃত্য জুলাহা বা তাঁতি সম্প্রদায়ের কাজের ছন্দ (সুতো টানা, কাপড় বোনা) উপস্থাপন করে।",
+    "question_en": "Which pairing correctly identifies the unique features of Bihar's 'Jhijhiya' and 'Jharni' dances?",
+    "options_en": [
+      "Jhijhiya involves women balancing lit lanterns on their heads, while Jharni depicts the work rhythm of the Julaha (weaver) community.",
+      "Jhijhiya is performed by the Chamar community, while Jharni is a monsoon dance.",
+      "Jhijhiya tells the story of migrant husbands, while Jharni is performed at the birth of a newborn.",
+      "Jhijhiya is a mock fight, while Jharni involves stacking pots on the head."
+    ],
+    "explanation_en": "The document explicitly states that in the Jhijhiya dance, women perform with a lit lantern on their heads, while the Jharni dance presents the working rhythm (pulling threads, weaving) of the Julaha or weaver community.",
+    "correctIndex": 0
+  },
+  {
+    "id": 19,
+    "question_bn": "তেলুগু ভাষায় \"বোনালু\" শব্দের অর্থ কী এবং এই উৎসবের মূল আচার কোনটি?",
+    "options_bn": [
+      "এর অর্থ \"খেলনা পুতুল\" এবং এতে কাঠ দিয়ে তৈরি মুখোশ পরতে হয়।",
+      "এর অর্থ \"মাটির পাত্র\", যা মহাকালী দেবীকে অর্পণ করা হয় এবং মহিলারা মাথায় এই পাত্র নিয়ে নৃত্য করেন।",
+      "এর অর্থ \"ছোট তম্বুরা\", যা বাজিয়ে পুরুষরা শিব মন্দিরে বীরত্বের নৃত্য পরিবেশন করেন।",
+      "এর অর্থ \"রঙিন লাঠি\", যা দিয়ে শিল্পীরা একটি বৃত্তাকার ছন্দে আঘাত করে নৃত্য করেন।"
+    ],
+    "explanation_bn": "নথির তথ্য অনুসারে, তেলুগু ভাষায় \"বোনালু\" মানে হলো মাটির পাত্র। এই পাত্রে মহাকালী দেবীকে খাবার অর্পণ করা হয় এবং মহিলারা এটি মাথায় নিয়ে নৃত্য করতে করতে মন্দিরের দিকে যান।",
+    "question_en": "What does the term \"Bonalu\" mean in Telugu, and what is the core ritual of this festival?",
+    "options_en": [
+      "It means \"toy doll\" and involves wearing masks made of wood.",
+      "It means \"earthen pot\", which is offered to Goddess Mahakali, and women dance carrying these pots on their heads.",
+      "It means \"small tambura\", which men play while performing heroic dances in Shiva temples.",
+      "It means \"colorful sticks\", which artists strike in a circular rhythm."
+    ],
+    "explanation_en": "According to the document, \"Bonalu\" in Telugu means earthen pot. Food is offered to Goddess Mahakali in this pot, and women carry it on their heads while dancing towards the temple.",
+    "correctIndex": 1
+  },
+  {
+    "id": 20,
+    "question_bn": "গুজরাটের 'ভাবাই' এবং 'পাধার' নৃত্যের মধ্যে পার্থক্য কী?",
+    "options_bn": [
+      "ভাবাই একটি আফ্রিকান প্রভাবিত নৃত্য, অন্যদিকে পাধার একটি প্রতীকী যুদ্ধ।",
+      "ভাবাই ভারওয়াড় উপজাতির নৃত্য যেখানে মাথায় পাত্রের স্তূপ রাখা হয়, অন্যদিকে পাধার মৎস্যজীবী সম্প্রদায়ের নৃত্য যা সমুদ্রের ঢেউয়ের গতি তুলে ধরে।",
+      "ভাবাই শুধুমাত্র চরওয়াদের মহিলারা করেন, অন্যদিকে পাধার হলো উচ্চবর্গের গর্বা।",
+      "ভাবাই ভীল উপজাতির ফসল কাটার নৃত্য, অন্যদিকে পাধার ডান্ডিয়া লাঠি নিয়ে পরিবেশিত হয়।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে ভাবাই নৃত্যে ভারওয়াড় উপজাতির শিল্পীরা মাথায় অনেকগুলো পাত্রের স্তূপ রেখে অসাধারণ দক্ষতার সাথে নৃত্য করেন, আর পাধার হলো মৎস্যজীবী সম্প্রদায়ের নৃত্য যা সমুদ্রের তরঙ্গের মতো গতিশীল।",
+    "question_en": "What distinguishes the 'Bhavai' dance from the 'Padhar' dance in Gujarat?",
+    "options_en": [
+      "Bhavai is an African-influenced dance, whereas Padhar is a mock fight.",
+      "Bhavai is performed by the Bharwad tribe involving balancing stacked pots on the head, whereas Padhar is performed by the fisherman community reflecting undulating sea waves.",
+      "Bhavai is exclusively performed by women in Chorwad, whereas Padhar is the Garba of the upper class.",
+      "Bhavai is a harvest dance of the Bhil tribe, whereas Padhar is performed with Dandiya sticks."
+    ],
+    "explanation_en": "The document notes that in the Bhavai dance, artists from the Bharwad tribe dance with exceptional skill by stacking many pots on their heads, while Padhar is a dance of the fisherman community characterized by sea wave-like movements.",
+    "correctIndex": 1
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
