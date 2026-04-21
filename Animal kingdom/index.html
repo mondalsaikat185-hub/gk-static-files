@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "Kingdom Animalia-র কোন বৈশিষ্ট্যটি উদ্ভিদ থেকে প্রাণীকে সবচেয়ে মৌলিকভাবে আলাদা করে?",
+    "options_bn": [
+      "প্রাণীরা ইউক্যারিওটিক এবং উদ্ভিদ প্রোক্যারিওটিক।",
+      "প্রাণীরা হেটারোট্রফিক এবং তাদের কোষপ্রাচীর (Cell Wall) অনুপস্থিত।",
+      "প্রাণীরা বহুকোষী এবং উদ্ভিদ এককোষী।",
+      "প্রাণীরা সবসময় সচল এবং উদ্ভিদ সবসময় স্থির।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, প্রাণী হেটারোট্রফিক (নিজে খাবার তৈরি করতে পারে না) এবং তাদের কোষপ্রাচীর নেই — এই দুটো বৈশিষ্ট্য একসাথে উদ্ভিদ থেকে সবচেয়ে মৌলিক পার্থক্য। উদ্ভিদ অটোট্রফিক ও কোষপ্রাচীরযুক্ত। (A) ভুল কারণ উদ্ভিদও ইউক্যারিওটিক। (D) ভুল কারণ নথিতে বলা হয়েছে \"অধিকাংশ\" সচল — সবসময় নয়।",
+    "question_en": "Which characteristic most fundamentally distinguishes Kingdom Animalia from plants?",
+    "options_en": [
+      "Animals are eukaryotic and plants are prokaryotic.",
+      "Animals are heterotrophic and lack a cell wall.",
+      "Animals are multicellular and plants are unicellular.",
+      "Animals are always mobile and plants are always stationary."
+    ],
+    "explanation_en": "According to the document, animals are heterotrophic (cannot prepare their own food) and lack a cell wall — these two features together most fundamentally distinguish them from plants. Plants are autotrophic and have cell walls. (A) is wrong because plants are also eukaryotic. (D) is incorrect as the document states \"most\" animals are mobile, not all.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "Porifera ও Platyhelminthes উভয়ই Acoelomate — তবু এই দুটো ফাইলামের মধ্যে জার্ম লেয়ারের দিক থেকে মূল পার্থক্য কোনটি?",
+    "options_bn": [
+      "Porifera Triploblastic, Platyhelminthes Diploblastic।",
+      "Porifera Diploblastic, Platyhelminthes Triploblastic।",
+      "উভয়ই Diploblastic।",
+      "উভয়ই Triploblastic।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Porifera Diploblastic (2টি জার্ম লেয়ার — Ectoderm ও Endoderm)। কিন্তু Platyhelminthes Triploblastic (3টি জার্ম লেয়ার — Ecto, Meso ও Endoderm) এবং Acoelomate। অর্থাৎ Platyhelminthes-এ Mesoderm আছে, কিন্তু সত্যিকারের সিলোম নেই।",
+    "question_en": "Both Porifera and Platyhelminthes are Acoelomate — but what is the key difference between these two phyla in terms of germ layers?",
+    "options_en": [
+      "Porifera is Triploblastic, Platyhelminthes is Diploblastic.",
+      "Porifera is Diploblastic, Platyhelminthes is Triploblastic.",
+      "Both are Diploblastic.",
+      "Both are Triploblastic."
+    ],
+    "explanation_en": "According to the document, Porifera is Diploblastic (2 germ layers — Ectoderm and Endoderm). Platyhelminthes, however, is Triploblastic (3 germ layers — Ecto, Meso, and Endoderm) yet Acoelomate. This means Platyhelminthes has a Mesoderm but lacks a true coelom.",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_bn": "নোটোকর্ড সম্পর্কে নথিতে কোন তথ্যটি সঠিকভাবে উল্লেখ করা হয়েছে?",
+    "options_bn": [
+      "এটি Ectoderm থেকে তৈরি এবং সারাজীবন থাকে।",
+      "এটি Mesoderm থেকে তৈরি এবং বেশিরভাগ Chordata-তে পরে মেরুদণ্ড দিয়ে প্রতিস্থাপিত হয়।",
+      "এটি Endoderm থেকে তৈরি এবং স্নায়ুতন্ত্রের অংশ।",
+      "এটি Porifera থেকে Chordata সব ফাইলামেই পাওয়া যায়।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে, নোটোকর্ড Mesoderm থেকে তৈরি একটি রডসদৃশ কাঠামো এবং বেশিরভাগ Chordata-তে ভ্রূণ অবস্থায় নোটোকর্ড পরে Vertebral Column দিয়ে প্রতিস্থাপিত হয়। এটি কেবল Chordata ফাইলামের বৈশিষ্ট্য।",
+    "question_en": "Which statement about Notochord is correctly mentioned in the document?",
+    "options_en": [
+      "It is derived from Ectoderm and persists throughout life.",
+      "It is derived from Mesoderm and is replaced by the vertebral column in most Chordates.",
+      "It is derived from Endoderm and is part of the nervous system.",
+      "It is found in all phyla from Porifera to Chordata."
+    ],
+    "explanation_en": "The document clearly states that the Notochord is a rod-like structure derived from Mesoderm, and in most Chordates, it is replaced by the Vertebral Column during embryonic development. It is a defining characteristic exclusively of the phylum Chordata.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "Nematoda ও Platyhelminthes উভয়ই কৃমি জাতীয় প্রাণী — কিন্তু পাচনতন্ত্রের দিক থেকে এদের মধ্যে মূল পার্থক্য কোনটি?",
+    "options_bn": [
+      "Nematoda-র পাচনতন্ত্র অসম্পূর্ণ, Platyhelminthes-এর সম্পূর্ণ।",
+      "উভয়েরই পাচনতন্ত্র সম্পূর্ণ।",
+      "Nematoda-র পাচনতন্ত্র সম্পূর্ণ (মুখ ও পায়ু আলাদা), Platyhelminthes-এর অসম্পূর্ণ।",
+      "উভয়েরই পায়ু অনুপস্থিত।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Nematoda-র পাচনতন্ত্র সম্পূর্ণ — মুখ ও পায়ু উভয়ই আলাদা আছে। অপরদিকে Platyhelminthes-এর পাচনতন্ত্র অসম্পূর্ণ — শুধু মুখ আছে, আলাদা পায়ু নেই। এটি দুটো ফাইলামের মধ্যে অত্যন্ত গুরুত্বপূর্ণ পার্থক্য।",
+    "question_en": "Both Nematoda and Platyhelminthes are worm-like animals — but what is the key difference between them in terms of the digestive system?",
+    "options_en": [
+      "Nematoda has an incomplete digestive tract, Platyhelminthes has a complete one.",
+      "Both have complete digestive tracts.",
+      "Nematoda has a complete digestive tract (separate mouth and anus), Platyhelminthes has an incomplete one.",
+      "Both lack an anus."
+    ],
+    "explanation_en": "According to the document, Nematoda has a complete alimentary canal with a separate mouth and anus. In contrast, Platyhelminthes has an incomplete digestive system with only a mouth and no separate anus. This is a crucial distinguishing feature between the two phyla.",
+    "correctIndex": 2
+  },
+  {
+    "id": 5,
+    "question_bn": "Porifera-র জলনালী তন্ত্রে পানি প্রবেশের সঠিক ক্রম কোনটি?",
+    "options_bn": [
+      "Osculum → Spongocoel → Ostia",
+      "Ostia → Spongocoel → Osculum",
+      "Spongocoel → Ostia → Osculum",
+      "Osculum → Ostia → Spongocoel"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Porifera-র জলনালী তন্ত্রে পানি প্রথমে ছোট ছোট ছিদ্র Ostia দিয়ে প্রবেশ করে, তারপর মূল গহ্বর Spongocoel-এ জমা হয় এবং সবশেষে বড় ছিদ্র Osculum দিয়ে বের হয়। এই ক্রমটিই সঠিক।",
+    "question_en": "What is the correct sequence of water flow in the Water Canal System of Porifera?",
+    "options_en": [
+      "Osculum → Spongocoel → Ostia",
+      "Ostia → Spongocoel → Osculum",
+      "Spongocoel → Ostia → Osculum",
+      "Osculum → Ostia → Spongocoel"
+    ],
+    "explanation_en": "According to the document, in Porifera's water canal system, water first enters through the small pores called Ostia, then collects in the main chamber called the Spongocoel, and finally exits through the large opening called the Osculum. This is the correct sequence.",
+    "correctIndex": 1
+  },
+  {
+    "id": 6,
+    "question_bn": "Ctenophora ও Coelenterata উভয়ই Diploblastic ও Radial Symmetry সম্পন্ন — তবু Ctenophora-র কোন এক বৈশিষ্ট্য একে সম্পূর্ণ আলাদা করে?",
+    "options_bn": [
+      "Ctenophora সম্পূর্ণ স্থলচর।",
+      "Ctenophora-তে Nematocyst থাকে।",
+      "Ctenophora Bioluminescence দেখাতে পারে।",
+      "Ctenophora Triploblastic।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Ctenophora-র সবচেয়ে অনন্য বৈশিষ্ট্য হলো Bioluminescence — অন্ধকারে নিজে থেকে আলো দেওয়ার ক্ষমতা। Nematocyst থাকে Coelenterata-তে, Ctenophora-তে নয়। Ctenophora সম্পূর্ণ সামুদ্রিক এবং Diploblastic।",
+    "question_en": "Both Ctenophora and Coelenterata are Diploblastic with Radial Symmetry — yet which unique feature of Ctenophora makes it completely distinct?",
+    "options_en": [
+      "Ctenophora is entirely terrestrial.",
+      "Ctenophora possesses Nematocysts.",
+      "Ctenophora can exhibit Bioluminescence.",
+      "Ctenophora is Triploblastic."
+    ],
+    "explanation_en": "According to the document, the most unique feature of Ctenophora is Bioluminescence — the ability to produce light in the dark. Nematocysts are found in Coelenterata, not Ctenophora. Ctenophora is exclusively marine and Diploblastic.",
+    "correctIndex": 2
+  },
+  {
+    "id": 7,
+    "question_bn": "Arthropoda ও Mollusca উভয়ই Open Circulatory System সম্পন্ন — কিন্তু রেচন অঙ্গের দিক থেকে এদের মধ্যে পার্থক্য কীভাবে উল্লেখ করা হয়েছে?",
+    "options_bn": [
+      "Arthropoda-তে Nephridia এবং Mollusca-তে Malpighian Tubules।",
+      "Arthropoda-তে Malpighian Tubules এবং Mollusca-তে কিডনির মতো অঙ্গ।",
+      "উভয়ই Nephridia ব্যবহার করে।",
+      "উভয়ই Flame Cells ব্যবহার করে।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Arthropoda-তে রেচনের জন্য Malpighian Tubules থাকে। Mollusca-তে কিডনির মতো রেচন অঙ্গ উপস্থিত। Nephridia থাকে Annelida-তে এবং Flame Cells থাকে Platyhelminthes-এ।",
+    "question_en": "Both Arthropoda and Mollusca have an Open Circulatory System — but how does the document differentiate them in terms of their excretory organs?",
+    "options_en": [
+      "Arthropoda has Nephridia and Mollusca has Malpighian Tubules.",
+      "Arthropoda has Malpighian Tubules and Mollusca has kidney-like organs.",
+      "Both use Nephridia.",
+      "Both use Flame Cells."
+    ],
+    "explanation_en": "According to the document, Arthropoda uses Malpighian Tubules for excretion. Mollusca possesses kidney-like excretory organs. Nephridia are found in Annelida, and Flame Cells are characteristic of Platyhelminthes.",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_bn": "Mollusca-র রক্ত নীল রঙের হওয়ার কারণ নথিতে কী বলা হয়েছে?",
+    "options_bn": [
+      "তাদের রক্তে আয়রনযুক্ত হিমোগ্লোবিন আছে।",
+      "তাদের রক্তে তামাযুক্ত Haemocyanin আছে, হিমোগ্লোবিন নেই।",
+      "তাদের রক্তে কোনো রঞ্জক পদার্থ নেই।",
+      "Closed Circulatory System থাকার কারণে রক্ত নীল দেখায়।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ আছে, Mollusca-র রক্তে হিমোগ্লোবিনের বদলে Haemocyanin থাকে যা তামাযুক্ত (Copper-based), তাই রক্ত নীল রঙের হয়। এছাড়া Mollusca-তে Open Circulatory System আছে, Closed নয়।",
+    "question_en": "What does the document state as the reason for the blue colour of Mollusca's blood?",
+    "options_en": [
+      "Their blood contains iron-based haemoglobin.",
+      "Their blood contains copper-based Haemocyanin instead of haemoglobin.",
+      "Their blood has no pigment at all.",
+      "The blood appears blue because of their Closed Circulatory System."
+    ],
+    "explanation_en": "The document clearly states that Mollusca blood contains Haemocyanin — a copper-based pigment — instead of haemoglobin, which gives it a blue colour. Additionally, Mollusca has an Open Circulatory System, not a Closed one.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "Annelida হলো প্রথম ফাইলাম যেখানে সত্যিকারের সিলোম পাওয়া যায় — এই প্রেক্ষিতে Nematoda ও Annelida-র সিলোমের মধ্যে কোন পার্থক্যটি নথিতে উল্লিখিত?",
+    "options_bn": [
+      "Nematoda-তে সিলোম আদৌ নেই, Annelida-তে Pseudocoelom আছে।",
+      "Nematoda-তে Pseudocoelom (মেসোডার্মের আবরণ নেই), Annelida-তে Eucoelom (মেসোডার্মের আবরণ আছে)।",
+      "উভয়ই Eucoelom সম্পন্ন।",
+      "Nematoda-তে Eucoelom, Annelida-তে Pseudocoelom।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Nematoda-তে Pseudocoelom আছে — এতে সত্যিকারের মেসোডার্মের আবরণ নেই। Annelida প্রথম ফাইলাম যেখানে Eucoelom বা True Coelom পাওয়া যায় — এখানে মেসোডার্মের আবরণযুক্ত সত্যিকারের গহ্বরে অঙ্গপ্রত্যঙ্গ থাকে।",
+    "question_en": "Annelida is the first phylum with a true coelom — in this context, what difference between the coelom of Nematoda and Annelida is mentioned in the document?",
+    "options_en": [
+      "Nematoda has no coelom at all, Annelida has a Pseudocoelom.",
+      "Nematoda has a Pseudocoelom (no mesodermal lining), Annelida has a Eucoelom (with mesodermal lining).",
+      "Both are Eucoelomate.",
+      "Nematoda has a Eucoelom, Annelida has a Pseudocoelom."
+    ],
+    "explanation_en": "According to the document, Nematoda possesses a Pseudocoelom — a false coelom without a true mesodermal lining. Annelida is the first phylum to have a Eucoelom or True Coelom — a genuine body cavity lined with mesoderm where organs are housed.",
+    "correctIndex": 1
+  },
+  {
+    "id": 10,
+    "question_bn": "Echinodermata-র Water Vascular System সম্পর্কে নথিতে কী বলা হয়েছে এবং এটি কোন ফাইলামেই শুধু দেখা যায়?",
+    "options_bn": [
+      "এটি রক্ত পরিবহনের কাজ করে এবং Chordata-তে পাওয়া যায়।",
+      "এটি পানি দিয়ে পরিচালিত Tube Feet ব্যবস্থা যা চলাচল ও খাদ্য ধরতে সাহায্য করে এবং শুধু Echinodermata-তেই পাওয়া যায়।",
+      "এটি রেচনের কাজ করে এবং Mollusca-তেও পাওয়া যায়।",
+      "এটি শ্বাসকার্যে সাহায্য করে এবং সব সামুদ্রিক ফাইলামে পাওয়া যায়।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Echinodermata-র Water Vascular System হলো পানি দিয়ে পরিচালিত একটি বিশেষ তন্ত্র যা Tube Feet চালনার মাধ্যমে এদের চলাচল ও শিকার ধরতে সাহায্য করে। এটি Echinodermata-র একমাত্র অনন্য বৈশিষ্ট্য।",
+    "question_en": "What does the document state about the Water Vascular System of Echinodermata and in which phylum is it exclusively found?",
+    "options_en": [
+      "It transports blood and is found in Chordata.",
+      "It is a water-powered Tube Feet system used for locomotion and capturing food, found exclusively in Echinodermata.",
+      "It performs excretion and is also found in Mollusca.",
+      "It aids respiration and is found in all marine phyla."
+    ],
+    "explanation_en": "According to the document, the Water Vascular System of Echinodermata is a unique water-powered system that drives Tube Feet, helping these animals in locomotion and capturing food. It is an exclusive and unique feature of Echinodermata.",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "Platyhelminthes-এ Flame Cells কোন কাজ করে এবং একই কাজের জন্য Annelida-তে কোন অঙ্গ ব্যবহৃত হয়?",
+    "options_bn": [
+      "Flame Cells শ্বাসের কাজ করে; Annelida-তে Gills।",
+      "Flame Cells রেচন ও অসমোরেগুলেশনে সাহায্য করে; Annelida-তে Nephridia।",
+      "Flame Cells পাচনে সাহায্য করে; Annelida-তে Malpighian Tubules।",
+      "Flame Cells প্রজননে সাহায্য করে; Annelida-তে Gonads।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Platyhelminthes-এ Flame Cells রেচন (Excretion) ও শরীরের পানির ভারসাম্য রক্ষায় (Osmoregulation) সাহায্য করে। একই কাজের জন্য Annelida-তে Nephridia ব্যবহৃত হয়।",
+    "question_en": "What function do Flame Cells perform in Platyhelminthes, and which organ performs the same function in Annelida?",
+    "options_en": [
+      "Flame Cells aid respiration; Annelida uses Gills.",
+      "Flame Cells assist in excretion and osmoregulation; Annelida uses Nephridia.",
+      "Flame Cells assist in digestion; Annelida uses Malpighian Tubules.",
+      "Flame Cells assist in reproduction; Annelida uses Gonads."
+    ],
+    "explanation_en": "According to the document, Flame Cells in Platyhelminthes assist in excretion and osmoregulation (maintaining water balance). For the same functions, Annelida uses Nephridia.",
+    "correctIndex": 1
+  },
+  {
+    "id": 12,
+    "question_bn": "Chordata-র 4টি মূল বৈশিষ্ট্যের মধ্যে হৃৎপিণ্ডের অবস্থান সম্পর্কে নথিতে কী উল্লেখ করা হয়েছে?",
+    "options_bn": [
+      "হৃৎপিণ্ড Dorsal (পিঠের দিকে) অবস্থিত।",
+      "হৃৎপিণ্ড Lateral (পাশের দিকে) অবস্থিত।",
+      "হৃৎপিণ্ড Ventral (পেটের দিকে) অবস্থিত।",
+      "হৃৎপিণ্ড Chordata-তে থাকে না।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Chordata-তে হৃৎপিণ্ড Ventral অর্থাৎ পেটের দিকে অবস্থিত। এটি Chordata-র একটি বিশেষ বৈশিষ্ট্য যা অন্যান্য ফাইলাম থেকে আলাদা।",
+    "question_en": "Regarding the position of the heart in Chordata, what does the document mention?",
+    "options_en": [
+      "The heart is located Dorsally (on the back side).",
+      "The heart is located Laterally (on the side).",
+      "The heart is located Ventrally (on the belly side).",
+      "Chordata does not have a heart."
+    ],
+    "explanation_en": "According to the document, in Chordata, the heart is located Ventrally — on the belly side. This is a distinctive feature of Chordata that sets it apart from other phyla.",
+    "correctIndex": 2
+  },
+  {
+    "id": 13,
+    "question_bn": "মেরুদণ্ডী প্রাণীর মধ্যে Crocodile একটি উল্লেখযোগ্য ব্যতিক্রম — কারণ কী?",
+    "options_bn": [
+      "Crocodile উষ্ণ রক্তের (Warm-Blooded) সরীসৃপ।",
+      "Crocodile ডিম পাড়ে না, সরাসরি বাচ্চা দেয়।",
+      "Crocodile অন্য সরীসৃপের মতো 3 প্রকোষ্ঠের হৃৎপিণ্ড না হয়ে 4 প্রকোষ্ঠের হৃৎপিণ্ড বহন করে।",
+      "Crocodile Reptilia নয়, এটি Amphibia ফাইলামের।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Reptilia শ্রেণির প্রাণীদের সাধারণত 3 প্রকোষ্ঠের হৃৎপিণ্ড থাকে। কিন্তু Crocodile একমাত্র ব্যতিক্রম — এর হৃৎপিণ্ড 4 প্রকোষ্ঠের, যা Aves ও Mammalia-র মতো।",
+    "question_en": "Among vertebrates, the Crocodile is a notable exception — why?",
+    "options_en": [
+      "The Crocodile is a warm-blooded reptile.",
+      "The Crocodile does not lay eggs; it gives birth to live young.",
+      "Unlike other reptiles with 3-chambered hearts, the Crocodile has a 4-chambered heart.",
+      "The Crocodile is not a Reptile; it belongs to Amphibia."
+    ],
+    "explanation_en": "According to the document, Reptilia typically have a 3-chambered heart. However, the Crocodile is the sole exception — it possesses a 4-chambered heart, similar to Aves and Mammalia.",
+    "correctIndex": 2
+  },
+  {
+    "id": 14,
+    "question_bn": "Platypus ও Echidna সম্পর্কে নথিতে কোন তথ্যটি বিশেষভাবে উল্লেখ করা হয়েছে?",
+    "options_bn": [
+      "এরা Reptilia শ্রেণির প্রাণী এবং ঠান্ডা রক্তের।",
+      "এরা Mammalia হওয়া সত্ত্বেও ডিম পাড়ে — যা তাদের Mammalia-র মধ্যে ব্যতিক্রমী করে তোলে।",
+      "এরা Mammalia এবং স্তনগ্রন্থি নেই।",
+      "এরা পাখি (Aves) শ্রেণির এবং সরাসরি বাচ্চা দেয়।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Platypus ও Echidna Mammalia শ্রেণির প্রাণী কিন্তু এরা ডিম পাড়ে (Oviparous), যেখানে সাধারণ Mammalia Viviparous (সরাসরি বাচ্চা দেয়)। এটি তাদের Mammalia-র মধ্যে বিশেষ ব্যতিক্রম করে তোলে।",
+    "question_en": "What special information about Platypus and Echidna is specifically mentioned in the document?",
+    "options_en": [
+      "They are Reptiles and cold-blooded.",
+      "Despite being Mammals, they lay eggs — making them exceptional among Mammalia.",
+      "They are Mammals but lack mammary glands.",
+      "They belong to Aves and give birth to live young."
+    ],
+    "explanation_en": "According to the document, Platypus and Echidna belong to the class Mammalia but they are Oviparous (egg-laying), whereas typical Mammals are Viviparous (give birth to live young). This makes them unique exceptions within the Mammalia class.",
+    "correctIndex": 1
+  },
+  {
+    "id": 15,
+    "question_bn": "Coelenterata-র Exoskeleton কী দিয়ে তৈরি এবং Arthropoda-র Exoskeleton কী দিয়ে তৈরি — এই পার্থক্যটি নথিতে কীভাবে উল্লেখ করা হয়েছে?",
+    "options_bn": [
+      "Coelenterata-তে Chitin, Arthropoda-তে Calcium Carbonate।",
+      "উভয়েই Chitin দিয়ে তৈরি।",
+      "Coelenterata-তে Calcium Carbonate (CaCO₃), Arthropoda-তে Chitin।",
+      "উভয়েই Calcium Carbonate দিয়ে তৈরি।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Coelenterata-র Exoskeleton Calcium Carbonate (CaCO₃) দিয়ে তৈরি। অন্যদিকে Arthropoda-র Exoskeleton Chitin দিয়ে তৈরি। এটি দুটো ফাইলামের মধ্যে একটি গুরুত্বপূর্ণ পার্থক্য।",
+    "question_en": "The document describes the exoskeletons of Coelenterata and Arthropoda as being made of different materials — what is the correct distinction?",
+    "options_en": [
+      "Coelenterata has Chitin, Arthropoda has Calcium Carbonate.",
+      "Both are made of Chitin.",
+      "Coelenterata has Calcium Carbonate (CaCO₃), Arthropoda has Chitin.",
+      "Both are made of Calcium Carbonate."
+    ],
+    "explanation_en": "According to the document, the Exoskeleton of Coelenterata is made of Calcium Carbonate (CaCO₃). In contrast, the Exoskeleton of Arthropoda is made of Chitin. This is an important distinguishing feature between the two phyla.",
+    "correctIndex": 2
+  },
+  {
+    "id": 16,
+    "question_bn": "Vertebrata শ্রেণিতে উষ্ণ রক্তের (Warm-Blooded) প্রাণী কোনগুলো এবং কোনগুলো ঠান্ডা রক্তের (Cold-Blooded) — নথির ভিত্তিতে সঠিক উত্তরটি কোনটি?",
+    "options_bn": [
+      "Pisces ও Reptilia উষ্ণ রক্তের; Aves ও Mammalia ঠান্ডা রক্তের।",
+      "শুধুমাত্র Mammalia উষ্ণ রক্তের; বাকি সব ঠান্ডা রক্তের।",
+      "Aves ও Mammalia উষ্ণ রক্তের; Pisces, Amphibia ও Reptilia ঠান্ডা রক্তের।",
+      "সব মেরুদণ্ডীই ঠান্ডা রক্তের।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Aves (পাখি) ও Mammalia (স্তন্যপায়ী) উষ্ণ রক্তের (Warm-Blooded)। Pisces, Amphibia ও Reptilia ঠান্ডা রক্তের (Cold-Blooded) প্রাণী। Cyclostomata-ও ঠান্ডা রক্তের।",
+    "question_en": "Based on the document, which Vertebrate classes are Warm-Blooded and which are Cold-Blooded?",
+    "options_en": [
+      "Pisces and Reptilia are warm-blooded; Aves and Mammalia are cold-blooded.",
+      "Only Mammalia is warm-blooded; all others are cold-blooded.",
+      "Aves and Mammalia are warm-blooded; Pisces, Amphibia, and Reptilia are cold-blooded.",
+      "All vertebrates are cold-blooded."
+    ],
+    "explanation_en": "According to the document, Aves (birds) and Mammalia (mammals) are Warm-Blooded. Pisces, Amphibia, and Reptilia are Cold-Blooded animals. Cyclostomata is also cold-blooded.",
+    "correctIndex": 2
+  },
+  {
+    "id": 17,
+    "question_bn": "Arthropoda প্রাণীজগতের সবচেয়ে বড় ফাইলাম — কিন্তু নথি অনুযায়ী এর মধ্যে সবচেয়ে বড় ক্লাস কোনটি এবং Arthropoda-তে কোন ধরনের লিঙ্গীয় বৈশিষ্ট্য পাওয়া যায়?",
+    "options_bn": [
+      "Arachnida সবচেয়ে বড় ক্লাস; Hermaphrodite।",
+      "Insecta সবচেয়ে বড় ক্লাস; Unisexual।",
+      "Crustacea সবচেয়ে বড় ক্লাস; Unisexual।",
+      "Myriapoda সবচেয়ে বড় ক্লাস; Hermaphrodite।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Arthropoda হলো প্রাণীজগতের সবচেয়ে বড় ফাইলাম এবং এর মধ্যে Insecta হলো সবচেয়ে বড় ক্লাস। Arthropoda Unisexual অর্থাৎ পুরুষ ও স্ত্রী আলাদা।",
+    "question_en": "Arthropoda is the largest phylum in the animal kingdom — but according to the document, what is the largest class within it and what is its sexual characteristic?",
+    "options_en": [
+      "Arachnida is the largest class; Hermaphrodite.",
+      "Insecta is the largest class; Unisexual.",
+      "Crustacea is the largest class; Unisexual.",
+      "Myriapoda is the largest class; Hermaphrodite."
+    ],
+    "explanation_en": "According to the document, Arthropoda is the largest phylum in the animal kingdom, and within it, Insecta is the largest class. Arthropoda is Unisexual — meaning males and females are separate individuals.",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "Nereis ও Earthworm উভয়ই Annelida — কিন্তু নথিতে এদের মধ্যে বিশেষ পার্থক্য হিসেবে কোন বৈশিষ্ট্যটি উল্লেখ করা হয়েছে?",
+    "options_bn": [
+      "Nereis মাটিতে থাকে ও Parapodia আছে; Earthworm সামুদ্রিক ও Parapodia নেই।",
+      "Nereis সামুদ্রিক ও Parapodia দিয়ে চলাচল করে; Earthworm মাটিতে থাকে ও চাষের জন্য উপকারী।",
+      "Nereis মিষ্টিপানির এবং Earthworm সামুদ্রিক।",
+      "উভয়ই মাটিতে থাকে ও উভয়েরই Parapodia আছে।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Nereis সামুদ্রিক এবং Parapodia (পার্শ্বস্থ উপাঙ্গ) দিয়ে চলাচল করে। Earthworm (Pheretima) মাটিতে থাকে এবং চাষের জন্য উপকারী কারণ এটি মাটি আলগা করে।",
+    "question_en": "Both Nereis and Earthworm belong to Annelida — but what specific difference between them is mentioned in the document?",
+    "options_en": [
+      "Nereis lives in soil and has Parapodia; Earthworm is marine and lacks Parapodia.",
+      "Nereis is marine and moves using Parapodia; Earthworm lives in soil and is beneficial for farming.",
+      "Nereis lives in freshwater and Earthworm is marine.",
+      "Both live in soil and both have Parapodia."
+    ],
+    "explanation_en": "According to the document, Nereis is marine and uses Parapodia (lateral appendages) for locomotion. Earthworm (Pheretima) lives in soil and is beneficial for agriculture as it loosens the soil.",
+    "correctIndex": 1
+  },
+  {
+    "id": 19,
+    "question_bn": "Cyclostomata কে \"সবচেয়ে আদিম মেরুদণ্ডী\" বলা হয় — নথিতে এর কোন বৈশিষ্ট্যটি এই বিশেষণকে যুক্তিসংগত করে?",
+    "options_bn": [
+      "এরা সম্পূর্ণ স্থলচর এবং ঠান্ডা রক্তের।",
+      "এরা চোয়ালবিহীন (Jawless) এবং গোলাকার চুষকের মতো মুখযুক্ত পরজীবী।",
+      "এরা উষ্ণ রক্তের এবং সরাসরি বাচ্চা দেয়।",
+      "এদের হৃৎপিণ্ড 4 প্রকোষ্ঠের।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Cyclostomata-কে সবচেয়ে আদিম মেরুদণ্ডী বলা হয় কারণ এদের চোয়াল (Jaw) নেই — তাই এদের Jawless Vertebrates বলা হয়। মুখ গোলাকার চুষকের মতো এবং এরা পরজীবী হিসেবে অন্য মাছের শরীরে থেকে রক্ত চুষে খায়। উদাহরণ: Petromyzon (Lamprey), Myxine।",
+    "question_en": "Cyclostomata is called the \"most primitive vertebrate\" — which feature mentioned in the document justifies this description?",
+    "options_en": [
+      "They are completely terrestrial and cold-blooded.",
+      "They are Jawless (no jaw) with a circular sucker-like mouth and are parasitic.",
+      "They are warm-blooded and give birth to live young.",
+      "They have a 4-chambered heart."
+    ],
+    "explanation_en": "According to the document, Cyclostomata is considered the most primitive vertebrate because it lacks a jaw — hence called Jawless Vertebrates. Their mouth is circular and sucker-like, and they are parasitic, feeding by attaching to other fish and sucking blood. Examples: Petromyzon (Lamprey), Myxine.",
+    "correctIndex": 1
+  },
+  {
+    "id": 20,
+    "question_bn": "Amphibia-র ত্বকে Mucous Glands থাকে — এই বৈশিষ্ট্যটির ভূমিকা নথিতে কীভাবে ব্যাখ্যা করা হয়েছে এবং Amphibia-র হৃৎপিণ্ড কত প্রকোষ্ঠের?",
+    "options_bn": [
+      "Mucous Glands রেচনে সাহায্য করে; হৃৎপিণ্ড 2 প্রকোষ্ঠের।",
+      "Mucous Glands শ্বাসকার্যে সাহায্য করে; হৃৎপিণ্ড 3 প্রকোষ্ঠের।",
+      "Mucous Glands পাচনে সাহায্য করে; হৃৎপিণ্ড 4 প্রকোষ্ঠের।",
+      "Mucous Glands তাপনিয়ন্ত্রণে সাহায্য করে; হৃৎপিণ্ড 2 প্রকোষ্ঠের।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Amphibia-র ত্বকে Mucous Glands থাকে যা শ্বাসকার্যে (Cutaneous Respiration বা ত্বকীয় শ্বাস) সাহায্য করে — ত্বক ভেজা থাকলে অক্সিজেন ত্বকের মধ্য দিয়ে শোষিত হতে পারে। Amphibia-র হৃৎপিণ্ড 3 প্রকোষ্ঠের।",
+    "question_en": "Amphibia have Mucous Glands in their skin — how does the document explain the role of this feature, and how many chambers does the Amphibia heart have?",
+    "options_en": [
+      "Mucous Glands assist in excretion; heart has 2 chambers.",
+      "Mucous Glands assist in respiration; heart has 3 chambers.",
+      "Mucous Glands assist in digestion; heart has 4 chambers.",
+      "Mucous Glands assist in thermoregulation; heart has 2 chambers."
+    ],
+    "explanation_en": "According to the document, Amphibia have Mucous Glands in their skin which assist in respiration (cutaneous respiration) — when the skin stays moist, oxygen can be absorbed through it. The heart of Amphibia has 3 chambers.",
+    "correctIndex": 1
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
