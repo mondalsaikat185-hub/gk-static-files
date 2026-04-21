@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 600, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "নথিতে উল্লেখিত \"অনেকান্তবাদ\" এর দার্শনিক ধারণা এবং আত্মা সম্পর্কে বিশ্বাসটি নিচের কোন বাক্যে সঠিকভাবে প্রকাশ করা হয়েছে?",
+    "options_bn": [
+      "কেবলমাত্র জীবিত প্রাণীদের আত্মা থাকে এবং পরম সত্য যে কেউ জানতে পারে।",
+      "আত্মা শুধুমাত্র প্রাণী এবং উদ্ভিদের মধ্যে থাকে, কিন্তু পাথরের মতো জড় বস্তুতে নয়।",
+      "একটি বিষয় দেখার অনেক দৃষ্টিভঙ্গি আছে এবং কেবল জীবিত প্রাণী নয়, পাথর, জল এবং অগ্নিতেও আত্মা আছে।",
+      "এটি একটি বৌদ্ধ ধারণা যা বলে যে কোনো কিছুরই স্থায়ী আত্মা নেই।"
+    ],
+    "explanation_bn": "নথিতে অনুসারে, অনেকান্তবাদ হলো জৈনধর্মের একটি দর্শন যার অর্থ \"একটি জিনিসকে দেখার অনেক দৃষ্টিভঙ্গি আছে।\" এর সাথে সম্পর্কিত আরেকটি বিশ্বাস হলো যে শুধু জীব নয়, বরং পাথর, জল, বায়ু, অগ্নি—সবকিছুতেই আত্মা (soul) আছে।",
+    "question_en": "Which of the following statements correctly expresses the philosophical concept of \"Anekantavada\" and the belief about souls as mentioned in the document?",
+    "options_en": [
+      "Only living beings possess souls and absolute truth can be known by anyone.",
+      "Souls exist only in animals and plants, but not in inanimate objects like rocks.",
+      "A subject has many perspectives, and souls exist not only in living beings but also in rocks, water, and fire.",
+      "It is a Buddhist concept stating that nothing has a permanent soul."
+    ],
+    "explanation_en": "According to the document, Anekantavada is a Jain philosophy meaning \"there are many perspectives to look at a thing.\" A related belief is that souls exist not only in living beings but also in rocks, water, wind, and fire.",
+    "correctIndex": 2
+  },
+  {
+    "id": 2,
+    "question_bn": "জৈনধর্মের প্রেক্ষাপটে \"আশ্রব\" (Asrava) শব্দটি কী বোঝায়?",
+    "options_bn": [
+      "সেই অবস্থা যখন একজন ব্যক্তি কৈবল্য বা পরম জ্ঞান লাভ করেন।",
+      "সেই অবস্থা যখন কর্ম-কণিকা জীবাত্মার দিকে প্রবাহিত হতে শুরু করে এবং আত্মাকে বাঁধে।",
+      "বস্তু, মানুষ এবং স্থানের প্রতি কোনো প্রকার আসক্তি না রাখার একটি কঠোর ব্রত।",
+      "একজন সর্বোচ্চ আধ্যাত্মিক গুরু যিনি দুঃখসাগর পার হওয়ার পথ তৈরি করেন।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ করা হয়েছে যে, জৈনধর্মে \"আশ্রব\" হলো সেই অবস্থা যখন কর্ম-কণিকা জীবাত্মার দিকে প্রবাহিত হতে শুরু করে এবং আত্মাকে বাঁধে। এটি জৈন কর্মতত্ত্বের একটি গুরুত্বপূর্ণ ধারণা।",
+    "question_en": "In the context of Jainism, what does the term \"Asrava\" signify?",
+    "options_en": [
+      "The state when an individual attains Kaivalya or supreme knowledge.",
+      "The state when karma particles start flowing towards the soul and bind it.",
+      "A strict vow of non-attachment to objects, people, and places.",
+      "The highest spiritual guru who creates the path across the ocean of sorrow."
+    ],
+    "explanation_en": "The document explicitly mentions that in Jainism, \"Asrava\" is the state when karma particles start flowing towards the soul and bind it. It is an important concept in Jain karma theory.",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_bn": "নথির তথ্য অনুসারে সাঁচী স্তূপের শিল্পকলায় প্রাপ্ত \"শালভঞ্জিকা\" মোটিফ সম্পর্কে কোন বিবৃতিটি সঠিক?",
+    "options_bn": [
+      "এটি সরাসরি বৌদ্ধ ধর্মের মূল দার্শনিক ধারণা থেকে উদ্ভূত হয়েছিল।",
+      "এটি মহাপ্রজাপতি গৌতমী, যিনি প্রথম ভিক্ষুণী ছিলেন, তাঁর প্রতীক।",
+      "এটি প্রাচীন ভারতীয় লোকবিশ্বাস থেকে অনুপ্রাণিত, সরাসরি বৌদ্ধ ধারণা থেকে নয়।",
+      "এটি একটি স্থাপত্য উপাদান যা পরবর্তী স্তূপগুলোতে 'হর্মিকা'-কে প্রতিস্থাপন করেছিল।"
+    ],
+    "explanation_bn": "নথি অনুসারে, শালভঞ্জিকা মোটিফ (যিনি শাল গাছ স্পর্শ করলে ফুল ফোটে) প্রাচীন ভারতীয় লোকবিশ্বাস থেকে এসেছে, সরাসরি বৌদ্ধ ধারণা থেকে আসেনি। এটি শুধুমাত্র বুদ্ধের মায়ের প্রতীক হিসেবে ব্যবহৃত হয়েছে।",
+    "question_en": "According to the document, which statement about the \"Salabhanjika\" motif found in the Sanchi Stupa art is correct?",
+    "options_en": [
+      "It originated directly from core Buddhist philosophical ideas.",
+      "It represents Mahaprajapati Gautami, the first Bhikkhuni.",
+      "It is inspired by ancient Indian folk beliefs, not directly by Buddhist ideas.",
+      "It is an architectural component that replaced the 'Harmika' in later stupas."
+    ],
+    "explanation_en": "According to the document, the Salabhanjika motif (a woman whose touch makes a Sal tree blossom) comes from ancient Indian folk beliefs and was not directly inspired by Buddhist ideas. It is merely used as a symbol for Buddha's mother.",
+    "correctIndex": 2
+  },
+  {
+    "id": 4,
+    "question_bn": "নিচের কোন স্থাপত্য উপাদানটি একটি ঐতিহ্যবাহী বৌদ্ধ স্তূপের কাঠামোর অংশ নয় বলে নথিতে উল্লেখ করা হয়েছে?",
+    "options_bn": [
+      "হর্মিকা (Harmika)",
+      "যষ্টি (Yashti)",
+      "গোপুর (Gopura)",
+      "মেধি (Medhi)"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে যে \"গোপুর\" হিন্দু মন্দিরের অংশ, এটি স্তূপের অংশ নয়। স্তূপের প্রধান অংশগুলোর মধ্যে অণ্ড, তোরণ, মেধি, যষ্টি, হর্মিকা, চত্র স্পায়ার এবং বেদিকা অন্তর্ভুক্ত রয়েছে।",
+    "question_en": "Which of the following architectural elements is mentioned in the document as NOT being a part of a traditional Stupa structure?",
+    "options_en": [
+      "Harmika",
+      "Yashti",
+      "Gopura",
+      "Medhi"
+    ],
+    "explanation_en": "The document explicitly states that a \"Gopura\" is a part of Hindu temple architecture and is not a part of a stupa. The main parts of a stupa include Anda, Torana, Medhi, Yashti, Harmika, Chattra Spire, and Vedika.",
+    "correctIndex": 2
+  },
+  {
+    "id": 5,
+    "question_bn": "মক্ষলী গোশাল দ্বারা প্রতিষ্ঠিত \"আজীবিক সম্প্রদায়\"-এর মূল দর্শন নিচের কোনটি সঠিকভাবে বর্ণনা করে?",
+    "options_bn": [
+      "চরম তপস্যা এবং চরম ভোগের মধ্যবর্তী একটি মধ্যমপন্থী পথ।",
+      "চরম নিয়তিবাদ, যেখানে সবকিছু পূর্বনির্ধারিত এবং মানুষের চেষ্টা কিছুই পরিবর্তন করতে পারে না।",
+      "এই বিশ্বাস যে অষ্টাঙ্গিক মার্গ অনুসরণ করেই কেবল নির্বাণ লাভ করা সম্ভব।",
+      "চরম অহিংসা, যা কৃষিকাজের মতো সাধারণ কার্যকলাপকেও নিষিদ্ধ করে।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে যে আজীবিক সম্প্রদায় চরম নিয়তিবাদে (extreme fatalism) বিশ্বাস করত। তাদের মতে, সবকিছু পূর্বনির্ধারিত এবং মানুষ নিজে কিছুই পরিবর্তন করতে পারে না; সাথে তারা অতিমাত্রায় তপস্যাতেও বিশ্বাস করত।",
+    "question_en": "Which of the following correctly describes the core philosophy of the \"Ajivika Sect\" founded by Makkhali Gosala?",
+    "options_en": [
+      "A middle path balancing extreme asceticism and extreme indulgence.",
+      "Extreme fatalism, where everything is predetermined and human effort changes nothing.",
+      "The belief that Nirvana can only be attained by following the eightfold path.",
+      "Extreme non-violence that prohibits even ordinary activities like agriculture."
+    ],
+    "explanation_en": "The document states that the Ajivika Sect believed in extreme fatalism. According to them, everything is predetermined and humans cannot change anything themselves; they also believed in extreme asceticism.",
+    "correctIndex": 1
+  },
+  {
+    "id": 6,
+    "question_bn": "প্রথম জৈন সভার নেতা, পৃষ্ঠপোষক এবং ফলাফলের সঠিক সংমিশ্রণটি চিহ্নিত করুন।",
+    "options_bn": [
+      "নেতা: স্থূলভদ্র, পৃষ্ঠপোষক: বিন্দুসার, ফলাফল: 12 টি অঙ্গ সংকলিত হয় যা দিগম্বররা বর্জন করে।",
+      "নেতা: ভদ্রবাহু, পৃষ্ঠপোষক: চন্দ্রগুপ্ত মৌর্য, ফলাফল: জৈন শাস্ত্রের চূড়ান্ত সংকলন।",
+      "নেতা: মহাকাশ্যপ, পৃষ্ঠপোষক: অজাতশত্রু, ফলাফল: দিগম্বর এবং শ্বেতাম্বর সম্প্রদায়ে বিভাজন।",
+      "নেতা: স্থূলভদ্র, পৃষ্ঠপোষক: অশোক, ফলাফল: আগম সূত্র প্রণয়ন যা সমস্ত জৈন গ্রহণ করে।"
+    ],
+    "explanation_bn": "নথির তালিকা অনুযায়ী, প্রথম জৈন সভা 298 খ্রিস্টপূর্বাব্দে পাটলিপুত্রে স্থূলভদ্রের নেতৃত্বে এবং বিন্দুসারের পৃষ্ঠপোষকতায় অনুষ্ঠিত হয়েছিল। এর বিশেষত্ব ছিল 12 টি অঙ্গ সংকলিত হওয়া, যা দিগম্বররা বর্জন করেছিল।",
+    "question_en": "Identify the correct combination of leader, patron, and outcome of the First Jain Council.",
+    "options_en": [
+      "Leader: Sthulabhadra, Patron: Bindusara, Outcome: 12 Angas were compiled which Digambaras rejected.",
+      "Leader: Bhadrabahu, Patron: Chandragupta Maurya, Outcome: Final compilation of Jain scriptures.",
+      "Leader: Mahakashyapa, Patron: Ajatashatru, Outcome: Division into Digambara and Shvetambara sects.",
+      "Leader: Sthulabhadra, Patron: Ashoka, Outcome: Compilation of Agama Sutras accepted by all Jains."
+    ],
+    "explanation_en": "According to the document's table, the First Jain Council was held in 298 BC at Pataliputra under the leadership of Sthulabhadra and the patronage of Bindusara. Its outcome was the compilation of 12 Angas, which the Digambaras rejected.",
+    "correctIndex": 0
+  },
+  {
+    "id": 7,
+    "question_bn": "সাঁচী স্তূপ কমপ্লেক্সের মধ্যে অবস্থিত \"Stupa 3\" এর নির্দিষ্ট ঐতিহাসিক গুরুত্ব কী?",
+    "options_bn": [
+      "এতে স্বয়ং গৌতম বুদ্ধের দেহাবশেষ সংরক্ষিত রয়েছে।",
+      "এটি সেই স্থান যেখানে বুদ্ধ তাঁর প্রথম ধর্মোপদেশ দিয়েছিলেন।",
+      "এতে বুদ্ধের দুজন গুরুত্বপূর্ণ শিষ্য সারিপুত্ত এবং মোগ্গল্লানের দেহাবশেষ রাখা আছে।",
+      "এটি ইন্দো-গ্রিক রাজা মেনান্ডারের ধর্মান্তরের স্মরণে নির্মিত হয়েছিল।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ করা হয়েছে যে সাঁচীর মূল স্তূপ ছাড়াও সেখানে Stupa 3 রয়েছে, যেখানে বুদ্ধের দুজন গুরুত্বপূর্ণ শিষ্য সারিপুত্ত এবং মোগ্গল্লানের দেহাবশেষ (অস্থি) রাখা আছে।",
+    "question_en": "What is the specific historical significance of \"Stupa 3\" located within the Sanchi Stupa complex?",
+    "options_en": [
+      "It contains the relics of Gautama Buddha himself.",
+      "It is the place where Buddha delivered his first sermon.",
+      "It houses the relics of Buddha's two important disciples, Sariputta and Moggallana.",
+      "It was built to commemorate the conversion of the Indo-Greek King Menander."
+    ],
+    "explanation_en": "The document explicitly states that in addition to the Great Stupa at Sanchi, there is Stupa 3, where the relics (bones) of two important disciples of Buddha, Sariputta and Moggallana, are kept.",
+    "correctIndex": 2
+  },
+  {
+    "id": 8,
+    "question_bn": "বেদে কোন দুজন জৈন তীর্থঙ্করের নাম স্পষ্টভাবে উল্লেখ করা হয়েছে, যা জৈনধর্মের প্রাচীনত্বের দাবিকে সমর্থন করে?",
+    "options_bn": [
+      "ঋষভদেব এবং পার্শ্বনাথ",
+      "পার্শ্বনাথ এবং বর্ধমান মহাবীর",
+      "ঋষভদেব এবং অরিষ্টনেমী",
+      "অরিষ্টনেমী এবং বর্ধমান মহাবীর"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে বেদে মাত্র দুজন তীর্থঙ্করের উল্লেখ আছে—প্রথম ঋষভদেব এবং 22 তম অরিষ্টনেমী। এই কারণেই জৈনরা দাবি করেন যে তাঁদের ধর্ম বেদের চেয়েও পুরোনো।",
+    "question_en": "Which two Jain Tirthankaras are explicitly mentioned in the Vedas, supporting the claim of Jainism's antiquity?",
+    "options_en": [
+      "Rishabhadev and Parshvanath",
+      "Parshvanath and Vardhamana Mahavira",
+      "Rishabhadev and Arishtanemi",
+      "Arishtanemi and Vardhamana Mahavira"
+    ],
+    "explanation_en": "The document mentions that only two Tirthankaras are cited in the Vedas—the 1st, Rishabhadev, and the 22nd, Arishtanemi. Because of this, Jains claim that their religion is older than the Vedas.",
+    "correctIndex": 2
+  },
+  {
+    "id": 9,
+    "question_bn": "বৌদ্ধ মুদ্রা এবং এর সঠিক প্রতীকি অর্থের জোড় মেলালে নিচের কোনটি সঠিক?",
+    "options_bn": [
+      "ভূমির্পর্শ মুদ্রা – শিক্ষার চাকা ঘোরানো বা প্রথম প্রবচন",
+      "বরদ মুদ্রা – সুরক্ষা এবং ভয়কে জয় করা",
+      "অভয় মুদ্রা – দান এবং করুণার প্রতীক",
+      "ধ্যান মুদ্রা – মনন ও অভ্যন্তরীণ শান্তি, দুই হাত কোলে রাখা"
+    ],
+    "explanation_bn": "নথির তালিকা অনুযায়ী, ধ্যান মুদ্রার অর্থ হলো ধ্যান, যা মনন ও অভ্যন্তরীণ শান্তির প্রতীক এবং এতে দুই হাত কোলে থাকে। ভূমিস্পর্শ হলো পৃথিবী স্পর্শ, বরদ হলো উদারতা/দান, এবং অভয় হলো নির্ভয়/সুরক্ষা।",
+    "question_en": "Matching the Buddhist Mudra with its correct symbolic meaning, which of the following pairs is correct?",
+    "options_en": [
+      "Bhumisparsha Mudra – Turning the wheel of teaching or first sermon",
+      "Varada Mudra – Protection and overcoming fear",
+      "Abhaya Mudra – Symbol of generosity and compassion",
+      "Dhyana Mudra – Contemplation and internal peace, with both hands on the lap"
+    ],
+    "explanation_en": "According to the document's table, Dhyana Mudra means meditation, symbolizing contemplation and internal peace, with both hands resting on the lap. Bhumisparsha is touching the earth, Varada is generosity/charity, and Abhaya is fearlessness/protection.",
+    "correctIndex": 3
+  },
+  {
+    "id": 10,
+    "question_bn": "জৈনধর্মের \"ত্রিরত্ন\" এবং বৌদ্ধধর্মের \"ত্রিরত্ন\" এর মধ্যে মূল পার্থক্য কী?",
+    "options_bn": [
+      "জৈনধর্মের ত্রিরত্ন হলো জ্ঞান, বিশ্বাস এবং আচরণ, অন্যদিকে বৌদ্ধধর্মের ত্রিরত্ন হলো বুদ্ধ, ধম্ম এবং সঙ্ঘ।",
+      "জৈনধর্মের ত্রিরত্ন হলো বুদ্ধ, ধম্ম এবং সঙ্ঘ, অন্যদিকে বৌদ্ধধর্মের ত্রিরত্ন হলো অহিংসা, সত্য এবং ব্রহ্মচর্য।",
+      "উভয় ধর্মের ত্রিরত্নই সম্পূর্ণ এক, যা হলো জ্ঞান, বিশ্বাস এবং আচরণ।",
+      "জৈনধর্মের ত্রিরত্ন চরম তপস্যার কথা বলে, অন্যদিকে বৌদ্ধধর্মের ত্রিরত্ন চরম নিয়তিবাদে বিশ্বাস করে।"
+    ],
+    "explanation_bn": "নথিতে সতর্ক করে বলা হয়েছে যে জৈনধর্মের ত্রিরত্ন হলো সম্যক জ্ঞান, সম্যক দর্শন (বিশ্বাস), এবং সম্যক চরিত্র (আচরণ)। অন্যদিকে বৌদ্ধধর্মের ত্রিরত্ন (বা তিন শরণ) হলো বুদ্ধ, ধম্ম এবং সঙ্ঘ।",
+    "question_en": "What is the main difference between the concept of \"Triratna\" in Jainism and in Buddhism?",
+    "options_en": [
+      "Jainism's Triratna focuses on Knowledge, Faith, and Conduct, while Buddhism's Triratna consists of Buddha, Dhamma, and Sangha.",
+      "Jainism's Triratna consists of Buddha, Dhamma, and Sangha, while Buddhism's focuses on Non-violence, Truth, and Celibacy.",
+      "Both religions have identical Triratnas focused on Knowledge, Faith, and Conduct.",
+      "Jainism's Triratna promotes extreme asceticism, while Buddhism's Triratna believes in extreme fatalism."
+    ],
+    "explanation_en": "The document cautions that Jainism's Triratnas are Right Knowledge, Right Faith, and Right Conduct. In contrast, Buddhism's Triratna (or Three Jewels) consists of Buddha, Dhamma, and Sangha.",
+    "correctIndex": 0
+  },
+  {
+    "id": 11,
+    "question_bn": "পালি ভাষার বৌদ্ধ গ্রন্থ \"মিলিন্দপনহো\" মূলত কোন দুই ঐতিহাসিক ব্যক্তির সংলাপ?",
+    "options_bn": [
+      "সম্রাট অশোক এবং মোগলিপুত্ত তিস্স",
+      "ইন্দো-গ্রিক রাজা মেনান্ডার এবং সন্ন্যাসী নাগসেন",
+      "রাজা বিম্বিসার এবং গৌতম বুদ্ধ",
+      "রাজা কনিষ্ক এবং বসুমিত্র"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে \"মিলিন্দপনহো\" হলো মিলিন্দ (ইন্দো-গ্রিক রাজা মেনান্ডার) এবং নাগসেনের মধ্যে সংলাপ। এই আলোচনার পরেই রাজা বৌদ্ধধর্ম গ্রহণ করেন।",
+    "question_en": "The Pali Buddhist text \"Milindapanho\" primarily contains a dialogue between which two historical figures?",
+    "options_en": [
+      "Emperor Ashoka and Moggaliputta Tissa",
+      "Indo-Greek King Menander and the monk Nagasena",
+      "King Bimbisara and Gautama Buddha",
+      "King Kanishka and Vasumitra"
+    ],
+    "explanation_en": "The document states that \"Milindapanho\" is a dialogue between Milinda (Indo-Greek King Menander) and Nagasena. Following this discussion, the king embraced Buddhism.",
+    "correctIndex": 1
+  },
+  {
+    "id": 12,
+    "question_bn": "নথি অনুযায়ী, জৈনধর্মের দিগম্বর এবং শ্বেতাম্বর সম্প্রদায়ে বিভক্ত হওয়ার মূল কারণ কী ছিল?",
+    "options_bn": [
+      "মগধে ভয়াবহ দুর্ভিক্ষের কারণে ভদ্রবাহু কর্ণাটকে চলে যান যেখানে তাঁরা বিবস্ত্র থাকেন, অন্যদিকে মগধে থেকে যাওয়া অংশ সাদা কাপড় পরা শুরু করে।",
+      "প্রথম জৈন সভার নেতৃত্ব নিয়ে স্থূলভদ্রের সাথে মতভেদের কারণে ভদ্রবাহু গুজরাটে চলে যান।",
+      "চন্দ্রগুপ্ত মৌর্য জোরপূর্বক একদল জৈন সন্ন্যাসীকে সাদা কাপড় পরতে বাধ্য করেন, যার ফলে অন্যরা বিদ্রোহ করে।",
+      "মহাবীরের মৃত্যুর পরপরই তাঁর সম্পত্তির উত্তরাধিকার নিয়ে শিষ্যদের মধ্যে বিভাজন দেখা দেয়।"
+    ],
+    "explanation_bn": "303 খ্রিস্টপূর্বাব্দে মগধে ভয়াবহ দুর্ভিক্ষ দেখা দিলে ভদ্রবাহু তাঁর অনুগামীদের নিয়ে শ্রাবণবেলাগোলায় চলে যান। যাঁরা মগধে থেকে গিয়েছিল তারা সাদা কাপড় পরতে শুরু করে। ভদ্রবাহুর দল ফিরে এসে এই পরিবর্তন মেনে না নেওয়ায় জৈনধর্ম দিগম্বর (বিবস্ত্র) এবং শ্বেতাম্বর (সাদা কাপড়) এ বিভক্ত হয়।",
+    "question_en": "According to the document, what was the primary reason for the division of Jainism into Digambara and Shvetambara sects?",
+    "options_en": [
+      "Due to a severe famine in Magadha, Bhadrabahu migrated to Karnataka where his followers remained naked, while those who stayed in Magadha started wearing white clothes.",
+      "Due to disagreements over the leadership of the First Jain Council, Bhadrabahu migrated to Gujarat.",
+      "Chandragupta Maurya forced a group of Jain monks to wear white clothes, causing the others to rebel.",
+      "Immediately after Mahavira's death, a division occurred among the disciples over property inheritance."
+    ],
+    "explanation_en": "When a severe famine struck Magadha in 303 BC, Bhadrabahu moved to Shravanabelagola with his followers. Those who stayed behind in Magadha began wearing white clothes. When Bhadrabahu's group returned and rejected this change, Jainism split into Digambara (naked) and Shvetambara (white-clad).",
+    "correctIndex": 0
+  },
+  {
+    "id": 13,
+    "question_bn": "মহাযান বৌদ্ধধর্মের প্রেক্ষাপটে, \"বোধিসত্ত্ব\" কারা?",
+    "options_bn": [
+      "যে সন্ন্যাসীরা কঠোরভাবে হীনযান পথ অনুসরণ করেন এবং মূর্তিপূজা বর্জন করেন।",
+      "যাঁরা নির্বাণের পথে ছিলেন কিন্তু অন্যদের পথ দেখানোর জন্য এবং শেখানোর জন্য নিজেদের নির্বাণ ত্যাগ করে থেকে গেছেন।",
+      "জৈনধর্মের সর্বোচ্চ আধ্যাত্মিক গুরু যাঁরা দুঃখের মহাসাগর পার হওয়ার পথ তৈরি করেন।",
+      "যে রাজারা বৌদ্ধ মহাসভাগুলোর পৃষ্ঠপোষকতা করেছিলেন এবং বড় স্তূপ নির্মাণ করেছিলেন।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, বোধিসত্ত্বরা হলেন তাঁরা যাঁরা নির্বাণের পথে ছিলেন কিন্তু অন্যদের শেখানোর জন্য থেকে গেছেন। তাঁরা মহাযান বৌদ্ধধর্মের সাথে সম্পর্কিত এবং এদের উদাহরণ হলো বজ্রপাণি, অবলোকিতেশ্বর এবং অমিতাভ।",
+    "question_en": "In the context of Mahayana Buddhism, who are \"Bodhisattvas\"?",
+    "options_en": [
+      "Monks who strictly follow the Hinayana path and reject idol worship.",
+      "Individuals who were on the path to Nirvana but chose to stay back to teach and guide others instead of attaining it.",
+      "The highest spiritual gurus in Jainism who create a path across the ocean of sorrow.",
+      "Kings who patronized Buddhist Councils and built large stupas."
+    ],
+    "explanation_en": "The document explains that Bodhisattvas are those who were on the path to Nirvana but stayed behind to teach others. They are associated with Mahayana Buddhism, and examples include Vajrapani, Avalokiteshvara, and Amitabha.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "বৌদ্ধ দর্শনের \"চারটি আর্যসত্য\" অনুসারে, \"সমুদয়\" (Samudaya) কী নির্দেশ করে?",
+    "options_bn": [
+      "জন্ম, বার্ধক্য, রোগ এবং মৃত্যুর মতো দুঃখের সত্য।",
+      "দুঃখের কারণের সত্য, যার মূল হলো তৃষ্ণা বা ইচ্ছা।",
+      "ইচ্ছা দূর করার মাধ্যমে দুঃখ নিবৃত্তির সত্য।",
+      "নির্বাণ লাভের জন্য আটটি পথের (অষ্টাঙ্গিক মার্গ) সত্য।"
+    ],
+    "explanation_bn": "বৌদ্ধ দর্শনের চার আর্যসত্যের তালিকায় 2 য় সত্যটি হলো \"সমুদয়\", যার অর্থ দুঃখের কারণের সত্য এবং এর বিস্তার হলো—তৃষ্ণা (Tanha) বা ইচ্ছাই দুঃখের মূল কারণ।",
+    "question_en": "According to the \"Four Noble Truths\" of Buddhist philosophy, what does \"Samudaya\" represent?",
+    "options_en": [
+      "The truth of suffering, such as birth, old age, disease, and death.",
+      "The truth of the cause of suffering, the root of which is desire or \"Tanha\".",
+      "The truth of the cessation of suffering by eliminating desires.",
+      "The truth of the path (Eightfold path) leading to Nirvana."
+    ],
+    "explanation_en": "In the list of the Four Noble Truths of Buddhist philosophy, the 2nd truth is \"Samudaya\", which means the truth of the cause of sorrow, elaborating that desire (Tanha) is the root cause of all suffering.",
+    "correctIndex": 1
+  },
+  {
+    "id": 15,
+    "question_bn": "পাঞ্চমার্ক মুদ্রার প্রচলন কীভাবে জৈনধর্ম এবং বৌদ্ধধর্মের উত্থানে সাহায্য করেছিল?",
+    "options_bn": [
+      "এটি মুদ্রাস্ফীতি সৃষ্টি করেছিল, যার ফলে নিম্নবিত্তরা নতুন ধর্মের সন্ধান করেছিল।",
+      "এটি ব্যবসাকে সহজ করেছিল, যার ফলে বৈশ্যরা ধনী হয় এবং তারা অহিংসার উপর ভিত্তি করে এমন ধর্ম খুঁজছিল যা বর্ণের বাধা মানে না।",
+      "এটি ব্রাহ্মণদের বেশি কর আদায়ের সুযোগ দিয়েছিল, যা ক্ষত্রিয়দের ক্ষুব্ধ করেছিল।",
+      "এটি শুধুমাত্র বিশাল স্তূপ নির্মাণের অর্থায়নে ব্যবহৃত হয়েছিল।"
+    ],
+    "explanation_bn": "নথির উৎপত্তির কারণসমূহ অংশে বলা হয়েছে যে পাঞ্চমার্ক মুদ্রা চালু হওয়ায় ব্যবসা-বাণিজ্য বাড়ে এবং বৈশ্যরা ধনী হয়ে ওঠে। এই ব্যবসায়ী শ্রেণী তাদের জীবনযাত্রার সাথে সামঞ্জস্যপূর্ণ একটি ধর্ম চাইছিল যেখানে অহিংসা আছে কিন্তু বর্ণের বাধা নেই।",
+    "question_en": "How did the introduction of punch-marked coins contribute to the rise of Jainism and Buddhism?",
+    "options_en": [
+      "It caused inflation, which forced the lower classes to seek new religions.",
+      "It facilitated trade, enriching the Vaishya class who then sought a religion based on non-violence and free from caste barriers.",
+      "It allowed Brahmins to collect more taxes, angering the Kshatriyas.",
+      "It was exclusively used to finance the construction of massive stupas."
+    ],
+    "explanation_en": "In the section on the causes of origin, the document states that the introduction of punch-marked coins boosted trade and made Vaishyas wealthy. This merchant class desired a religion suitable to their lifestyle, featuring non-violence and no caste barriers.",
+    "correctIndex": 1
+  },
+  {
+    "id": 16,
+    "question_bn": "বৌদ্ধ শিল্পকলায় বুদ্ধের গৃহত্যাগের ঘটনা (মহাভিনিষ্ক্রমণ) বোঝাতে কোন প্রতীকটি ব্যবহৃত হয়?",
+    "options_bn": [
+      "পদ্ম এবং ষাঁড়",
+      "বোধি বৃক্ষ",
+      "চাকা বা ধর্মচক্র",
+      "ঘোড়া"
+    ],
+    "explanation_bn": "নথির তালিকা অনুযায়ী, বৌদ্ধধর্মে বুদ্ধের গৃহত্যাগের (মহাভিনিষ্ক্রমণ) প্রতীক হলো ঘোড়া। বুদ্ধের ঘোড়ার নাম ছিল কন্থক।",
+    "question_en": "Which symbol is used in Buddhist art to represent the event of Buddha's departure from home (Mahabhinishkramana)?",
+    "options_en": [
+      "Lotus and Bull",
+      "Bodhi Tree",
+      "Wheel or Dharmachakra",
+      "Horse"
+    ],
+    "explanation_en": "According to the document's table, the symbol for Buddha's departure from home (Mahabhinishkramana) in Buddhism is a horse. Buddha's horse was named Kanthaka.",
+    "correctIndex": 3
+  },
+  {
+    "id": 17,
+    "question_bn": "জৈন সাহিত্য সম্পর্কিত নিচের কোন তথ্যটি নথির ভিত্তিতে সঠিক?",
+    "options_bn": [
+      "আগম সূত্রগুলো সংস্কৃতে লেখা এবং এগুলো বৌদ্ধ দর্শনের সারসংক্ষেপ।",
+      "ভগবতী সূত্রতে মহাবীরের শিক্ষার কথা আছে এবং এতে মহাজনপদের উল্লেখ পাওয়া যায়।",
+      "কল্প সূত্র মূলত গৌতম বুদ্ধের জীবনকাহিনীর বিস্তারিত বিবরণ দেয়।",
+      "সমস্ত জৈন সাহিত্য শুধুমাত্র পালি ভাষায় লেখা হয়েছিল।"
+    ],
+    "explanation_bn": "নথির \"জৈন সাহিত্য ও গুরুত্বপূর্ণ গ্রন্থ\" সারণিতে বলা হয়েছে যে ভগবতী সূত্রে মহাবীরের শিক্ষা এবং মহাজনপদের উল্লেখ আছে। আগম প্রাকৃত ভাষায় লেখা এবং কল্প সূত্র মহাবীরের জীবনী নিয়ে।",
+    "question_en": "Which of the following information regarding Jain literature is correct based on the document?",
+    "options_en": [
+      "Agama Sutras are written in Sanskrit and summarize Buddhist philosophy.",
+      "Bhagavati Sutra contains Mahavira's teachings and mentions the Mahajanapadas.",
+      "Kalpa Sutra primarily provides a detailed account of Gautama Buddha's life.",
+      "All Jain literature was written exclusively in the Pali language."
+    ],
+    "explanation_en": "In the \"Jain Literature and Important Texts\" table of the document, it is stated that Bhagavati Sutra contains Mahavira's teachings and mentions the Mahajanapadas. Agamas are in Prakrit, and Kalpa Sutra is about Mahavira's life.",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "বৌদ্ধধর্মের \"হীনযান\" বা \"থেরবাদ\" শাখার বৈশিষ্ট্য নিচের কোনটি?",
+    "options_bn": [
+      "এটি বুদ্ধের পুনর্জন্মে বিশ্বাস করে এবং মূর্তিপূজা করে।",
+      "এটি সংস্কৃত ভাষা ব্যবহার করে এবং জাপান ও চীনে ব্যাপকভাবে প্রচলিত।",
+      "এটি মূর্তিপূজা করে না, পালি ভাষা ব্যবহার করে এবং শ্রীলঙ্কায় প্রচলিত।",
+      "এটি একটি তান্ত্রিক রূপ যা প্রধানত তিব্বতে প্রচলিত।"
+    ],
+    "explanation_bn": "নথির বৌদ্ধধর্মের শাখা অংশের তালিকা অনুসারে, হীনযান (যাকে থেরবাদও বলা হয়) শাখা মূর্তিপূজা করে না, বুদ্ধের পুনর্জন্মে বিশ্বাস করে না, পালি ভাষা ব্যবহার করে এবং শ্রীলঙ্কা, কম্বোডিয়া ও দক্ষিণ ভারতে প্রচলিত।",
+    "question_en": "Which of the following is a characteristic of the \"Hinayana\" or \"Theravada\" branch of Buddhism?",
+    "options_en": [
+      "It believes in the rebirth of Buddha and practices idol worship.",
+      "It uses the Sanskrit language and is widely popular in Japan and China.",
+      "It does not practice idol worship, uses the Pali language, and is prevalent in Sri Lanka.",
+      "It is a Tantric form primarily prevalent in Tibet."
+    ],
+    "explanation_en": "According to the table in the sects of Buddhism section, the Hinayana (also known as Theravada) branch does not worship idols, does not believe in Buddha's rebirth, uses the Pali language, and is prevalent in Sri Lanka, Cambodia, and South India.",
+    "correctIndex": 2
+  },
+  {
+    "id": 19,
+    "question_bn": "বর্ধমান মহাবীর কত বছর বয়সে এবং কোন গাছের নিচে \"কৈবল্য\" বা পরম জ্ঞান লাভ করেন?",
+    "options_bn": [
+      "29 বছর বয়সে পিপ্পল গাছের নিচে।",
+      "35 বছর বয়সে বোধি বৃক্ষের নিচে।",
+      "42 বছর বয়সে শাল গাছের নিচে।",
+      "72 বছর বয়সে বট গাছের নিচে।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে যে, বর্ধমান মহাবীর 42 বছর বয়সে জাম্ভিকাগ্রামে ঋজুপালিকা নদীর তীরে একটি শাল গাছের নিচে কৈবল্য লাভ করেছিলেন।",
+    "question_en": "At what age and under which tree did Vardhamana Mahavira attain \"Kaivalya\" or supreme knowledge?",
+    "options_en": [
+      "At the age of 29 under a Peepal tree.",
+      "At the age of 35 under a Bodhi tree.",
+      "At the age of 42 under a Sal tree.",
+      "At the age of 72 under a Banyan tree."
+    ],
+    "explanation_en": "The document states that Vardhamana Mahavira attained Kaivalya at the age of 42 under a Sal tree on the banks of the Rijupalika river in Jambhikagrama.",
+    "correctIndex": 2
+  },
+  {
+    "id": 20,
+    "question_bn": "গৌতম বুদ্ধ তাঁর প্রথম ধর্মোপদেশ কোথায় দিয়েছিলেন, যে ঘটনাটিকে \"ধর্মচক্রপ্রবর্তন\" বলা হয়?",
+    "options_bn": [
+      "লুম্বিনী",
+      "বোধগয়া",
+      "কুশিনগর",
+      "সারনাথ, বারাণসী"
+    ],
+    "explanation_bn": "নথির তথ্য অনুযায়ী, গৌতম বুদ্ধ তাঁর প্রথম প্রবচন সারনাথে (বারাণসী) দিয়েছিলেন। বৌদ্ধধর্মে এই ঘটনাকে ধর্মচক্রপ্রবর্তন বলা হয়।",
+    "question_en": "Where did Gautama Buddha deliver his first sermon, an event known as \"Dharmachakrapravartana\"?",
+    "options_en": [
+      "Lumbini",
+      "Bodh Gaya",
+      "Kushinagar",
+      "Sarnath, Varanasi"
+    ],
+    "explanation_en": "According to the information in the document, Gautama Buddha delivered his first sermon at Sarnath (Varanasi). In Buddhism, this event is called Dharmachakrapravartana.",
+    "correctIndex": 3
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
