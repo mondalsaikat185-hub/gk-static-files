@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "একজন ভূতাত্ত্বিক একটি সাম্প্রতিক জীবাশ্মের (যার বয়স আনুমানিক 30,000 বছর) বয়স নির্ধারণ করতে চান এবং মাঝারি বয়সের একটি আগ্নেয় শিলারও বয়স যাচাই করতে চান। নথি অনুসারে, তার যথাক্রমে কোন দুটি ডেটিং পদ্ধতি ব্যবহার করা উচিত?",
+    "options_bn": [
+      "ইউরেনিয়াম-সীসা (Uranium-Lead) এবং রুবিডিয়াম-স্ট্রনশিয়াম (Rubidium-Strontium)",
+      "রেডিওকার্বন (Radiocarbon/C14) এবং পটাসিয়াম-আর্গন (Potassium-Argon)",
+      "ক্লোরিন-36 (Chlorine-36) এবং পটাসিয়াম-আর্গন (Potassium-Argon)",
+      "রেডিওকার্বন (Radiocarbon/C14) এবং ইউরেনিয়াম-সীসা (Uranium-Lead)"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে যে 50,000 বছর পর্যন্ত সাম্প্রতিক জীবাশ্মের বয়স নির্ধারণে রেডিওকার্বন (C14) পদ্ধতি এবং মাঝারি বয়সের আগ্নেয় শিলার জন্য পটাসিয়াম-আর্গন পদ্ধতি ব্যবহার করা হয়।",
+    "question_en": "A geologist wants to determine the age of a recent fossil (estimated to be around 30,000 years old) and also verify the age of a medium-aged igneous rock. According to the document, which two dating methods should be used respectively?",
+    "options_en": [
+      "Uranium-Lead and Rubidium-Strontium",
+      "Radiocarbon (C14) and Potassium-Argon",
+      "Chlorine-36 and Potassium-Argon",
+      "Radiocarbon (C14) and Uranium-Lead"
+    ],
+    "explanation_en": "The document explicitly states that the Radiocarbon (C14) method is used for recent fossils up to 50,000 years old, and the Potassium-Argon method is effective for medium-aged igneous rocks.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "বিষুবরেখায় দাঁড়িয়ে থাকা ব্যক্তির তুলনায় উত্তর মেরুতে দাঁড়িয়ে থাকা একজন ব্যক্তি পৃথিবীর কেন্দ্রের কিছুটা বেশি কাছে থাকেন কেন?",
+    "options_bn": [
+      "কারণ মেরু অঞ্চলে মাধ্যাকর্ষণ বল বিষুবরেখার তুলনায় বেশি শক্তিশালী।",
+      "কারণ উপবৃত্তাকার কক্ষপথে পৃথিবীর পরিক্রমণ দুই মেরুকে ভেতরের দিকে টেনে নেয়।",
+      "কারণ পৃথিবীর আবর্তনের ফলে সৃষ্ট কেন্দ্রাতিগ বলের (Centrifugal Force) কারণে বিষুবরেখা ফুলে গেছে এবং মেরু চাপা হয়েছে।",
+      "কারণ মাউন্ট চিম্বোরাজো বিষুবরেখায় অবস্থিত, যা সামগ্রিক ব্যাসার্ধকে বাড়িয়ে দেয়।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, পৃথিবীর আবর্তনের কারণে সৃষ্ট কেন্দ্রাতিগ বল (Centrifugal Force) মাঝখানকে (বিষুবরেখাকে) ফুলিয়ে দিয়েছে এবং মেরুগুলো চাপা হয়েছে। তাই মেরুর ব্যাসার্ধ (6357 কিমি) বিষুবীয় ব্যাসার্ধের (6378 কিমি) চেয়ে কম।",
+    "question_en": "Why is a person standing at the North Pole slightly closer to the center of the Earth compared to a person standing at the Equator?",
+    "options_en": [
+      "Because the gravitational pull at the poles is stronger than at the equator.",
+      "Because the Earth's revolution in an elliptical orbit pulls the poles inward.",
+      "Because the centrifugal force generated by the Earth's rotation causes the equator to bulge and the poles to flatten.",
+      "Because Mount Chimborazo is located at the equator, which increases the overall radius."
+    ],
+    "explanation_en": "The document states that the centrifugal force caused by the Earth's rotation has made the equator bulge out and the poles flatten. Therefore, the polar radius (6357 km) is smaller than the equatorial radius (6378 km).",
+    "correctIndex": 2
+  },
+  {
+    "id": 3,
+    "question_bn": "পৃথিবীতে মোট অক্ষাংশ রেখার সংখ্যা 181টি হলেও, অক্ষাংশ বৃত্তের (Latitudinal Circles) সংখ্যা ঠিক 179টি হওয়ার কারণ কী?",
+    "options_bn": [
+      "কারণ বিষুবরেখাকে একটি 'মহান বৃত্ত' হিসেবে ধরা হয় এবং সাধারণ অক্ষাংশের অন্তর্ভুক্ত করা হয় না।",
+      "কারণ 90 ডিগ্রি উত্তর এবং 90 ডিগ্রি দক্ষিণ হলো কেবল দুটি বিন্দু, এগুলো কোনো বৃত্ত তৈরি করে না।",
+      "কারণ সুমেরু এবং কুমেরু বৃত্তকে সম্পূর্ণ বৃত্ত হিসেবে গণনা করা হয় না যেহেতু সেখানে 6 মাস দিন ও রাত থাকে।",
+      "কারণ কর্কটক্রান্তি এবং মকরক্রান্তি রেখা উষ্ণমণ্ডলের সীমানার সাথে মিশে যায়।"
+    ],
+    "explanation_bn": "নথি অনুসারে, 90 ডিগ্রি উত্তর (উত্তর মেরু) এবং 90 ডিগ্রি দক্ষিণ (দক্ষিণ মেরু) হলো কেবল বিন্দু, কোনো বৃত্ত নয়। তাই মোট 181টি রেখার মধ্যে বৃত্তের সংখ্যা 179টি।",
+    "question_en": "While the total number of latitude lines on Earth is 181, why is the number of Latitudinal Circles exactly 179?",
+    "options_en": [
+      "Because the Equator is considered a 'Great Circle' and is not included as a regular latitude.",
+      "Because 90 degrees North and 90 degrees South are merely points and do not form circles.",
+      "Because the Arctic and Antarctic circles are not counted as full circles since they experience 6 months of day and night.",
+      "Because the Tropics of Cancer and Capricorn overlap with the boundaries of the Torrid Zone."
+    ],
+    "explanation_en": "According to the document, 90 degrees North (North Pole) and 90 degrees South (South Pole) are merely points, not circles. Therefore, out of 181 latitude lines, there are 179 circles.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "যদি 60 ডিগ্রি পূর্ব দেশান্তরে দুপুর 12:00 টা বাজে, তবে 30 ডিগ্রি পূর্ব দেশান্তরে স্থানীয় সময় কত হবে?",
+    "options_bn": [
+      "সকাল 10:00 টা",
+      "দুপুর 2:00 টা",
+      "সকাল 8:00 টা",
+      "বিকেল 4:00 টা"
+    ],
+    "explanation_bn": "দুটি দেশান্তরের মধ্যে পার্থক্য হলো 60 - 30 = 30 ডিগ্রি। 1 ডিগ্রি = 4 মিনিট, তাই 30 ডিগ্রি = 120 মিনিট বা 2 ঘণ্টা। যেহেতু 30 ডিগ্রি পূর্ব স্থানটি 60 ডিগ্রি পূর্বের পশ্চিমে অবস্থিত, তাই সময় 2 ঘণ্টা পিছিয়ে যাবে (12 - 2 = সকাল 10:00 টা)।",
+    "question_en": "If it is 12:00 PM (noon) at 60 degrees East longitude, what will be the local time at 30 degrees East longitude?",
+    "options_en": [
+      "10:00 AM",
+      "2:00 PM",
+      "8:00 AM",
+      "4:00 PM"
+    ],
+    "explanation_en": "The difference between the two longitudes is 60 - 30 = 30 degrees. Since 1 degree = 4 minutes, 30 degrees = 120 minutes or 2 hours. Because 30 degrees East is to the west of 60 degrees East, the time must be subtracted by 2 hours (12 - 2 = 10:00 AM).",
+    "correctIndex": 0
+  },
+  {
+    "id": 5,
+    "question_bn": "নথি অনুযায়ী, আন্তর্জাতিক তারিখ রেখা (International Date Line) অতিক্রম করার সময় পশ্চিম থেকে পূর্বে (West to East) গেলে তারিখ ও দিনের কী পরিবর্তন হয়?",
+    "options_bn": [
+      "একটি দিন ক্ষতি (Day Lose) হয় এবং তারিখ বেড়ে যায়।",
+      "একটি দিন লাভ (Day Gain) হয় কিন্তু তারিখ কমে যায় (Date Loss)।",
+      "দিন এবং তারিখের কোনো পরিবর্তন হয় না কারণ রেখাটি জিগজ্যাগ।",
+      "একটি দিন ক্ষতি হয় এবং তারিখও কমে যায়।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্ট বলা আছে, পশ্চিম থেকে পূর্বে (West to East) আন্তর্জাতিক তারিখ রেখা পার করলে একটি দিন লাভ (Day Gain) হয় কিন্তু তারিখ কমে (Date Loss)।",
+    "question_en": "According to the document, what happens to the date and day when crossing the International Date Line from West to East?",
+    "options_en": [
+      "A day is lost and the date increases.",
+      "A day is gained but the date decreases (Date Loss).",
+      "Both the day and date remain the same because the line is zigzag.",
+      "A day is lost and the date decreases."
+    ],
+    "explanation_en": "The document explicitly states that traveling from West to East across the International Date Line results in a Day Gain but a Date Loss.",
+    "correctIndex": 1
+  },
+  {
+    "id": 6,
+    "question_bn": "মহান বৃত্ত (Great Circle) সম্পর্কে প্রদত্ত নথির ভিত্তিতে নিচের কোন বিবৃতিটি সঠিক?",
+    "options_bn": [
+      "সমস্ত অক্ষাংশ এবং দেশান্তর রেখাই হলো মহান বৃত্ত।",
+      "শুধুমাত্র বিষুবরেখা, কর্কটক্রান্তি এবং মকরক্রান্তি রেখা হলো মহান বৃত্ত।",
+      "সমস্ত দেশান্তর রেখাই মহান বৃত্ত, কিন্তু অক্ষাংশ রেখাগুলোর মধ্যে শুধুমাত্র বিষুবরেখাই মহান বৃত্ত।",
+      "কোনো দেশান্তর রেখাই মহান বৃত্ত নয়; কেবল প্রাইম মেরিডিয়ানই মহান বৃত্ত।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ করা হয়েছে যে সব দেশান্তর রেখা মহান বৃত্ত, কিন্তু অক্ষাংশ রেখাগুলোর মধ্যে শুধু বিষুবরেখাই মহান বৃত্ত।",
+    "question_en": "Based on the provided document, which of the following statements about Great Circles is true?",
+    "options_en": [
+      "All latitudinal and longitudinal lines are Great Circles.",
+      "Only the Equator, Tropic of Cancer, and Tropic of Capricorn are Great Circles.",
+      "All longitudinal lines are Great Circles, but among latitudinal lines, only the Equator is a Great Circle.",
+      "No longitudinal lines are Great Circles; only the Prime Meridian is a Great Circle."
+    ],
+    "explanation_en": "The document clearly states that all longitude lines are Great Circles, but among latitude lines, only the Equator is a Great Circle.",
+    "correctIndex": 2
+  },
+  {
+    "id": 7,
+    "question_bn": "পৃথিবীর কক্ষপথ উপবৃত্তাকার হওয়ায় 3রা জানুয়ারি পৃথিবী সূর্যের সবচেয়ে কাছে (Perihelion) থাকে। তা সত্ত্বেও ওই সময়ে ভারতে শীতকাল বিরাজ করে। নথির তথ্য অনুযায়ী এই বৈপরীত্যের কারণ কী?",
+    "options_bn": [
+      "ভারত বিষুবরেখার কাছাকাছি অবস্থিত হওয়ায় দূরত্বের প্রভাব উল্টো হয়।",
+      "এই সময়ে দক্ষিণ গোলার্ধ সূর্যের দিকে হেলানো থাকে এবং মকরক্রান্তি রেখার ওপর সূর্যের সরাসরি কিরণ পড়ে।",
+      "পেরিহেলিয়ন অবস্থানে পৃথিবীর কক্ষীয় বেগ সর্বাধিক থাকে, যা উত্তর গোলার্ধকে শীতল করে দেয়।",
+      "পৃথিবীর কেন্দ্রাতিগ বলের কারণে উত্তর মেরু থেকে শীতল বাতাস ভারতে প্রবেশ করে।"
+    ],
+    "explanation_bn": "ঋতু পরিবর্তন দূরত্বের ওপর নয়, বরং অক্ষের হেলনের ওপর নির্ভর করে। জানুয়ারিতে দক্ষিণ গোলার্ধ সূর্যের দিকে হেলে থাকায় সেখানে গ্রীষ্মকাল হয় এবং উত্তর গোলার্ধে (যেখানে ভারত অবস্থিত) শীতকাল হয়।",
+    "question_en": "Because the Earth's orbit is elliptical, it is closest to the Sun (Perihelion) on January 3. Despite this, India experiences winter at this time. According to the document, what is the reason for this paradox?",
+    "options_en": [
+      "India is located near the Equator, where the effect of distance is reversed.",
+      "At this time, the Southern Hemisphere is tilted towards the Sun, and direct solar rays fall on the Tropic of Capricorn.",
+      "The orbital speed of the Earth is at its maximum at Perihelion, which cools down the Northern Hemisphere.",
+      "The centrifugal force pushes cold winds from the North Pole into India."
+    ],
+    "explanation_en": "Seasons depend on the tilt of the Earth's axis, not its distance from the Sun. In January, the Southern Hemisphere is tilted towards the Sun causing summer there, while the Northern Hemisphere (where India is located) experiences winter.",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_bn": "যদি পৃথিবীর অক্ষ তার কক্ষীয় সমতলের সাথে 23.5 ডিগ্রি কোণে হেলে না থেকে সম্পূর্ণ সোজা (0 ডিগ্রি হেলন) থাকত, তবে প্রধান পরিণতি কী হতো?",
+    "options_bn": [
+      "একটি সৌর দিনের সময়কাল বেড়ে 365 দিন হয়ে যেত।",
+      "পৃথিবীতে কোনো ঋতু পরিবর্তন হতো না এবং সারাবছর একই তাপমাত্রা থাকত।",
+      "পৃথিবী সূর্যের চারদিকে পরিক্রমণ করা বন্ধ করে দিত এবং শুধুমাত্র নিজের অক্ষে আবর্তন করত।",
+      "বিষুবরেখায় দিন ও রাতের দৈর্ঘ্যের পার্থক্য 6 ঘণ্টা হয়ে যেত।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, পৃথিবীর অক্ষের হেলনই ঋতু পরিবর্তনের মূল কারণ। অক্ষ হেলানো না থাকলে কোনো ঋতু থাকত না এবং সারা বছর একই তাপমাত্রা থাকত।",
+    "question_en": "If the Earth's axis were completely perpendicular (0 degree tilt) instead of being tilted at 23.5 degrees to its orbital plane, what would be the primary consequence?",
+    "options_en": [
+      "The duration of a solar day would increase to 365 days.",
+      "There would be no change of seasons on Earth, and the temperature would remain the same all year round.",
+      "The Earth would stop revolving around the Sun and only rotate on its axis.",
+      "The difference in length between day and night at the equator would become 6 hours."
+    ],
+    "explanation_en": "The document states that the tilt of the Earth's axis is the main reason for the change of seasons. If the axis were not tilted, there would be no seasons and the temperature would remain the same throughout the year.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "নাক্ষত্রিক দিন' (Sidereal Day)-এর সঠিক সময়কাল নথিতে কত উল্লেখ করা হয়েছে?",
+    "options_bn": [
+      "ঠিক 24 ঘণ্টা",
+      "23 ঘণ্টা 56 মিনিট 4 সেকেন্ড",
+      "365 দিন 6 ঘণ্টা",
+      "9 ঘণ্টা 55 মিনিট"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে পৃথিবী তার নিজের অক্ষের চারপাশে একটি সম্পূর্ণ আবর্তন সম্পন্ন করতে 23 ঘণ্টা 56 মিনিট 4 সেকেন্ড সময় নেয়, যাকে 'নাক্ষত্রিক দিন' বলা হয়।",
+    "question_en": "What is the exact duration of a 'Sidereal Day' as mentioned in the document?",
+    "options_en": [
+      "Exactly 24 hours",
+      "23 hours 56 minutes 4 seconds",
+      "365 days 6 hours",
+      "9 hours 55 minutes"
+    ],
+    "explanation_en": "The document states that the Earth takes 23 hours 56 minutes 4 seconds to complete one rotation around its axis, which is called a 'Sidereal Day'.",
+    "correctIndex": 1
+  },
+  {
+    "id": 10,
+    "question_bn": "‘Equinox’ বা বিষুব-এর প্রধান বৈশিষ্ট্য কী?",
+    "options_bn": [
+      "সূর্যের কিরণ সরাসরি কর্কটক্রান্তি রেখায় পড়ে, যা দীর্ঘতম দিন তৈরি করে।",
+      "উপবৃত্তাকার কক্ষপথে পৃথিবী সূর্য থেকে সবচেয়ে দূরে অবস্থান করে।",
+      "সূর্যের সরাসরি কিরণ বিষুবরেখায় পড়ে, যার ফলে সারা পৃথিবীতে দিন ও রাত সমান হয়।",
+      "চাঁদ ঠিক পৃথিবী ও সূর্যের মাঝখানে অবস্থান করে।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, ইকুইনক্স (Equinox) হলো সেই দিন যেদিন বিষুবরেখায় সূর্যের সরাসরি কিরণ পড়ে, যার ফলে সারা পৃথিবীতে দিন ও রাত সমান (12 ঘণ্টা করে) হয়।",
+    "question_en": "What is the main characteristic of an 'Equinox'?",
+    "options_en": [
+      "The sun's rays fall directly on the Tropic of Cancer, creating the longest day.",
+      "The Earth is at its farthest point from the Sun in its elliptical orbit.",
+      "The direct rays of the sun fall on the Equator, resulting in equal days and nights all over the world.",
+      "The moon is positioned exactly between the Earth and the Sun."
+    ],
+    "explanation_en": "The document explains that an Equinox is the day when the direct rays of the sun fall on the Equator, causing day and night to be equal (12 hours each) all over the world.",
+    "correctIndex": 2
+  },
+  {
+    "id": 11,
+    "question_bn": "আমরা পৃথিবী থেকে সব সময় চাঁদের একই দিক দেখতে পাই এবং অপর দিকটি (Far Side) অদৃশ্য থাকে কেন?",
+    "options_bn": [
+      "কারণ চাঁদ নিজের অক্ষের চারপাশে ঘোরে না, এটি কেবল পৃথিবীর চারপাশে ঘোরে।",
+      "কারণ পৃথিবীর মহাকর্ষীয় বল চাঁদের আবর্তনকে সম্পূর্ণভাবে আটকে দেয়।",
+      "কারণ চাঁদের আবর্তন এবং পরিক্রমণ কাল একই (27 দিন)।",
+      "কারণ চাঁদের কক্ষপথ পৃথিবীর বিষুবরেখার সাথে 90 ডিগ্রি কোণে অবস্থিত।"
+    ],
+    "explanation_bn": "নথিতে পরিষ্কার বলা হয়েছে যে চাঁদের একটি আবর্তন ও পরিক্রমণ কাল একই (27 দিন)। এই কারণেই পৃথিবী থেকে চাঁদের সবসময় একই পিঠ দেখা যায়।",
+    "question_en": "Why do we always see the exact same side of the Moon from Earth, leaving the 'Far Side' hidden?",
+    "options_en": [
+      "Because the Moon does not rotate on its own axis; it only revolves around the Earth.",
+      "Because the Earth's gravitational pull completely locks the Moon's rotation.",
+      "Because the Moon's time of rotation and revolution are exactly the same (27 days).",
+      "Because the Moon's orbit is located at a 90-degree angle to the Earth's equator."
+    ],
+    "explanation_en": "The document clearly states that the Moon's rotation and revolution times are the same (27 days). This is the reason why the same side of the Moon is always visible from Earth.",
+    "correctIndex": 2
+  },
+  {
+    "id": 12,
+    "question_bn": "সম্পূর্ণ সূর্যগ্রহণের (Total Solar Eclipse) পরিবর্তে বলয় সূর্যগ্রহণ (Annular Solar Eclipse) ঘটার নির্দিষ্ট কারণ কোনটি?",
+    "options_bn": [
+      "যখন পৃথিবী পেরিহেলিয়নে থাকে এবং চাঁদ পেরিজিতে থাকে।",
+      "যখন চাঁদ অ্যাপোজিতে (পৃথিবী থেকে দূরে) থাকে, তাই চাঁদকে ছোট দেখায় এবং এটি সূর্যকে সম্পূর্ণ ঢাকতে পারে না।",
+      "যখন চাঁদ পূর্ণিমা দশায় থাকে এবং পৃথিবীর উম্ব্রা (Umbra) ছায়ার সাথে পুরোপুরি সারিবদ্ধ হয়।",
+      "যখন সূর্যের আলো পৃথিবীর বায়ুমণ্ডলের ভেতর দিয়ে বেঁকে গিয়ে একটি লাল বলয় তৈরি করে।"
+    ],
+    "explanation_bn": "নথির তালিকা অনুযায়ী, চাঁদ যখন পৃথিবীর দূরে (Apogee) থাকে, তখন এটি সূর্যকে পুরোপুরি ঢাকতে পারে না। ফলে চারদিকে আগুনের বলয় দেখা যায়, যাকে বলয় সূর্যগ্রহণ বলে।",
+    "question_en": "What is the specific reason for an Annular Solar Eclipse occurring instead of a Total Solar Eclipse?",
+    "options_en": [
+      "When the Earth is at Perihelion and the Moon is at Perigee.",
+      "When the Moon is at Apogee (far from Earth), making it appear smaller and unable to cover the Sun completely.",
+      "When the Moon is in its Full Moon phase and perfectly aligns with the Earth's umbra.",
+      "When sunlight bends through the Earth's atmosphere, creating a red ring."
+    ],
+    "explanation_en": "According to the document's table, when the Moon is at Apogee (far away), it cannot cover the Sun completely. As a result, a ring of fire is seen around it, which is called an Annular Solar Eclipse.",
+    "correctIndex": 1
+  },
+  {
+    "id": 13,
+    "question_bn": "চন্দ্রগ্রহণের সময় চাঁদ সম্পূর্ণ অন্ধকার না হয়ে লালচে (Blood Moon) দেখায়। এর পেছনে বৈজ্ঞানিক কারণ কী?",
+    "options_bn": [
+      "চাঁদের পৃষ্ঠ মঙ্গল গ্রহের বায়ুমণ্ডল থেকে আসা লাল ধূলিকণা প্রতিফলিত করে।",
+      "পৃথিবীর বায়ুমণ্ডল সূর্যের আলোকে বাঁক দেয় (Refraction), নীল আলো ছড়িয়ে পড়ে এবং লাল আলো চাঁদে পৌঁছায়।",
+      "পৃথিবী সূর্যের সম্পূর্ণ ছায়া (Umbra) আটকে দেয়, শুধু আংশিক ছায়া (Penumbra) বাকি থাকে যার রং লাল।",
+      "সরাসরি সূর্যের আলো না পেলে চাঁদের পৃষ্ঠে থাকা তেজস্ক্রিয় পদার্থ লাল আভা বিকিরণ করে।"
+    ],
+    "explanation_bn": "চন্দ্রগ্রহণের সময় চাঁদ লালচে দেখায় কারণ পৃথিবীর বায়ুমণ্ডল সূর্যের আলোকে বাঁক দেয় (Refraction)। এর ফলে নীল আলো বেশি ছড়িয়ে পড়ে এবং কেবল লাল আলো চাঁদে পৌঁছায়।",
+    "question_en": "During a Lunar Eclipse, the Moon does not become completely dark but instead appears reddish (Blood Moon). What is the scientific reason behind this?",
+    "options_en": [
+      "The lunar surface reflects red dust coming from the Martian atmosphere.",
+      "The Earth's atmosphere refracts sunlight, scattering the blue light and allowing the red light to reach the Moon.",
+      "The Earth completely blocks the Sun's umbra, leaving only the penumbra which is inherently red.",
+      "Radioactive materials on the Moon's surface glow red when cut off from direct sunlight."
+    ],
+    "explanation_en": "During a lunar eclipse, the Moon looks reddish because the Earth's atmosphere bends (refracts) sunlight. As a result, blue light scatters more, and only red light reaches the Moon.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "চাঁদের মহাকর্ষ বলের কারণে পৃথিবীর যে দিকে চাঁদ আছে সেখানে জোয়ার (High Tide) হয়, কিন্তু ঠিক একই সময়ে পৃথিবীর বিপরীত দিকে জোয়ার হওয়ার কারণ কী?",
+    "options_bn": [
+      "সূর্যের মহাকর্ষ বল।",
+      "পৃথিবীর আবর্তনের ফলে সৃষ্ট কেন্দ্রাতিগ বল (Centrifugal Force)।",
+      "কোরিওলিস বল যা জলকে বিষুবরেখা থেকে দূরে সরিয়ে দেয়।",
+      "পৃথিবীর চৌম্বকীয় ক্ষেত্র জলকে বিকর্ষণ করে।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে পৃথিবীর যে দিকে চাঁদ থাকে সেখানে চাঁদের মহাকর্ষের কারণে জোয়ার হয় এবং ঠিক বিপরীত দিকে কেন্দ্রাতিগ বলের (Centrifugal Force) কারণে জোয়ার হয়।",
+    "question_en": "While the Moon's gravitational pull causes a High Tide on the side of the Earth facing the Moon, what causes the High Tide on the exactly opposite side of the Earth at the same time?",
+    "options_en": [
+      "The gravitational pull of the Sun.",
+      "The centrifugal force generated by the Earth's rotation.",
+      "The Coriolis force pushing water away from the equator.",
+      "The magnetic field of the Earth repelling the water."
+    ],
+    "explanation_en": "The document states that a high tide occurs on the side facing the moon due to lunar gravity, and a high tide occurs on the exact opposite side due to the centrifugal force.",
+    "correctIndex": 1
+  },
+  {
+    "id": 15,
+    "question_bn": "মড় জোয়ার বা Neap Tide (যেখানে জোয়ার ও ভাটার পার্থক্য সর্বনিম্ন থাকে) কখন ঘটে?",
+    "options_bn": [
+      "পূর্ণিমার সময় যখন সূর্য, পৃথিবী এবং চাঁদ একটি সরল রেখায় থাকে।",
+      "যখন চাঁদ পেরিজিতে থাকে এবং পৃথিবী অ্যাপেলিয়নে থাকে।",
+      "প্রথম বা তৃতীয় শুক্লপক্ষে, যখন সূর্য এবং চাঁদ পৃথিবীর সাপেক্ষে 90 ডিগ্রি কোণে থাকে।",
+      "অমাবস্যার সময় যখন চাঁদের মহাকর্ষ বল সূর্যের মহাকর্ষ বল দ্বারা বাতিল হয়ে যায়।"
+    ],
+    "explanation_bn": "নথির তথ্য অনুযায়ী, Neap Tide বা ক্ষুদ্র জোয়ার তখন হয় যখন সূর্য ও চাঁদ পৃথিবীর সাপেক্ষে 90 ডিগ্রি কোণে থাকে (প্রথম শুক্লপক্ষ ও তৃতীয় কৃষ্ণপক্ষে)। এই সময় তারা একে অপরের বিরুদ্ধে টানে।",
+    "question_en": "When does a Neap Tide (where the difference between high and low tide is the lowest) occur?",
+    "options_en": [
+      "During a Full Moon when the Sun, Earth, and Moon are in a straight line.",
+      "When the Moon is at Perigee and the Earth is at Aphelion.",
+      "During the first or third quarter moon, when the Sun and Moon are at a 90-degree angle relative to the Earth.",
+      "During a New Moon when the moon's gravity is canceled by the Sun's gravity."
+    ],
+    "explanation_en": "According to the document, a Neap Tide occurs when the Sun and Moon are at a 90-degree angle relative to Earth (during the first or third quarter). At this time, they pull against each other.",
+    "correctIndex": 2
+  },
+  {
+    "id": 16,
+    "question_bn": "ভারতে গুজরাটের কচ্ছ উপসাগর (Gulf of Kutch) এবং খাম্বাত উপসাগরে (Gulf of Khambhat) সর্বাধিক জোয়ার শক্তি (Tidal Energy) উৎপাদনের সম্ভাবনা থাকার মূল কারণ কী?",
+    "options_bn": [
+      "কারণ এগুলো বিষুবরেখায় অবস্থিত যেখানে কেন্দ্রাতিগ বল সবচেয়ে বেশি।",
+      "কারণ এই উপসাগরগুলোর ফানেল আকৃতির জন্য জল ভেতরে ঢুকলে সংকুচিত হয়ে উপরের দিকে উঠে আসে।",
+      "কারণ ভারত মহাসাগরের ওপর চাঁদের মহাকর্ষ বল বিশেষভাবে শক্তিশালী।",
+      "কারণ পৃথিবীর 23.5 ডিগ্রি হেলনের জন্য সেখানে প্রতিদিন Spring Tide হয়।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, এই উপসাগরগুলোর ফানেল আকৃতির কারণে ফানেলের মুখে জল ঢুকলে সংকুচিত হয়ে উপরে উঠে আসে। তাই এখানে জোয়ার-ভাটার পার্থক্য এবং জোয়ার শক্তির সম্ভাবনা সর্বাধিক।",
+    "question_en": "What is the main reason why the Gulf of Kutch and Gulf of Khambhat in Gujarat, India, have the maximum potential for generating Tidal Energy?",
+    "options_en": [
+      "Because they are located on the equator where the centrifugal force is maximum.",
+      "Because of their funnel shape, which compresses the entering water and forces it upwards.",
+      "Because the Moon's gravitational pull is specifically stronger over the Indian Ocean.",
+      "Because they experience a Spring Tide every day due to the Earth's 23.5-degree tilt."
+    ],
+    "explanation_en": "The document states that due to the funnel shape of these gulfs, when water enters, it gets compressed and rises up. This causes maximum difference in tides, offering the highest potential for tidal energy.",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_bn": "নথি অনুযায়ী সৌরজগতের কোন গ্রহের কক্ষীয় বেগ (Orbital Speed) সবচেয়ে বেশি?",
+    "options_bn": [
+      "বৃহস্পতি (Jupiter)",
+      "ইউরেনাস (Uranus)",
+      "বুধ (Mercury)",
+      "নেপচুন (Neptune)"
+    ],
+    "explanation_bn": "পরিক্রমণ অধ্যায়ে স্পষ্ট বলা হয়েছে যে সৌরজগতে সবচেয়ে বেশি কক্ষীয় বেগ (Orbital Speed) বুধের (Mercury) এবং সবচেয়ে কম নেপচুনের।",
+    "question_en": "According to the document, which planet in the solar system has the highest orbital speed?",
+    "options_en": [
+      "Jupiter",
+      "Uranus",
+      "Mercury",
+      "Neptune"
+    ],
+    "explanation_en": "In the revolution chapter, it is clearly stated that Mercury has the highest orbital speed in the solar system, while Neptune has the lowest.",
+    "correctIndex": 2
+  },
+  {
+    "id": 18,
+    "question_bn": "পৃথিবীর আবর্তনের অধ্যায়ে সৌরজগতের কোন গ্রহটিকে শুয়ে শুয়ে ঘোরার কারণে 'Rolling Planet' বলা হয়েছে?",
+    "options_bn": [
+      "বৃহস্পতি (Jupiter)",
+      "শুক্র (Venus)",
+      "ইউরেনাস (Uranus)",
+      "নেপচুন (Neptune)"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, সবচেয়ে অদ্ভুত গ্রহ হলো ইউরেনাস (Uranus) যা শুয়ে শুয়ে ঘোরে, তাই একে 'Rolling Planet' বলা হয়।",
+    "question_en": "In the chapter on Earth's rotation, which planet of the solar system is called the 'Rolling Planet' because it rotates on its side?",
+    "options_en": [
+      "Jupiter",
+      "Venus",
+      "Uranus",
+      "Neptune"
+    ],
+    "explanation_en": "The document mentions that the strangest planet is Uranus, which rotates on its side, making it known as the 'Rolling Planet'.",
+    "correctIndex": 2
+  },
+  {
+    "id": 19,
+    "question_bn": "প্রাইম মেরিডিয়ান (Prime Meridian) মোট 8টি দেশের ওপর দিয়ে যায়। নথিতে প্রদত্ত তথ্যের ভিত্তিতে নিচের কোন বিকল্পটিতে শুধুমাত্র সেই দেশগুলোর নাম রয়েছে?",
+    "options_bn": [
+      "যুক্তরাজ্য (UK), ফ্রান্স, জার্মানি, টোগো",
+      "স্পেন, আলজেরিয়া, মালি, বার্কিনা ফাসো",
+      "ফ্রান্স, ইতালি, ঘানা, মালি",
+      "যুক্তরাজ্য (UK), স্পেন, মিশর, আলজেরিয়া"
+    ],
+    "explanation_bn": "নথির তালিকা অনুযায়ী, প্রাইম মেরিডিয়ান যে 8টি দেশ দিয়ে যায় সেগুলি হলো যুক্তরাজ্য (UK), ফ্রান্স, স্পেন, আলজেরিয়া, মালি, বার্কিনা ফাসো, টোগো এবং ঘানা। তাই বিকল্প (B) সম্পূর্ণ সঠিক।",
+    "question_en": "The Prime Meridian passes through a total of 8 countries. Based on the information provided in the document, which of the following options contains only those countries?",
+    "options_en": [
+      "UK, France, Germany, Togo",
+      "Spain, Algeria, Mali, Burkina Faso",
+      "France, Italy, Ghana, Mali",
+      "UK, Spain, Egypt, Algeria"
+    ],
+    "explanation_en": "According to the document's list, the 8 countries the Prime Meridian passes through are UK, France, Spain, Algeria, Mali, Burkina Faso, Togo, and Ghana. Therefore, option (B) is completely correct.",
+    "correctIndex": 1
+  },
+  {
+    "id": 20,
+    "question_bn": "পৃথিবীর 4.5 বিলিয়ন বছরের বয়স বোঝাতে নথিতে একটি চমকপ্রদ তুলনা দেওয়া হয়েছে। যদি পৃথিবীর সম্পূর্ণ ইতিহাসকে 1 বছরের মধ্যে সংকুচিত করা হয়, তবে মানুষের আগমন ঠিক কখন ঘটেছিল?",
+    "options_bn": [
+      "31শে ডিসেম্বর রাত 11:59 মিনিটে",
+      "31শে ডিসেম্বর রাত 11:30 মিনিটে",
+      "1লা ডিসেম্বর রাত 12:00 টায়",
+      "1লা জানুয়ারি রাত 11:30 মিনিটে"
+    ],
+    "explanation_bn": "নথির \"চমকপ্রদ তথ্য\" অংশে বলা হয়েছে যে পৃথিবীর বয়স 4.5 বিলিয়ন বছরকে এক বছরের মধ্যে রাখলে মানুষ পৃথিবীতে এসেছে মাত্র 31শে ডিসেম্বর রাত 11টা 30 মিনিটে।",
+    "question_en": "The document gives a fascinating comparison to explain the Earth's 4.5 billion years of age. If the entire history of the Earth were compressed into 1 year, at what exact time did humans appear?",
+    "options_en": [
+      "December 31 at 11:59 PM",
+      "December 31 at 11:30 PM",
+      "December 1 at 12:00 AM",
+      "January 1 at 11:30 PM"
+    ],
+    "explanation_en": "The \"amazing fact\" section of the document states that if the Earth's 4.5 billion-year age is scaled to a single year, humans arrived on Earth on December 31 at exactly 11:30 PM.",
+    "correctIndex": 1
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
