@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 600, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "হরপ্পা বা সিন্ধু সভ্যতাকে কেন 'আদি-ঐতিহাসিক' (Proto-historic) যুগ হিসেবে শ্রেণীবদ্ধ করা হয়েছে, 'প্রাগৈতিহাসিক' (Pre-historic) বা 'ঐতিহাসিক' (Historic) যুগ হিসেবে নয়?",
+    "options_bn": [
+      "কারণ এই যুগে মানুষ ধাতু ব্যবহার করতে শিখেছিল কিন্তু কৃষিকাজ জানত না।",
+      "কারণ এই যুগে লিখিত প্রমাণের অস্তিত্ব রয়েছে, কিন্তু সেই লিপি আজও পাঠোদ্ধার করা সম্ভব হয়নি।",
+      "কারণ এই সভ্যতার কোনো প্রত্নতাত্ত্বিক প্রমাণ পাওয়া যায়নি, কেবল লিখিত দলিল রয়েছে।",
+      "কারণ এই যুগে পাথরের হাতিয়ারের পাশাপাশি প্রথম লোহার ব্যবহার শুরু হয়েছিল।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে যে আদি-ঐতিহাসিক (Proto-historic) যুগে লিখিত প্রমাণ থাকে কিন্তু তা পড়া যায় না। হরপ্পা সভ্যতার লিপি আজও রহস্যময় এবং পড়া যায়নি, তাই এটি এই পর্যায়ে পড়ে।",
+    "question_en": "Why is the Harappan or Indus Valley Civilization classified as the 'Proto-historic' age, rather than the 'Pre-historic' or 'Historic' age?",
+    "options_en": [
+      "Because in this age, people learned to use metals but did not know agriculture.",
+      "Because written evidence exists in this age, but the script remains undeciphered to this day.",
+      "Because no archaeological evidence of this civilization has been found, only written documents exist.",
+      "Because the first use of iron started alongside stone tools in this age."
+    ],
+    "explanation_en": "The document clearly states that in the Proto-historic age, written evidence is available but cannot be read. The script of the Harappan civilization remains mysterious and undeciphered, placing it in this category.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "পৃথিবীর ভূতাত্ত্বিক সময়কাল ও মানব বিবর্তনের সম্পর্ক বিবেচনা করে নিচের কোন তথ্যটি সঠিক?",
+    "options_bn": [
+      "প্লেইস্টোসিন (Pleistocene) স্তরটি ছিল উষ্ণ ও আর্দ্র, যেখানে মেসোলিথিক মানুষের বিকাশ ঘটেছিল।",
+      "হোলোসিন (Holocene) স্তরে বরফযুগ শুরু হয় এবং হোমো ইরেক্টাস প্রথম আগুন ব্যবহার করতে শেখে।",
+      "প্লেইস্টোসিন (Pleistocene) স্তরে বরফযুগ ছিল এবং এই ভয়ংকর ঠান্ডার মধ্যেই পুরাপ্রস্তর যুগের মানুষের বিকাশ ঘটেছিল।",
+      "হোলোসিন (Holocene) স্তর সম্পূর্ণ বরফে ঢাকা ছিল এবং এখানেই আধুনিক মানুষ বা হোমো স্যাপিয়েন্সের আবির্ভাব হয়।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, প্লেইস্টোসিন (Pleistocene) ছিল বরফযুগ, যেখানে প্রবল ঠান্ডার মধ্যে পুরাপ্রস্তর যুগের মানুষ বেঁচে থাকত। হোলোসিন (Holocene) হলো বরফযুগ শেষ হওয়ার পরের উষ্ণ সময়।",
+    "question_en": "Considering the relationship between the Earth's geological timescale and human evolution, which of the following statements is correct?",
+    "options_en": [
+      "The Pleistocene stage was warm and humid, where Mesolithic humans developed.",
+      "The Ice Age began in the Holocene stage, and Homo Erectus first learned to use fire.",
+      "The Pleistocene stage was the Ice Age, and Palaeolithic humans developed amidst this severe cold.",
+      "The Holocene stage was completely covered in ice, and modern humans or Homo Sapiens emerged here."
+    ],
+    "explanation_en": "According to the document, the Pleistocene was the Ice Age, where Palaeolithic humans survived in extreme cold. The Holocene is the warm period following the end of the Ice Age.",
+    "correctIndex": 2
+  },
+  {
+    "id": 3,
+    "question_bn": "ভারতের পুরাপ্রস্তর যুগের প্রত্নতাত্ত্বিক সাইটগুলির মধ্যে মহারাষ্ট্রের 'পাটনে' (Patne) সাইটটি কেন বিশেষভাবে তাৎপর্যপূর্ণ?",
+    "options_bn": [
+      "এখানে ভারতের প্রাচীনতম শিলাচিত্র আবিষ্কৃত হয়েছে।",
+      "এখানে প্রথমবার উটপাখির (Ostrich) অস্তিত্বের প্রমাণ পাওয়া গেছে।",
+      "এখানে প্রথম হোমো স্যাপিয়েন্সের জীবাশ্ম আবিষ্কৃত হয়েছে।",
+      "এখানে গৃহপালিত কুকুরকে মানুষের সাথে কবর দেওয়ার প্রমাণ পাওয়া গেছে।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে মহারাষ্ট্রের পাটনে (Patne) সাইটটি উল্লেখযোগ্য কারণ এখানে ভারতে প্রথমবারের মতো উটপাখির (Ostrich) অস্তিত্বের প্রমাণ পাওয়া গেছে।",
+    "question_en": "Among the Palaeolithic archaeological sites in India, why is the 'Patne' site in Maharashtra particularly significant?",
+    "options_en": [
+      "The oldest rock paintings of India were discovered here.",
+      "The first evidence of the existence of the Ostrich in India was found here.",
+      "The first fossils of Homo Sapiens were discovered here.",
+      "Evidence of burying domesticated dogs with humans was found here."
+    ],
+    "explanation_en": "The document states that the Patne site in Maharashtra is significant because the first evidence of the existence of the Ostrich in India was found here.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "'Flake Technology' বা ফ্লেক প্রযুক্তি প্রস্তর যুগের কোন নির্দিষ্ট পর্যায়ে সবচেয়ে বেশি ব্যবহৃত হতো এবং এর মূল কৌশল কী ছিল?",
+    "options_bn": [
+      "উচ্চ পুরাপ্রস্তর যুগে; যেখানে পাথর ঘষে মসৃণ করা হতো।",
+      "মধ্য পুরাপ্রস্তর যুগে; যেখানে একটি বড় পাথরের কোরকে আঘাত করে ধারালো ছোট টুকরো বা ফ্লেকস বের করা হতো।",
+      "মধ্যপ্রস্তর যুগে; যেখানে তীরের ডগায় ব্যবহারের জন্য মাইক্রোলিথ তৈরি করা হতো।",
+      "নিম্ন পুরাপ্রস্তর যুগে; যেখানে বড় ও অমসৃণ পাথরের ভারী হাতিয়ার তৈরি করা হতো।"
+    ],
+    "explanation_bn": "নথি অনুসারে, 'Flake Technology' মধ্য পুরাপ্রস্তর (Middle Palaeolithic) যুগের একটি প্রযুক্তি, যেখানে বড় পাথরের কোরকে আঘাত করে ধারালো চকচকে টুকরো (Flakes) বের করে হাতিয়ার বানানো হতো।",
+    "question_en": "In which specific phase of the Stone Age was 'Flake Technology' most widely used, and what was its core technique?",
+    "options_en": [
+      "Upper Palaeolithic Age; where stones were rubbed to make them smooth.",
+      "Middle Palaeolithic Age; where a large stone core was struck to extract small, sharp pieces or flakes.",
+      "Mesolithic Age; where microliths were made to be used on arrowheads.",
+      "Lower Palaeolithic Age; where large and rough heavy stone tools were created."
+    ],
+    "explanation_en": "According to the document, 'Flake Technology' was a technique of the Middle Palaeolithic Age, where a large stone core was struck to extract sharp, shiny pieces (Flakes) to make tools.",
+    "correctIndex": 1
+  },
+  {
+    "id": 5,
+    "question_bn": "ভারতীয় উপমহাদেশে মানব বিবর্তনের ইতিহাস অনুযায়ী, হোমো ইরেক্টাস (Homo Erectus)-এর খুলি কোথায় আবিষ্কৃত হয়েছে?",
+    "options_bn": [
+      "রাজস্থানের দিদওয়ানায়",
+      "মধ্যপ্রদেশের হাটনোরায় (নর্মদা নদীর কাছে)",
+      "উত্তরপ্রদেশের বেলান উপত্যকায়",
+      "মহারষ্ট্রের দাইমাবাদে"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে, হোমো ইরেক্টাস (Homo Erectus)-এর খুলি ভারতে মধ্যপ্রদেশের হাটনোরায় (Hathnora) নর্মদা নদীর কাছে পাওয়া গেছে।",
+    "question_en": "According to the history of human evolution in the Indian subcontinent, where was the skull of Homo Erectus discovered?",
+    "options_en": [
+      "Didwana in Rajasthan",
+      "Hathnora in Madhya Pradesh (near the Narmada river)",
+      "Belan Valley in Uttar Pradesh",
+      "Daimabad in Maharashtra"
+    ],
+    "explanation_en": "The document mentions that the skull of Homo Erectus was found in India at Hathnora in Madhya Pradesh, near the Narmada river.",
+    "correctIndex": 1
+  },
+  {
+    "id": 6,
+    "question_bn": "মধ্যপ্রস্তর যুগকে (Mesolithic Age) কেন শিকারজীবী থেকে কৃষিজীবী মানুষে রূপান্তরিত হওয়ার 'সেতু যুগ' বলা হয়, এবং এই যুগের কোন সাইটটি পশু পালনের প্রাচীনতম প্রমাণ দেয়?",
+    "options_bn": [
+      "কারণ এই যুগে মানুষ প্রথমবার গুহায় বাস করা শুরু করে; ভীমবেটকা হলো সেই সাইট।",
+      "কারণ মানুষ স্থায়ী বসতি গড়ে তুলে প্রথম কৃষিকাজ শুরু করেছিল; মেহেরগড় হলো সেই সাইট।",
+      "কারণ উষ্ণ আবহাওয়ায় মানুষ শিকারের পাশাপাশি পশুপালন শিখতে শুরু করে; রাজস্থানের বাগোর হলো সেই সাইট।",
+      "কারণ মানুষ বড় পাথরের হাতিয়ার ছেড়ে ধাতুর ব্যবহার শুরু করেছিল; গুজরাটের লাংনাজ হলো সেই সাইট।"
+    ],
+    "explanation_bn": "নথিতে মধ্যপ্রস্তর যুগকে সেতু যুগ বলা হয়েছে কারণ এই সময়ে মানুষ শিকারের পাশাপাশি পশু পালন শুরু করে। রাজস্থানের বাগোর (Bagor) সাইট থেকে পশু পালনের (Animal Domestication) সবচেয়ে প্রাচীন প্রমাণ পাওয়া গেছে।",
+    "question_en": "Why is the Mesolithic Age called the 'bridge age' of transition from a hunter-gatherer to an agricultural human, and which site of this age provides the oldest evidence of animal domestication?",
+    "options_en": [
+      "Because humans first started living in caves during this age; Bhimbetka is that site.",
+      "Because humans built permanent settlements and first started agriculture; Mehrgarh is that site.",
+      "Because in the warmer climate, humans began learning animal domestication alongside hunting; Bagor in Rajasthan is that site.",
+      "Because humans abandoned large stone tools and began using metals; Langhnaj in Gujarat is that site."
+    ],
+    "explanation_en": "The document calls the Mesolithic Age the bridge age because people started animal domestication alongside hunting. The Bagor site in Rajasthan provides the oldest evidence of animal domestication.",
+    "correctIndex": 2
+  },
+  {
+    "id": 7,
+    "question_bn": "কাশ্মীরের নবপ্রস্তর সাইট 'বুর্জাহম' (Burzahom) পৃথিবীর ইতিহাসে অনন্য হওয়ার মূল প্রত্নতাত্ত্বিক কারণ কী?",
+    "options_bn": [
+      "এখানে প্রথমবার হাড়ের তৈরি হাতিয়ার এবং রেশম চাষের প্রমাণ পাওয়া গেছে।",
+      "এখানে গৃহপালিত কুকুরকে মৃত্যুর পর তার মালিকের সাথে কবরে রাখা হতো এবং মানুষ মাটিতে গর্ত করে বাস করত।",
+      "এখানে প্রথমবার ঘোড়া পালনের প্রমাণ এবং পোড়া ইটের তৈরি বাড়ির ধ্বংসাবশেষ পাওয়া গেছে।",
+      "এখানে প্রথমবার কালো ও লাল মৃৎপাত্রের ব্যবহার শুরু হয়েছিল।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে, বুর্জাহমে মানুষ তার গৃহপালিত কুকুরকে মৃত্যুর পরেও সাথে রাখত (মালিকের কবরে কুকুরের কঙ্কাল) এবং তারা হ্রদের পাশে মাটিতে গর্ত করে (Pits) বাস করত।",
+    "question_en": "What is the primary archaeological reason for the Kashmiri Neolithic site 'Burzahom' being unique in world history?",
+    "options_en": [
+      "Evidence of bone tools and silk cultivation was first found here.",
+      "Domesticated dogs were buried with their owners after death, and people lived in pit dwellings.",
+      "The first evidence of horse rearing and ruins of houses made of burnt bricks were found here.",
+      "The use of black and red pottery started here for the first time."
+    ],
+    "explanation_en": "The document explicitly states that in Burzahom, domesticated dogs were kept with their owners even after death (dog skeletons in the owner's grave), and they lived in pits dug into the ground near lakes.",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_bn": "উত্তরপ্রদেশের বেলান উপত্যকায় অবস্থিত কোলদিহওয়া (Koldihwa) এবং মহাগড়া (Mahagara) সাইট দুটি কোন প্রাচীনতম প্রমাণের জন্য বিখ্যাত?",
+    "options_bn": [
+      "তুলা চাষের প্রাচীনতম প্রমাণ",
+      "7000 BC-তে ধান চাষের প্রমাণ",
+      "প্রথম চাকা আবিষ্কারের প্রমাণ",
+      "প্রাচীনতম তামার খনির প্রমাণ"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে, উত্তরপ্রদেশের বেলান উপত্যকায় কোলদিহওয়া এবং মহাগড়া সাইটে 7000 BC-তে ধান চাষের (Rice Cultivation) প্রাচীনতম প্রমাণ পাওয়া গেছে।",
+    "question_en": "For which oldest evidence are the Koldihwa and Mahagara sites, located in the Belan Valley of Uttar Pradesh, famous?",
+    "options_en": [
+      "The oldest evidence of cotton cultivation",
+      "Evidence of rice cultivation in 7000 BC",
+      "Evidence of the first invention of the wheel",
+      "Evidence of the oldest copper mine"
+    ],
+    "explanation_en": "The document mentions that the oldest evidence of rice cultivation in 7000 BC was found at the Koldihwa and Mahagara sites in the Belan Valley of Uttar Pradesh.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "তাম্রপ্রস্তর যুগের (Chalcolithic Age) সংস্কৃতি ও মানুষের জীবনযাত্রা সম্পর্কে নিচের কোন বিবৃতিটি সম্পূর্ণ সঠিক?",
+    "options_bn": [
+      "তারা 'কলস সমাধি' (Urn Burial) পদ্ধতিতে মৃতদেহ সৎকার করত, তবে তারা ঘোড়া এবং পোড়া ইটের ব্যবহার সম্পর্কে জানত না।",
+      "তারা লোহা এবং তামা উভয় ধাতুরই ব্যবহার জানত এবং উন্নত নগর সভ্যতা গড়ে তুলেছিল।",
+      "এই যুগের সবচেয়ে বড় সাইট ছিল রাজস্থানের আহার, যেখানে তারা প্রথম ঘোড়া পালনের প্রমাণ রেখে গেছে।",
+      "তারা কেবল গৈরিক রঙের পাত্র ব্যবহার করত এবং তাদের সমাজে সম্পদের কোনো ব্যক্তিগত মালিকানা ছিল না।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, তাম্রপ্রস্তর যুগে 'কলস সমাধি' বা Urn Burial পদ্ধতিতে মৃতদের কবর দেওয়া হতো। এর পাশাপাশি এটি উল্লেখ করা হয়েছে যে তারা ঘোড়া এবং পোড়া ইট (Burnt Bricks) সম্পর্কে জানত না।",
+    "question_en": "Which of the following statements about the culture and lifestyle of the Chalcolithic Age is completely correct?",
+    "options_en": [
+      "They disposed of the dead using the 'Urn Burial' method, but they did not know about the use of horses and burnt bricks.",
+      "They knew the use of both iron and copper metals and built an advanced urban civilization.",
+      "The largest site of this age was Ahar in Rajasthan, where they left the first evidence of horse rearing.",
+      "They only used ochre-coloured pottery and there was no private ownership of property in their society."
+    ],
+    "explanation_en": "According to the document, in the Chalcolithic age, the dead were buried using the 'Urn Burial' method. Additionally, it is mentioned that they were unaware of horses and burnt bricks.",
+    "correctIndex": 0
+  },
+  {
+    "id": 10,
+    "question_bn": "তাম্রপ্রস্তর যুগে পশ্চিম মহারাষ্ট্রের 'জোর্বে সংস্কৃতি' (Jorwe Culture)-এর অধীনে থাকা সাইটগুলির মধ্যে কোনটি সবচেয়ে বড় সাইট হিসেবে চিহ্নিত হয়েছে?",
+    "options_bn": [
+      "গিলুন্ড (Gilund)",
+      "দাইমাবাদ (Daimabad)",
+      "ইনামগাঁও (Inamgaon)",
+      "চান্দোলি (Chandoli)"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে, পশ্চিম মহারাষ্ট্রে জোর্বে সংস্কৃতির অধীনে বেশ কিছু সাইটের মধ্যে দাইমাবাদ (Daimabad) বিশেষভাবে গুরুত্বপূর্ণ কারণ এটি তাম্রপ্রস্তর যুগের সবচেয়ে বড় সাইট।",
+    "question_en": "Among the sites under the 'Jorwe Culture' in Western Maharashtra during the Chalcolithic Age, which one is identified as the largest site?",
+    "options_en": [
+      "Gilund",
+      "Daimabad",
+      "Inamgaon",
+      "Chandoli"
+    ],
+    "explanation_en": "The document clearly states that among several sites under the Jorwe culture in Western Maharashtra, Daimabad is particularly important because it is the largest site of the Chalcolithic Age.",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "1957 সালে কে মধ্যপ্রদেশের ভীমবেটকায় (Bhimbetka) ভারতের প্রাচীনতম শিলাচিত্র আবিষ্কার করেন?",
+    "options_bn": [
+      "আর্কিবাল্ড ক্যাম্পবেল (Archibald Campbell)",
+      "ভি.এস. ওয়াকানকার (V.S. Wakankar)",
+      "জন মার্শাল (John Marshall)",
+      "আলেকজান্ডার কানিংহাম (Alexander Cunningham)"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ করা হয়েছে যে ভারতীয় প্রত্নতত্ত্ববিদ ভি.এস. ওয়াকানকার (V.S. Wakankar) 1957 সালে মধ্যপ্রদেশের ভীমবেটকায় প্রাচীনতম শিলাচিত্র আবিষ্কার করেন।",
+    "question_en": "Who discovered the oldest rock paintings of India at Bhimbetka, Madhya Pradesh, in 1957?",
+    "options_en": [
+      "Archibald Campbell",
+      "V.S. Wakankar",
+      "John Marshall",
+      "Alexander Cunningham"
+    ],
+    "explanation_en": "The document clearly mentions that the Indian archaeologist V.S. Wakankar discovered the oldest rock paintings at Bhimbetka, Madhya Pradesh, in 1957.",
+    "correctIndex": 1
+  },
+  {
+    "id": 12,
+    "question_bn": "ভীমবেটকা শিলাচিত্র আবিষ্কারের আগেই, ভারতে সর্বপ্রথম শিলাচিত্র (Rock Paintings) কে চিহ্নিত করেছিলেন বলে নথিতে উল্লেখ রয়েছে?",
+    "options_bn": [
+      "ভি.এস. ওয়াকানকার (V.S. Wakankar)",
+      "দয়ারাম সাহনি (Dayaram Sahni)",
+      "আর্কিবাল্ড ক্যাম্পবেল (Archibald Campbell)",
+      "রাখালদাস বন্দ্যোপাধ্যায় (Rakhaldas Bandyopadhyay)"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে যে, ভীমবেটকা আবিষ্কারের আগে ভারতে সর্বপ্রথম কিছু শিলাচিত্র চিহ্নিত করেছিলেন আর্কিবাল্ড ক্যাম্পবেল (Archibald Campbell)।",
+    "question_en": "Before the discovery of the Bhimbetka rock paintings, who is mentioned in the document as the first to identify rock paintings in India?",
+    "options_en": [
+      "V.S. Wakankar",
+      "Dayaram Sahni",
+      "Archibald Campbell",
+      "Rakhaldas Bandyopadhyay"
+    ],
+    "explanation_en": "The document states that before the discovery of Bhimbetka, Archibald Campbell was the first to identify some rock paintings in India.",
+    "correctIndex": 2
+  },
+  {
+    "id": 13,
+    "question_bn": "বিহারের 'চিরাঁদ' (Chirand) নামক নবপ্রস্তর যুগের (Neolithic) সাইটটি প্রত্নতাত্ত্বিকভাবে কেন এত গুরুত্বপূর্ণ?",
+    "options_bn": [
+      "এখানে ভারতের প্রাচীনতম ধান চাষের প্রমাণ পাওয়া গেছে।",
+      "এটি উত্তর ভারতের এমন একটি স্থান যেখানে হাড়ের তৈরি হাতিয়ার (বিশেষ করে হরিণের শিং দিয়ে তৈরি) বিপুল পরিমাণে পাওয়া গেছে।",
+      "এখানে প্রথম তামার ব্যবহার এবং কলস সমাধির (Urn Burial) প্রথা শুরু হয়েছিল।",
+      "এখানে প্রাচীনতম রেশম চাষ এবং তুলো উৎপাদনের প্রমাণ রয়েছে।"
+    ],
+    "explanation_bn": "নথি অনুসারে, বিহারের চিরাঁদ (Chirand) সাইটটি বিখ্যাত কারণ এখানে হাড়ের তৈরি হাতিয়ার (Bone Tools) প্রচুর পরিমাণে পাওয়া গেছে, যা মূলত হরিণের শিং দিয়ে তৈরি ছিল।",
+    "question_en": "Why is the Neolithic site 'Chirand' in Bihar so archaeologically important?",
+    "options_en": [
+      "The oldest evidence of rice cultivation in India was found here.",
+      "It is a site in North India where a large number of bone tools (especially made from deer antlers) have been found.",
+      "The first use of copper and the practice of Urn Burial began here.",
+      "There is evidence of the oldest silk cultivation and cotton production here."
+    ],
+    "explanation_en": "According to the document, the Chirand site in Bihar is famous because a large number of bone tools, mainly made from deer antlers, were found here.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "মানব বিবর্তনের পর্যায়ক্রম অনুযায়ী, কোন প্রজাতিকে প্রথম 'হাতিয়ার ব্যবহারকারী মানুষ' হিসেবে চিহ্নিত করা হয় যারা সর্বপ্রথম পাথরের হাতিয়ার তৈরি করেছিল?",
+    "options_bn": [
+      "হোমো স্যাপিয়েন্স (Homo Sapiens)",
+      "হোমো ইরেক্টাস (Homo Erectus)",
+      "হোমো হ্যাবিলিস (Homo Habilis)",
+      "হোমো নিয়ান্ডার্থালেনসিস (Homo Neanderthalensis)"
+    ],
+    "explanation_bn": "নথিতে হোমো হ্যাবিলিস (Homo Habilis)-কে \"হাত দিয়ে কাজ করতে পারা মানুষ\" বা \"হাতিয়ার ব্যবহারকারী মানুষ\" বলা হয়েছে, যারা প্রথম পাথরের হাতিয়ার বানিয়েছিল।",
+    "question_en": "According to the sequence of human evolution, which species is identified as the first 'tool-using human' who created the first stone tools?",
+    "options_en": [
+      "Homo Sapiens",
+      "Homo Erectus",
+      "Homo Habilis",
+      "Homo Neanderthalensis"
+    ],
+    "explanation_en": "The document describes Homo Habilis as the \"human who could work with hands\" or \"tool-using human,\" who made the first stone tools.",
+    "correctIndex": 2
+  },
+  {
+    "id": 15,
+    "question_bn": "মধ্যপ্রস্তর যুগের (Mesolithic Age) অন্যতম প্রধান বৈশিষ্ট্য 'মাইক্রোলিথ' (Microlith) পাথরের হাতিয়ারগুলির সবচেয়ে বড় সুবিধা কী ছিল?",
+    "options_bn": [
+      "এগুলো আকারে অত্যন্ত বড় হওয়ায় বড় প্রাণী শিকারে সহায়ক ছিল।",
+      "এগুলো মূলত শস্য পেষাই করার কাজে ব্যবহৃত পালিশ করা পাথর ছিল।",
+      "এগুলো ছোট এবং ধারালো হওয়ার কারণে তীরের ডগায় বা কাঠের হাতলে লাগিয়ে দূর থেকে শিকার করা সহজ হয়েছিল।",
+      "এগুলো ধাতু দিয়ে তৈরি হওয়ায় আগের পাথরের হাতিয়ারের চেয়ে দীর্ঘস্থায়ী ছিল।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, মাইক্রোলিথ অত্যন্ত ছোট এবং ধারালো হতো। এগুলো তীরের ডগায় বা বর্শার মাথায় লাগিয়ে দূর থেকে শিকার করা সহজ হয়েছিল, যা ভারী পাথরের চেয়ে বেশি কার্যকর ছিল।",
+    "question_en": "What was the biggest advantage of the 'Microlith' stone tools, which were a major feature of the Mesolithic Age?",
+    "options_en": [
+      "Being extremely large in size, they were helpful in hunting large animals.",
+      "They were mainly polished stones used for grinding grains.",
+      "Being small and sharp, they could be attached to arrowheads or wooden handles, making distant hunting easier.",
+      "Being made of metal, they were more durable than previous stone tools."
+    ],
+    "explanation_en": "The document states that microliths were extremely small and sharp. They could be attached to arrowheads or spearheads, making distant hunting easier and more effective than using heavy stones.",
+    "correctIndex": 2
+  },
+  {
+    "id": 16,
+    "question_bn": "নবপ্রস্তর যুগের সাইট 'মেহেরগড়' (Mehrgarh) সম্পর্কিত কোন তথ্যটি নথির ভিত্তিতে সঠিক?",
+    "options_bn": [
+      "এটি মহারাষ্ট্রে অবস্থিত এবং এখানে ঘোড়া পালনের প্রাচীনতম প্রমাণ রয়েছে।",
+      "এটি বেলুচিস্তানে অবস্থিত এবং এখানে কৃষিকাজ (গম ও যব) ও কাদা-ইটের (Mud-brick) বাড়ির প্রাচীনতম প্রমাণ পাওয়া গেছে।",
+      "এটি রাজস্থানে অবস্থিত এবং এখানে প্রথম তামার খনি আবিষ্কৃত হয়েছিল।",
+      "এটি উত্তরপ্রদেশে অবস্থিত এবং এখানে 7000 BC-তে ধান চাষের প্রমাণ মিলেছে।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, মেহেরগড় (Mehrgarh) বেলুচিস্তানে অবস্থিত। এটি একটি অত্যন্ত গুরুত্বপূর্ণ নবপ্রস্তর সাইট, যেখানে গম ও যব চাষ এবং কাদা-ইটের (Mud-brick) বাড়ির প্রাচীনতম প্রমাণ পাওয়া গেছে।",
+    "question_en": "Which statement regarding the Neolithic site 'Mehrgarh' is correct based on the document?",
+    "options_en": [
+      "It is located in Maharashtra and has the oldest evidence of horse rearing.",
+      "It is located in Baluchistan and the oldest evidence of agriculture (wheat and barley) and mud-brick houses has been found here.",
+      "It is located in Rajasthan and the first copper mine was discovered here.",
+      "It is located in Uttar Pradesh and evidence of rice cultivation in 7000 BC was found here."
+    ],
+    "explanation_en": "According to the document, Mehrgarh is located in Baluchistan. It is a highly important Neolithic site where the oldest evidence of wheat and barley cultivation and mud-brick houses has been found.",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_bn": "নথিতে ইতিহাস (History) এবং প্রত্নতত্ত্বের (Archaeology) মধ্যে যে মূল পার্থক্য তুলে ধরা হয়েছে, তা কী?",
+    "options_bn": [
+      "ইতিহাস শুধুমাত্র রাজাদের গল্প বলে, কিন্তু প্রত্নতত্ত্ব সাধারণ মানুষের কথা বলে।",
+      "ইতিহাস প্রাচীন যুগের কথা বলে, আর প্রত্নতত্ত্ব আধুনিক যুগ নিয়ে আলোচনা করে।",
+      "ইতিহাস লিখিত দলিলের বিশ্লেষণের ওপর নির্ভরশীল, আর প্রত্নতত্ত্ব মাটি খুঁড়ে পাওয়া বস্তুর বিশ্লেষণের ওপর নির্ভরশীল।",
+      "ইতিহাস সম্পূর্ণ প্রমাণভিত্তিক, কিন্তু প্রত্নতত্ত্ব পুরোটাই কল্পনাভিত্তিক।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্ট করা হয়েছে যে ইতিহাস জানার পথ হলো লিখিত দলিল (Written Text) বিশ্লেষণ করা, যেখানে প্রত্নতত্ত্ব (Archaeology) মাটি খুঁড়ে (Excavation) পাওয়া বস্তু বিশ্লেষণ করে অতীত সম্পর্কে জানতে সাহায্য করে।",
+    "question_en": "What is the main difference highlighted in the document between History and Archaeology?",
+    "options_en": [
+      "History only tells the stories of kings, but archaeology talks about common people.",
+      "History talks about the ancient age, while archaeology discusses the modern age.",
+      "History depends on the analysis of written documents, while archaeology depends on the analysis of excavated materials.",
+      "History is entirely evidence-based, but archaeology is entirely based on imagination."
+    ],
+    "explanation_en": "The document clarifies that the way to know history is by analyzing written texts, whereas archaeology helps in knowing the past by analyzing excavated objects.",
+    "correctIndex": 2
+  },
+  {
+    "id": 18,
+    "question_bn": "রাজস্থানের তাম্রপ্রস্তর সংস্কৃতির সাইট 'আহার' (Ahar)-কে কেন ঐতিহাসিকভাবে 'তাম্বাবতী' (Tambavati) বলা হয়?",
+    "options_bn": [
+      "কারণ এখানে মাটির তৈরি লাল পাত্র (Terracotta) বিপুল পরিমাণে পাওয়া গেছে।",
+      "কারণ এই স্থানে প্রচুর পরিমাণে তামা গলানোর কাজ হতো এবং তামার ব্যবহার অত্যন্ত বেশি ছিল।",
+      "কারণ এই অঞ্চলের মানুষ প্রথম ব্রোঞ্জ (Bronze) তৈরি করতে শিখেছিল।",
+      "কারণ এখানে তামাটে রঙের পোড়া ইট দিয়ে নগর সভ্যতা গড়ে উঠেছিল।"
+    ],
+    "explanation_bn": "নথি অনুসারে, রাজস্থানের আহার (Ahar) সাইটটিকে 'তাম্বাবতী' বলা হয় কারণ এখানে প্রচুর পরিমাণে তামা গলানো হতো এবং তামা ব্যবহারের ব্যাপকতা ছিল।",
+    "question_en": "Why is the Chalcolithic culture site 'Ahar' in Rajasthan historically called 'Tambavati'?",
+    "options_en": [
+      "Because a huge amount of red clay pots (Terracotta) were found here.",
+      "Because a lot of copper smelting took place here and the use of copper was extremely high.",
+      "Because the people of this region first learned to make bronze.",
+      "Because an urban civilization was built here using coppery-coloured burnt bricks."
+    ],
+    "explanation_en": "According to the document, the Ahar site in Rajasthan is called 'Tambavati' because a large amount of copper was smelted there, and the use of copper was extensive.",
+    "correctIndex": 1
+  },
+  {
+    "id": 19,
+    "question_bn": "তাম্রপ্রস্তর যুগের (Chalcolithic Age) গ্রামীণ সম্প্রদায়গুলি মূলত কোন ধরনের মৃৎপাত্র (Pottery) সবচেয়ে বেশি ব্যবহার করত?",
+    "options_bn": [
+      "কালো ও লাল মৃৎপাত্র (Black and Red Ware)",
+      "গৈরিক রঙের মৃৎপাত্র (Ochre Coloured Pottery)",
+      "কর্ড ইমপ্রেসড মৃৎপাত্র (Cord Impressed Pottery)",
+      "চিত্রিত ধূসর মৃৎপাত্র (Painted Grey Ware)"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, তাম্রপ্রস্তর যুগের মানুষ নানা ধরনের পাত্র ব্যবহার করলেও তাদের সবচেয়ে পরিচিত এবং বহুল ব্যবহৃত পাত্র ছিল কালো ও লাল মৃৎপাত্র (Black and Red Ware)।",
+    "question_en": "Which type of pottery was predominantly used by the rural communities of the Chalcolithic Age?",
+    "options_en": [
+      "Black and Red Ware",
+      "Ochre Coloured Pottery",
+      "Cord Impressed Pottery",
+      "Painted Grey Ware"
+    ],
+    "explanation_en": "The document states that although the people of the Chalcolithic Age used various types of pots, their most familiar and widely used pottery was Black and Red Ware.",
+    "correctIndex": 0
+  },
+  {
+    "id": 20,
+    "question_bn": "উত্তর-পূর্ব ভারতের গারো পাহাড় অঞ্চলে অবস্থিত কোন নবপ্রস্তর সাইট থেকে 'জেডাইট পাথর' (Jadeite Stone)-এর প্রমাণ পাওয়া গেছে?",
+    "options_bn": [
+      "সাঙ্গানাকাল্লু (Sanganakallu)",
+      "দাউজালি হাডিং (Daojali Hading)",
+      "কাতাল হুয়ুক (Catal Huyuk)",
+      "হাল্লুর (Hallur)"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ রয়েছে যে উত্তর-পূর্ব ভারতের গারো পাহাড়ে অবস্থিত নবপ্রস্তর সাইট দাউজালি হাডিং (Daojali Hading) থেকে জেডাইট পাথর (Jadeite Stone)-এর প্রমাণ পাওয়া গেছে।",
+    "question_en": "From which Neolithic site located in the Garo Hills region of North-East India has evidence of 'Jadeite Stone' been found?",
+    "options_en": [
+      "Sanganakallu",
+      "Daojali Hading",
+      "Catal Huyuk",
+      "Hallur"
+    ],
+    "explanation_en": "The document mentions that evidence of Jadeite Stone has been found at the Neolithic site Daojali Hading, located in the Garo Hills of North-East India.",
+    "correctIndex": 1
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
