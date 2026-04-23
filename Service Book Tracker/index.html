@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -8,216 +8,99 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,sans-serif;background:#f0f2f5}
 header{background:#1a237e;color:white;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
-header h1{font-size:1.15rem}
-.controls{background:white;padding:12px 18px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #ddd}
-.controls input,.controls select{padding:7px 11px;border:1px solid #ccc;border-radius:5px;font-size:.88rem}
-.controls input[type=text]{flex:1;min-width:180px}
-.btn{padding:7px 14px;border:none;border-radius:5px;cursor:pointer;font-size:.88rem;font-weight:bold}
-.btn-g{background:#2e7d32;color:white}.btn-b{background:#1565c0;color:white}
-.btn-r{background:#c62828;color:white}.btn-o{background:#e65100;color:white}
+header h1{font-size:1.1rem}
+.bar{background:white;padding:11px 18px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #ddd}
+.bar input,.bar select{padding:7px 10px;border:1px solid #ccc;border-radius:5px;font-size:.87rem}
+.bar input[type=text]{flex:1;min-width:160px}
+.btn{padding:7px 13px;border:none;border-radius:5px;cursor:pointer;font-weight:bold;font-size:.87rem}
+.g{background:#2e7d32;color:#fff}.b{background:#1565c0;color:#fff}
+.r{background:#c62828;color:#fff}.o{background:#e65100;color:#fff}
 table{width:100%;border-collapse:collapse;background:white}
-th{background:#1a237e;color:white;padding:9px 10px;text-align:left;font-size:.82rem;position:sticky;top:0;z-index:1}
-td{padding:8px 10px;border-bottom:1px solid #eee;font-size:.82rem;vertical-align:middle}
+th{background:#1a237e;color:white;padding:9px 10px;text-align:left;font-size:.8rem;position:sticky;top:0;z-index:1}
+td{padding:8px 10px;border-bottom:1px solid #eee;font-size:.8rem;vertical-align:middle}
 tr:hover{background:#f5f5f5}
-.av{background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:3px;font-size:.78rem;font-weight:bold}
-.ws{background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:3px;font-size:.78rem;font-weight:bold}
-.sp{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:3px;font-size:.78rem;font-weight:bold}
-.ms{background:#ffebee;color:#b71c1c;padding:2px 8px;border-radius:3px;font-size:.78rem;font-weight:bold}
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:999}
-.modal.on{display:flex;align-items:center;justify-content:center}
-.mbox{background:white;padding:22px;border-radius:8px;width:490px;max-width:96%;max-height:90vh;overflow-y:auto}
-.mbox h3{margin-bottom:14px;color:#1a237e}
+.av{background:#e8f5e9;color:#1b5e20;padding:2px 7px;border-radius:3px;font-size:.76rem;font-weight:bold;white-space:nowrap}
+.ws{background:#fff3e0;color:#bf360c;padding:2px 7px;border-radius:3px;font-size:.76rem;font-weight:bold;white-space:nowrap}
+.sp{background:#e3f2fd;color:#0d47a1;padding:2px 7px;border-radius:3px;font-size:.76rem;font-weight:bold;white-space:nowrap}
+.ms{background:#ffebee;color:#b71c1c;padding:2px 7px;border-radius:3px;font-size:.76rem;font-weight:bold;white-space:nowrap}
+.ov{overflow-x:auto;max-height:calc(100vh - 170px)}
+.stb{background:white;padding:8px 18px;display:flex;gap:15px;flex-wrap:wrap;border-bottom:1px solid #ddd;font-size:.8rem}
+.si{display:flex;align-items:center;gap:4px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center}
+.modal.show{display:flex}
+.mb{background:white;border-radius:8px;width:480px;max-width:95vw;max-height:92vh;overflow-y:auto;padding:22px}
+.mb h3{color:#1a237e;margin-bottom:14px}
 .fg{margin-bottom:11px}
-.fg label{display:block;margin-bottom:4px;font-size:.82rem;font-weight:bold;color:#444}
-.fg input,.fg select,.fg textarea{width:100%;padding:7px 9px;border:1px solid #ccc;border-radius:4px;font-size:.88rem}
-.fg textarea{height:58px;resize:vertical}
-.ma{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-.tw{overflow-x:auto;max-height:calc(100vh - 175px)}
-.sbar{background:white;padding:8px 18px;display:flex;gap:16px;border-bottom:1px solid #ddd;font-size:.82rem;flex-wrap:wrap}
-.si{display:flex;align-items:center;gap:5px}
-.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
-.msg{text-align:center;padding:30px;color:#888;font-size:.95rem}
+.fg label{display:block;font-size:.8rem;font-weight:bold;color:#444;margin-bottom:4px}
+.fg input,.fg select,.fg textarea{width:100%;padding:7px 9px;border:1px solid #ccc;border-radius:4px;font-size:.87rem}
+.fg textarea{height:56px;resize:vertical}
+.ma{display:flex;gap:8px;justify-content:flex-end;margin-top:13px}
+.info{text-align:center;padding:28px;color:#888;font-size:.9rem}
 </style>
 </head>
 <body>
 <header>
-  <h1>&#128218; Service Book Tracker — Customs Preventive Commissionerate</h1>
-  <span style="font-size:.78rem;background:#4caf50;padding:3px 10px;border-radius:10px;color:white">&#9679; Live</span>
+  <h1>&#128218; Service Book Tracker — Customs</h1>
+  <span id="ls" style="font-size:.76rem;background:#4caf50;padding:3px 10px;border-radius:10px">&#9679; Connecting...</span>
 </header>
-<div class="controls">
-  <input type="text" id="q" placeholder="Search name, CPF, section, status..." oninput="ft()">
+<div class="bar">
+  <input type="text" id="q" placeholder="Search name, CPF, section..." oninput="ft()">
   <select id="sf" onchange="ft()">
     <option value="">All Status</option>
     <option>Available</option><option>With Staff</option>
     <option>Sent to PAO</option><option>Missing</option>
   </select>
   <select id="sc" onchange="ft()"><option value="">All Sections</option></select>
-  <button class="btn btn-g" onclick="oa()">+ Add Employee</button>
-  <button class="btn btn-b" onclick="doExport()">&#8595; Export CSV</button>
+  <button class="btn g" onclick="openAdd()">+ Add Employee</button>
+  <button class="btn b" onclick="doCSV()">Export CSV</button>
 </div>
-<div class="sbar">
+<div class="stb">
   <span><b id="tc">0</b> Total</span>
   <span class="si"><span class="dot" style="background:#2e7d32"></span><b id="ac">0</b> Available</span>
   <span class="si"><span class="dot" style="background:#e65100"></span><b id="wc">0</b> With Staff</span>
   <span class="si"><span class="dot" style="background:#1565c0"></span><b id="pc">0</b> PAO</span>
   <span class="si"><span class="dot" style="background:#b71c1c"></span><b id="mc">0</b> Missing</span>
 </div>
-<div class="tw">
+<div class="ov">
 <table>
 <thead><tr>
-  <th>#</th><th>Name</th><th>CPF/GPF</th><th>Designation</th>
-  <th>Section</th><th>Status</th><th>Location/With Whom</th>
-  <th>Remarks</th><th>Updated By</th><th>Last Updated</th><th>Actions</th>
+<th>#</th><th>Name</th><th>CPF/GPF</th><th>Designation</th>
+<th>Section</th><th>Status</th><th>Location</th><th>Remarks</th>
+<th>Updated By</th><th>Last Updated</th><th>Actions</th>
 </tr></thead>
-<tbody id="tb"></tbody>
+<tbody id="tb"><tr><td colspan="11" class="info">Connecting...</td></tr></tbody>
 </table>
 </div>
-
 <div class="modal" id="modal">
-<div class="mbox">
+<div class="mb">
   <h3 id="mtitle">Add Employee</h3>
-  <div class="fg">abel>Full Name *</label><input id="fn" type="text" placeholder="Employee full name"></div>
-  <div class="fg">abel>CPF / GPF Number</label><input id="fc" type="text" placeholder="CPF/GPF No."></div>
-  <div class="fg">abel>Designation</label><input id="fd" type="text" placeholder="Inspector, SI, Sepoy..."></div>
-  <div class="fg">abel>Section / Division</label><input id="fs" type="text" placeholder="Section name"></div>
-  <div class="fg">abel>Status *</label>
-    <select id="fst">
-      <option>Available</option><option>With Staff</option>
-      <option>Sent to PAO</option><option>Missing</option>
-    </select>
-  </div>
-  <div class="fg">abel>Location / With Whom</label><input id="fl" type="text" placeholder="Stack no., person name..."></div>
-  <div class="fg">abel>Remarks</label><textarea id="fr" placeholder="Any additional notes..."></textarea></div>
-  <div class="fg">abel>Your Name (Updated By)</label><input id="fu" type="text" placeholder="Enter your name"></div>
-  <div class="ma">
-    <button class="btn btn-r" onclick="cm()">Cancel</button>
-    <button class="btn btn-g" onclick="se()">Save</button>
-  </div>
+  <div class="fg"><label>Full Name *</label><input id="fn" type="text"></div>
+  <div class="fg"><label>CPF / GPF No</label><input id="fc" type="text"></div>
+  <div class="fg"><label>Designation</label><input id="fd" type="text"></div>
+  <div class="fg"><label>Section</label><input id="fsc" type="text"></div>
+  <div class="fg"><label>Status</label><select id="fst"><option>Available</option><option>With Staff</option><option>Sent to PAO</option><option>Missing</option></select></div>
+  <div class="fg"><label>Location</label><input id="fl" type="text"></div>
+  <div class="fg"><label>Remarks</label><textarea id="fr"></textarea></div>
+  <div class="fg"><label>Your Name</label><input id="fu" type="text"></div>
+  <div class="ma"><button class="btn r" onclick="closeModal()">Cancel</button><button class="btn g" onclick="saveEmp()">Save</button></div>
 </div>
 </div>
-
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-const app = initializeApp({
-  apiKey: "AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI",
-  authDomain: "service-book-tracker.firebaseapp.com",
-  projectId: "service-book-tracker",
-  storageBucket: "service-book-tracker.firebasestorage.app",
-  messagingSenderId: "1080714862635",
-  appId: "1:1080714862635:web:9c5c096b2536d5a976ca6e"
-});
-
-const db = getFirestore(app);
-const col = collection(db, "employees");
-let all = [], eid = null;
-
-onSnapshot(col, snap => {
-  all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  all.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-  updateSections();
-  ft();
-  stats();
-});
-
-function stats() {
-  document.getElementById("tc").textContent = all.length;
-  document.getElementById("ac").textContent = all.filter(e => e.status === "Available").length;
-  document.getElementById("wc").textContent = all.filter(e => e.status === "With Staff").length;
-  document.getElementById("pc").textContent = all.filter(e => e.status === "Sent to PAO").length;
-  document.getElementById("mc").textContent = all.filter(e => e.status === "Missing").length;
-}
-
-function updateSections() {
-  const sel = document.getElementById("sc");
-  const cur = sel.value;
-  const secs = [...new Set(all.map(e => e.section).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">All Sections</option>' + secs.map(s => `<option value="${s}">${s}</option>`).join("");
-  sel.value = cur;
-}
-
-window.ft = function () {
-  const q = document.getElementById("q").value.toLowerCase();
-  const sf = document.getElementById("sf").value;
-  const sc = document.getElementById("sc").value;
-  const filtered = all.filter(e => {
-    const m = !q || [e.name, e.cpf, e.section, e.designation, e.location, e.remarks, e.status]
-      .some(v => (v || "").toLowerCase().includes(q));
-    return m && (!sf || e.status === sf) && (!sc || e.section === sc);
-  });
-  render(filtered);
-};
-
-function badge(s) {
-  const m = { "Available": "av", "With Staff": "ws", "Sent to PAO": "sp", "Missing": "ms" };
-  return `<span class="${m[s] || ''}">${s || "N/A"}</span>`;
-}
-
-function render(data) {
-  const tb = document.getElementById("tb");
-  if (!data.length) {
-    tb.innerHTML = `<tr><td colspan="11" class="msg">${all.length === 0 ? "No employees added yet. Click '+ Add Employee' to start." : "No records match your search."}</td></tr>`;
-    return;
-  }
-  tb.innerHTML = data.map((e, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td><b>${e.name || ""}</b></td>
-      <td>${e.cpf || ""}</td>
-      <td>${e.designation || ""}</td>
-      <td>${e.section || ""}</td>
-      <td>${badge(e.status)}</td>
-      <td>${e.location || ""}</td>
-      <td>${e.remarks || ""}</td>
-      <td style="font-size:.75rem;color:#777">${e.updatedBy || ""}</td>
-      <td style="font-size:.75rem;color:#777">${e.updatedAt?.toDate ? e.updatedAt.toDate().toLocaleString("en-IN") : ""}</td>
-      <td>
-        <button class="btn btn-o" style="padding:3px 8px;font-size:.75rem;margin-right:3px" onclick="oe('${e.id}')">Edit</button>
-        <button class="btn btn-r" style="padding:3px 8px;font-size:.75rem" onclick="del('${e.id}','${(e.name||"").replace(/'/g,"")}')">Del</button>
-      </td>
-    </tr>`).join("");
-}
-
-window.oa = function () {
-  eid = null;
-  document.getElementById("mtitle").textContent = "Add Employee";
-  ["fn","fc","fd","fs","fl","fr","fu"].forEach(id => document.getElementById(id).value = "");
-  document.getElementById("fst").value = "Available";
-  document.getElementById("modal").classList.add("on");
-};
-
-window.oe = function (id) {
-  const e = all.find(x => x.id === id);
-  if (!e) return;
-  eid = id;
-  document.getElementById("mtitle").textContent = "Edit Employee";
-  document.getElementById("fn").value = e.name || "";
-  document.getElementById("fc").value = e.cpf || "";
-  document.getElementById("fd").value = e.designation || "";
-  document.getElementById("fs").value = e.section || "";
-  document.getElementById("fst").value = e.status || "Available";
-  document.getElementById("fl").value = e.location || "";
-  document.getElementById("fr").value = e.remarks || "";
-  document.getElementById("fu").value = e.updatedBy || "";
-  document.getElementById("modal").classList.add("on");
-};
-
-window.cm = function () { document.getElementById("modal").classList.remove("on"); };
-
-window.se = async function () {
-  const name = document.getElementById("fn").value.trim();
-  if (!name) { alert("Name is required!"); return; }
-  const obj = {
-    name, cpf: document.getElementById("fc").value.trim(),
-    designation: document.getElementById("fd").value.trim(),
-    section: document.getElementById("fs").value.trim(),
-    status: document.getElementById("fst").value,
-    location: document.getElementById("fl").value.trim(),
-    remarks: document.getElementById("fr").value.trim(),
-    updatedBy: document.getElementById("fu").value.trim(),
-    updatedAt: serverTimestamp()
-  };
-  try {
-    if (eid) await updateDoc(doc(db, "employees", eid), obj);
-    else await addDoc(col, obj);
+import{initializeApp}from"https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import{getFirestore,collection,onSnapshot,addDoc,updateDoc,deleteDoc,doc,serverTimestamp}from"https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+const fb=initializeApp({apiKey:"AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI",authDomain:"service-book-tracker.firebaseapp.com",projectId:"service-book-tracker",storageBucket:"service-book-tracker.firebasestorage.app",messagingSenderId:"1080714862635",appId:"1:1080714862635:web:9c5c096b2536d5a976ca6e"});
+const db=getFirestore(fb),col=collection(db,"employees");let ALL=[],EID=null;
+onSnapshot(col,snap=>{ALL=snap.docs.map(d=>({id:d.id,...d.data()}));ALL.sort((a,b)=>(a.name||"").localeCompare(b.name||""));document.getElementById("ls").textContent="● Live";updSec();ft();updStats();});
+function updStats(){document.getElementById("tc").textContent=ALL.length;document.getElementById("ac").textContent=ALL.filter(e=>e.status==="Available").length;document.getElementById("wc").textContent=ALL.filter(e=>e.status==="With Staff").length;document.getElementById("pc").textContent=ALL.filter(e=>e.status==="Sent to PAO").length;document.getElementById("mc").textContent=ALL.filter(e=>e.status==="Missing").length;}
+function updSec(){const s=document.getElementById("sc"),cv=s.value,secs=[...new Set(ALL.map(e=>e.section).filter(Boolean))].sort();s.innerHTML='<option value="">All Sections</option>'+secs.map(x=>`<option value="${x}">${x}</option>`).join("");s.value=cv;}
+window.ft=function(){const q=document.getElementById("q").value.toLowerCase(),sf=document.getElementById("sf").value,sc=document.getElementById("sc").value;const f=ALL.filter(e=>{const m=!q||[e.name,e.cpf,e.section,e.designation,e.location,e.remarks,e.status].some(v=>(v||"").toLowerCase().includes(q));return m&&(!sf||e.status===sf)&&(!sc||e.section===sc);});render(f);};
+function render(d){const tb=document.getElementById("tb");if(!d.length){tb.innerHTML=`<tr><td colspan="11" class="info">${ALL.length?"No match":"No data"}</td></tr>`;return;}tb.innerHTML=d.map((e,i)=>`<tr><td>${i+1}</td><td><b>${e.name||""}</b></td><td>${e.cpf||""}</td><td>${e.designation||""}</td><td>${e.section||""}</td><td><span class="${{"Available":"av","With Staff":"ws","Sent to PAO":"sp","Missing":"ms"}[e.status]||""}">${e.status||"—"}</span></td><td>${e.location||""}</td><td>${e.remarks||""}</td><td style="font-size:.7rem">${e.updatedBy||""}</td><td style="font-size:.7rem">${e.updatedAt?.toDate?e.updatedAt.toDate().toLocaleString("en-IN"):""}</td><td><button class="btn o" style="padding:2px 5px" onclick="openEdit('${e.id}')">Edit</button><button class="btn r" style="padding:2px 5px" onclick="delEmp('${e.id}','${(e.name||"").replace(/'/g,"")}')">Del</button></td></tr>`).join("");}
+window.openAdd=function(){EID=null;document.getElementById("mtitle").textContent="Add Employee";["fn","fc","fd","fsc","fl","fr","fu"].forEach(id=>document.getElementById(id).value="");document.getElementById("modal").classList.add("show");};
+window.openEdit=function(id){const e=ALL.find(x=>x.id===id);if(!e)return;EID=id;document.getElementById("mtitle").textContent="Edit Employee";document.getElementById("fn").value=e.name||"";document.getElementById("fc").value=e.cpf||"";document.getElementById("fd").value=e.designation||"";document.getElementById("fsc").value=e.section||"";document.getElementById("fst").value=e.status;document.getElementById("fl").value=e.location||"";document.getElementById("fr").value=e.remarks||"";document.getElementById("fu").value=e.updatedBy||"";document.getElementById("modal").classList.add("show");};
+window.closeModal=function(){document.getElementById("modal").classList.remove("show");};
+window.saveEmp=async function(){const nm=document.getElementById("fn").value.trim();if(!nm)return;const obj={name:nm,cpf:document.getElementById("fc").value,designation:document.getElementById("fd").value,section:document.getElementById("fsc").value,status:document.getElementById("fst").value,location:document.getElementById("fl").value,remarks:document.getElementById("fr").value,updatedBy:document.getElementById("fu").value,updatedAt:serverTimestamp()};if(EID)await updateDoc(doc(db,"employees",EID),obj);else await addDoc(col,obj);closeModal();};
+window.delEmp=async function(id,nm){if(confirm("Delete "+nm+"?"))await deleteDoc(doc(db,"employees",id));};
+window.doCSV=function(){const h=["Name","CPF","Designation","Section","Status","Location","Remarks"],rows=ALL.map(e=>[e.name,e.cpf,e.designation,e.section,e.status,e.location,e.remarks].map(v=>`"${(v||"").replace(/"/g,'""')}"`).join(",")),csv=[h.join(","),...rows].join("
+"),a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download="service_book.csv";a.click();};
+</script></body></html>
