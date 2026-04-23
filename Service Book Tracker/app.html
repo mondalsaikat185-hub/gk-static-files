@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Service Book Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:sans-serif;background:#f0f2f5}
+header{background:#1a237e;color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+.bar{background:#fff;padding:10px 18px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #ddd}
+.bar input,.bar select{padding:6px 10px;border:1px solid #ccc;border-radius:4px}.btn{padding:7px 12px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;color:#fff}
+.g{background:#2e7d32}.b{background:#1565c0}.r{background:#c62828}.o{background:#e65100}
+table{width:100%;border-collapse:collapse;background:#fff;font-size:0.9rem}
+th{background:#1a237e;color:#fff;padding:10px;text-align:left;position:sticky;top:0}
+td{padding:8px 10px;border-bottom:1px solid #eee}.av{background:#e8f5e9;color:#2e7d32;padding:2px 5px;font-weight:bold;border-radius:3px}
+.bold-rack{font-weight:900;color:#c62828;font-size:1.1rem;background:#ffebee;padding:3px 6px;border-radius:4px;text-align:center}
+.modal, .login-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;align-items:center;justify-content:center}
+.show{display:flex !important}
+.mb{background:#fff;padding:20px;border-radius:8px;width:500px;max-width:95%;max-height:90vh;overflow-y:auto}
+.fg{margin-bottom:10px}.fg label{display:block;margin-bottom:3px;font-size:.8rem;font-weight:bold}
+.fg input,.fg select,.fg textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:4px}
+.login-box{background:#fff;padding:30px;border-radius:8px;width:350px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.2)}
+.login-box h2{margin-bottom:20px;color:#1a237e}
+.login-box input{width:100%;padding:10px;margin-bottom:15px;border:1px solid #ccc;border-radius:4px}
+.login-box button{width:100%;padding:10px;background:#1a237e;color:#fff;border:none;border-radius:4px;font-size:1rem;cursor:pointer}
+#app-content{display:none} /* Hidden until login */
+</style>
+</head>
+<body>
+
+<!-- Login System -->
+<div class="login-overlay show" id="loginScreen">
+    <div class="login-box">
+        <h2>🔒 Login Required</h2>
+        <input type="text" id="userid" placeholder="User ID">
+        <input type="password" id="pwd" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <p id="loginErr" style="color:red;font-size:0.8rem;margin-top:10px;display:none">Invalid ID or Password!</p>
+    </div>
+</div>
+
+<div id="app-content">
+<header><h3>📚 Service Book Tracker</h3><span id="ls">Connecting...</span></header>
+<div class="bar">
+<input type="text" id="q" placeholder="Search by Name, GPF, Rack..." oninput="ft()">
+<select id="sf" onchange="ft()"><option value="">All Status</option><option>Available</option><option>With Staff</option><option>Sent to PAO</option><option>Missing</option></select>
+<button class="btn g" onclick="oa()">+ Add New Record</button>
+<button class="btn r" onclick="logout()" style="margin-left:auto">Logout</button>
+</div>
+<div style="overflow-x:auto">
+<table id="mt">
+<thead><tr><th>Name</th><th>Designation</th><th>Section/Rack</th><th>GPF/PPO No</th><th>DOB</th><th>Retirement</th><th>Mobile</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody id="tb"></tbody>
+</table>
+</div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal" id="md">
+<div class="mb"><h3 id="mtit" style="margin-bottom:15px;color:#1a237e">Add / Edit Record</h3>
+<div class="fg"><label>Name*</label><input id="fn"></div>
+<div class="fg"><label>Designation</label><input id="fdesig"></div>
+<div class="fg"><label>Section/Rack (e.g. 1(1), 2(3))*</label><input id="fsc"></div>
+<div class="fg"><label>GPF / PPO No</label><input id="fgpf"></div>
+<div class="fg"><label>DOB</label><input type="date" id="fdob"></div>
+<div class="fg"><label>Retirement Date</label><input type="date" id="fret"></div>
+<div class="fg"><label>Mobile No</label><input id="fmob"></div>
+<div class="fg"><label>Email</label><input id="fmail"></div>
+<div class="fg"><label>Status</label><select id="fst"><option>Available in stack</option><option>With Staff</option><option>Sent to PAO</option><option>Missing</option></select></div>
+<div class="fg"><label>Remarks/Location</label><textarea id="fr"></textarea></div>
+
+<div style="display:flex;gap:10px;margin-top:15px">
+<button class="btn g" style="flex:1" onclick="sv()">Save Record</button>
+<button class="btn r" style="flex:1" onclick="cl()">Cancel</button>
+</div>
+</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+// Firebase Config
+const fb = initializeApp({apiKey: "AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI", authDomain: "service-book-tracker.firebaseapp.com", projectId: "service-book-tracker", storageBucket: "service-book-tracker.firebasestorage.app", messagingSenderId: "1080714862635", appId: "1:1080714862635:web:9c5c096b2536d5a976ca6e"});
+const db = getFirestore(fb), col = collection(db, "employees"); 
+let ALL = [], EID = null;
+
+// --- LOGIN SYSTEM ---
+const USERS = {
+    "admin": "admin123",
+    "saikat": "saikat123",
+    "office": "office123"
+};
+
+window.login = () => {
+    const u = document.getElementById("userid").value.trim().toLowerCase();
+    const p = document.getElementById("pwd").value.trim();
+    if(USERS[u] && USERS[u] === p) {
+        document.getElementById("loginScreen").classList.remove("show");
+        document.getElementById("app-content").style.display = "block";
+        sessionStorage.setItem("loggedIn", "true");
+        loadData(); 
+    } else {
+        document.getElementById("loginErr").style.display = "block";
+    }
+};
+
+window.logout = () => {
+    sessionStorage.removeItem("loggedIn");
+    location.reload();
+};
+
+if(sessionStorage.getItem("loggedIn") === "true") {
+    document.getElementById("loginScreen").classList.remove("show");
+    document.getElementById("app-content").style.display = "block";
+    loadData();
+}
+
+// --- DATA HANDLING ---
+function loadData() {
+    onSnapshot(col, s => { 
+        ALL = s.docs.map(d => ({id: d.id, ...d.data()})); 
+        ALL.sort((a,b)=>(a.name||"").localeCompare(b.name||"")); 
+        document.getElementById("ls").textContent="🟢 Live"; 
+        ft(); 
+    });
+}
+
+window.ft = () => { 
+    const v = document.getElementById("q").value.toLowerCase(), s = document.getElementById("sf").value;
+    const f = ALL.filter(e => (!v || [e.name, e.section, e.designation, e.cpf].some(x=>(x||"").toLowerCase().includes(v))) && (!s || (e.trackingStatus||e.status||"").includes(s)));
+    
+    document.getElementById("tb").innerHTML = f.map(e => `<tr>
+        <td style="font-weight:bold;color:#1a237e">${e.name||""}</td>
+        <td>${e.designation||""}</td>
+        <td class="bold-rack">${e.section||e.stackNumber||"N/A"}</td>
+        <td>${e.cpf||e.ppoNo||""}</td>
+        <td>${e.dob||""}</td>
+        <td>${e.retirement||""}</td>
+        <td>${e.mobile||""}</td>
+        <td><span class="av">${e.trackingStatus||e.status||"Available"}</span></td>
+        <td style="display:flex;gap:5px;">
+            <button class="btn b" onclick="ed('${e.id}')">Edit</button>
+            <button class="btn r" onclick="dl('${e.id}')">Delete</button>
+        </td>
+    </tr>`).join("");
+};
+
+window.oa = () => { 
+    EID=null; 
+    document.getElementById("mtit").innerText = "Add New Record";
+    ["fn","fdesig","fsc","fgpf","fdob","fret","fmob","fmail","fr"].forEach(i=>document.getElementById(i).value=""); 
+    document.getElementById("fst").value="Available in stack";
+    document.getElementById("md").classList.add("show"); 
+};
+
+window.cl = () => document.getElementById("md").classList.remove("show");
+
+window.ed = (id) => { 
+    EID=id; const e=ALL.find(x=>x.id===id); 
+    document.getElementById("mtit").innerText = "Edit Record";
+    document.getElementById("fn").value=e.name||""; 
+    document.getElementById("fdesig").value=e.designation||""; 
+    document.getElementById("fsc").value=e.section||e.stackNumber||""; 
+    document.getElementById("fgpf").value=e.cpf||e.ppoNo||""; 
+    document.getElementById("fdob").value=e.dob||""; 
+    document.getElementById("fret").value=e.retirement||""; 
+    document.getElementById("fmob").value=e.mobile||""; 
+    document.getElementById("fmail").value=e.email||""; 
+    document.getElementById("fst").value=e.trackingStatus||e.status||"Available in stack"; 
+    document.getElementById("fr").value=e.remarks||e.location||""; 
+    document.getElementById("md").classList.add("show"); 
+};
+
+window.dl = async (id) => {
+    if(confirm("Are you sure you want to permanently DELETE this record?")) {
+        await deleteDoc(doc(db, "employees", id));
+    }
+};
+
+window.sv = async () => { 
+    const obj = {
+        name: document.getElementById("fn").value, 
+        designation: document.getElementById("fdesig").value, 
+        section: document.getElementById("fsc").value, 
+        cpf: document.getElementById("fgpf").value, 
+        dob: document.getElementById("fdob").value, 
+        retirement: document.getElementById("fret").value, 
+        mobile: document.getElementById("fmob").value, 
+        email: document.getElementById("fmail").value, 
+        trackingStatus: document.getElementById("fst").value, 
+        remarks: document.getElementById("fr").value, 
+        updatedAt: serverTimestamp()
+    };
+    if(EID) await updateDoc(doc(db,"employees",EID),obj); 
+    else await addDoc(col,obj); 
+    cl(); 
+};
+</script></body></html>
