@@ -1,0 +1,223 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Service Book Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f0f2f5}
+header{background:#1a237e;color:white;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:1.15rem}
+.controls{background:white;padding:12px 18px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #ddd}
+.controls input,.controls select{padding:7px 11px;border:1px solid #ccc;border-radius:5px;font-size:.88rem}
+.controls input[type=text]{flex:1;min-width:180px}
+.btn{padding:7px 14px;border:none;border-radius:5px;cursor:pointer;font-size:.88rem;font-weight:bold}
+.btn-g{background:#2e7d32;color:white}.btn-b{background:#1565c0;color:white}
+.btn-r{background:#c62828;color:white}.btn-o{background:#e65100;color:white}
+table{width:100%;border-collapse:collapse;background:white}
+th{background:#1a237e;color:white;padding:9px 10px;text-align:left;font-size:.82rem;position:sticky;top:0;z-index:1}
+td{padding:8px 10px;border-bottom:1px solid #eee;font-size:.82rem;vertical-align:middle}
+tr:hover{background:#f5f5f5}
+.av{background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:3px;font-size:.78rem;font-weight:bold}
+.ws{background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:3px;font-size:.78rem;font-weight:bold}
+.sp{background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:3px;font-size:.78rem;font-weight:bold}
+.ms{background:#ffebee;color:#b71c1c;padding:2px 8px;border-radius:3px;font-size:.78rem;font-weight:bold}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:999}
+.modal.on{display:flex;align-items:center;justify-content:center}
+.mbox{background:white;padding:22px;border-radius:8px;width:490px;max-width:96%;max-height:90vh;overflow-y:auto}
+.mbox h3{margin-bottom:14px;color:#1a237e}
+.fg{margin-bottom:11px}
+.fg label{display:block;margin-bottom:4px;font-size:.82rem;font-weight:bold;color:#444}
+.fg input,.fg select,.fg textarea{width:100%;padding:7px 9px;border:1px solid #ccc;border-radius:4px;font-size:.88rem}
+.fg textarea{height:58px;resize:vertical}
+.ma{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.tw{overflow-x:auto;max-height:calc(100vh - 175px)}
+.sbar{background:white;padding:8px 18px;display:flex;gap:16px;border-bottom:1px solid #ddd;font-size:.82rem;flex-wrap:wrap}
+.si{display:flex;align-items:center;gap:5px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.msg{text-align:center;padding:30px;color:#888;font-size:.95rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>&#128218; Service Book Tracker — Customs Preventive Commissionerate</h1>
+  <span style="font-size:.78rem;background:#4caf50;padding:3px 10px;border-radius:10px;color:white">&#9679; Live</span>
+</header>
+<div class="controls">
+  <input type="text" id="q" placeholder="Search name, CPF, section, status..." oninput="ft()">
+  <select id="sf" onchange="ft()">
+    <option value="">All Status</option>
+    <option>Available</option><option>With Staff</option>
+    <option>Sent to PAO</option><option>Missing</option>
+  </select>
+  <select id="sc" onchange="ft()"><option value="">All Sections</option></select>
+  <button class="btn btn-g" onclick="oa()">+ Add Employee</button>
+  <button class="btn btn-b" onclick="doExport()">&#8595; Export CSV</button>
+</div>
+<div class="sbar">
+  <span><b id="tc">0</b> Total</span>
+  <span class="si"><span class="dot" style="background:#2e7d32"></span><b id="ac">0</b> Available</span>
+  <span class="si"><span class="dot" style="background:#e65100"></span><b id="wc">0</b> With Staff</span>
+  <span class="si"><span class="dot" style="background:#1565c0"></span><b id="pc">0</b> PAO</span>
+  <span class="si"><span class="dot" style="background:#b71c1c"></span><b id="mc">0</b> Missing</span>
+</div>
+<div class="tw">
+<table>
+<thead><tr>
+  <th>#</th><th>Name</th><th>CPF/GPF</th><th>Designation</th>
+  <th>Section</th><th>Status</th><th>Location/With Whom</th>
+  <th>Remarks</th><th>Updated By</th><th>Last Updated</th><th>Actions</th>
+</tr></thead>
+<tbody id="tb"></tbody>
+</table>
+</div>
+
+<div class="modal" id="modal">
+<div class="mbox">
+  <h3 id="mtitle">Add Employee</h3>
+  <div class="fg">abel>Full Name *</label><input id="fn" type="text" placeholder="Employee full name"></div>
+  <div class="fg">abel>CPF / GPF Number</label><input id="fc" type="text" placeholder="CPF/GPF No."></div>
+  <div class="fg">abel>Designation</label><input id="fd" type="text" placeholder="Inspector, SI, Sepoy..."></div>
+  <div class="fg">abel>Section / Division</label><input id="fs" type="text" placeholder="Section name"></div>
+  <div class="fg">abel>Status *</label>
+    <select id="fst">
+      <option>Available</option><option>With Staff</option>
+      <option>Sent to PAO</option><option>Missing</option>
+    </select>
+  </div>
+  <div class="fg">abel>Location / With Whom</label><input id="fl" type="text" placeholder="Stack no., person name..."></div>
+  <div class="fg">abel>Remarks</label><textarea id="fr" placeholder="Any additional notes..."></textarea></div>
+  <div class="fg">abel>Your Name (Updated By)</label><input id="fu" type="text" placeholder="Enter your name"></div>
+  <div class="ma">
+    <button class="btn btn-r" onclick="cm()">Cancel</button>
+    <button class="btn btn-g" onclick="se()">Save</button>
+  </div>
+</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI",
+  authDomain: "service-book-tracker.firebaseapp.com",
+  projectId: "service-book-tracker",
+  storageBucket: "service-book-tracker.firebasestorage.app",
+  messagingSenderId: "1080714862635",
+  appId: "1:1080714862635:web:9c5c096b2536d5a976ca6e"
+});
+
+const db = getFirestore(app);
+const col = collection(db, "employees");
+let all = [], eid = null;
+
+onSnapshot(col, snap => {
+  all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  all.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  updateSections();
+  ft();
+  stats();
+});
+
+function stats() {
+  document.getElementById("tc").textContent = all.length;
+  document.getElementById("ac").textContent = all.filter(e => e.status === "Available").length;
+  document.getElementById("wc").textContent = all.filter(e => e.status === "With Staff").length;
+  document.getElementById("pc").textContent = all.filter(e => e.status === "Sent to PAO").length;
+  document.getElementById("mc").textContent = all.filter(e => e.status === "Missing").length;
+}
+
+function updateSections() {
+  const sel = document.getElementById("sc");
+  const cur = sel.value;
+  const secs = [...new Set(all.map(e => e.section).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All Sections</option>' + secs.map(s => `<option value="${s}">${s}</option>`).join("");
+  sel.value = cur;
+}
+
+window.ft = function () {
+  const q = document.getElementById("q").value.toLowerCase();
+  const sf = document.getElementById("sf").value;
+  const sc = document.getElementById("sc").value;
+  const filtered = all.filter(e => {
+    const m = !q || [e.name, e.cpf, e.section, e.designation, e.location, e.remarks, e.status]
+      .some(v => (v || "").toLowerCase().includes(q));
+    return m && (!sf || e.status === sf) && (!sc || e.section === sc);
+  });
+  render(filtered);
+};
+
+function badge(s) {
+  const m = { "Available": "av", "With Staff": "ws", "Sent to PAO": "sp", "Missing": "ms" };
+  return `<span class="${m[s] || ''}">${s || "N/A"}</span>`;
+}
+
+function render(data) {
+  const tb = document.getElementById("tb");
+  if (!data.length) {
+    tb.innerHTML = `<tr><td colspan="11" class="msg">${all.length === 0 ? "No employees added yet. Click '+ Add Employee' to start." : "No records match your search."}</td></tr>`;
+    return;
+  }
+  tb.innerHTML = data.map((e, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><b>${e.name || ""}</b></td>
+      <td>${e.cpf || ""}</td>
+      <td>${e.designation || ""}</td>
+      <td>${e.section || ""}</td>
+      <td>${badge(e.status)}</td>
+      <td>${e.location || ""}</td>
+      <td>${e.remarks || ""}</td>
+      <td style="font-size:.75rem;color:#777">${e.updatedBy || ""}</td>
+      <td style="font-size:.75rem;color:#777">${e.updatedAt?.toDate ? e.updatedAt.toDate().toLocaleString("en-IN") : ""}</td>
+      <td>
+        <button class="btn btn-o" style="padding:3px 8px;font-size:.75rem;margin-right:3px" onclick="oe('${e.id}')">Edit</button>
+        <button class="btn btn-r" style="padding:3px 8px;font-size:.75rem" onclick="del('${e.id}','${(e.name||"").replace(/'/g,"")}')">Del</button>
+      </td>
+    </tr>`).join("");
+}
+
+window.oa = function () {
+  eid = null;
+  document.getElementById("mtitle").textContent = "Add Employee";
+  ["fn","fc","fd","fs","fl","fr","fu"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("fst").value = "Available";
+  document.getElementById("modal").classList.add("on");
+};
+
+window.oe = function (id) {
+  const e = all.find(x => x.id === id);
+  if (!e) return;
+  eid = id;
+  document.getElementById("mtitle").textContent = "Edit Employee";
+  document.getElementById("fn").value = e.name || "";
+  document.getElementById("fc").value = e.cpf || "";
+  document.getElementById("fd").value = e.designation || "";
+  document.getElementById("fs").value = e.section || "";
+  document.getElementById("fst").value = e.status || "Available";
+  document.getElementById("fl").value = e.location || "";
+  document.getElementById("fr").value = e.remarks || "";
+  document.getElementById("fu").value = e.updatedBy || "";
+  document.getElementById("modal").classList.add("on");
+};
+
+window.cm = function () { document.getElementById("modal").classList.remove("on"); };
+
+window.se = async function () {
+  const name = document.getElementById("fn").value.trim();
+  if (!name) { alert("Name is required!"); return; }
+  const obj = {
+    name, cpf: document.getElementById("fc").value.trim(),
+    designation: document.getElementById("fd").value.trim(),
+    section: document.getElementById("fs").value.trim(),
+    status: document.getElementById("fst").value,
+    location: document.getElementById("fl").value.trim(),
+    remarks: document.getElementById("fr").value.trim(),
+    updatedBy: document.getElementById("fu").value.trim(),
+    updatedAt: serverTimestamp()
+  };
+  try {
+    if (eid) await updateDoc(doc(db, "employees", eid), obj);
+    else await addDoc(col, obj);
