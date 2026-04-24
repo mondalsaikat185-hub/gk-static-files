@@ -493,9 +493,8 @@ function makeOtp(){
 ════════════════════════════════════════════════════════════ */
 function sendTelegramOtp(username, otp, actionLabel){
   if(TELEGRAM_BOT_TOKEN === "YOUR_BOT_TOKEN_HERE"){
-    return Promise.resolve({ok:false, error:"Telegram not configured in the HTML file."});
+    return Promise.resolve({ok:false, error:"Telegram not configured. Open HTML in Notepad and paste your Bot Token and Chat ID."});
   }
-  // Plain text only — no parse_mode, no special characters that can cause API errors
   var text =
     "SERVICE BOOK TRACKER - Password OTP\n" +
     "CGST Commissionerate, Bhubaneswar\n\n" +
@@ -505,25 +504,29 @@ function sendTelegramOtp(username, otp, actionLabel){
     "Valid for 5 minutes only.\n" +
     "Share this OTP only if you recognise the requestor.";
 
-  return fetch(
+  /* 10-second timeout — so it never hangs forever */
+  var timeoutPromise = new Promise(function(resolve){
+    setTimeout(function(){ resolve({ok:false, error:"Request timed out (10s). Check your internet connection or firewall."}); }, 10000);
+  });
+
+  var fetchPromise = fetch(
     "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage",
     {
       method: "POST",
       headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({
-        chat_id: TELEGRAM_ADMIN_CHAT_ID,
-        text: text
-      })
+      body: JSON.stringify({chat_id: TELEGRAM_ADMIN_CHAT_ID, text: text})
     }
   )
   .then(function(res){ return res.json(); })
   .then(function(json){
     if(json.ok) return {ok:true};
-    return {ok:false, error:"Telegram error: " + (json.description||"Unknown")};
+    return {ok:false, error:"Telegram API error: " + (json.description||"Unknown. Check Bot Token and Chat ID.")};
   })
   .catch(function(err){
-    return {ok:false, error:"Network error: " + err.message};
+    return {ok:false, error:"Network error: " + err.message + ". Check internet connection."};
   });
+
+  return Promise.race([fetchPromise, timeoutPromise]);
 }
 
 /* ══════════════════════════════════════════════════════════════
