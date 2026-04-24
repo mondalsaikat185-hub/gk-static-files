@@ -1,198 +1,767 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Service Book Tracker</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Service Book Tracker — CGST Bhubaneswar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:sans-serif;background:#f0f2f5}
-header{background:#1a237e;color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
-.bar{background:#fff;padding:10px 18px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #ddd}
-.bar input,.bar select{padding:6px 10px;border:1px solid #ccc;border-radius:4px}.btn{padding:7px 12px;border:none;border-radius:4px;cursor:pointer;font-weight:bold;color:#fff}
-.g{background:#2e7d32}.b{background:#1565c0}.r{background:#c62828}.o{background:#e65100}
-table{width:100%;border-collapse:collapse;background:#fff;font-size:0.9rem}
-th{background:#1a237e;color:#fff;padding:10px;text-align:left;position:sticky;top:0}
-td{padding:8px 10px;border-bottom:1px solid #eee}.av{background:#e8f5e9;color:#2e7d32;padding:2px 5px;font-weight:bold;border-radius:3px}
-.bold-rack{font-weight:900;color:#c62828;font-size:1.1rem;background:#ffebee;padding:3px 6px;border-radius:4px;text-align:center}
-.modal, .login-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;align-items:center;justify-content:center}
-.show{display:flex !important}
-.mb{background:#fff;padding:20px;border-radius:8px;width:500px;max-width:95%;max-height:90vh;overflow-y:auto}
-.fg{margin-bottom:10px}.fg label{display:block;margin-bottom:3px;font-size:.8rem;font-weight:bold}
-.fg input,.fg select,.fg textarea{width:100%;padding:8px;border:1px solid #ccc;border-radius:4px}
-.login-box{background:#fff;padding:30px;border-radius:8px;width:350px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.2)}
-.login-box h2{margin-bottom:20px;color:#1a237e}
-.login-box input{width:100%;padding:10px;margin-bottom:15px;border:1px solid #ccc;border-radius:4px}
-.login-box button{width:100%;padding:10px;background:#1a237e;color:#fff;border:none;border-radius:4px;font-size:1rem;cursor:pointer}
-#app-content{display:none} /* Hidden until login */
+:root {
+  --navy: #0f1f45;
+  --navy-mid: #1a3066;
+  --accent: #c8a84b;
+  --accent-light: #f0e0a0;
+  --red: #c0392b;
+  --green: #1a7a4a;
+  --blue: #1565c0;
+  --orange: #b94f00;
+  --bg: #f2f4f8;
+  --card: #ffffff;
+  --border: #dde2ee;
+  --text: #1c2a45;
+  --muted: #6b7a99;
+  --shadow: 0 2px 12px rgba(15,31,69,0.10);
+  --shadow-lg: 0 8px 30px rgba(15,31,69,0.15);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── LOGIN SCREEN ── */
+#loginScreen {
+  display: none;
+  position: fixed; inset: 0;
+  background: linear-gradient(135deg, var(--navy) 0%, #1e3a8a 60%, #0f1f45 100%);
+  z-index: 999;
+  align-items: center; justify-content: center;
+}
+#loginScreen.show { display: flex; }
+
+.login-card {
+  background: rgba(255,255,255,0.07);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(200,168,75,0.3);
+  border-radius: 20px;
+  padding: 50px 45px;
+  width: 400px;
+  text-align: center;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+  animation: slideUp 0.5s ease;
+}
+@keyframes slideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+
+.login-emblem {
+  width: 70px; height: 70px;
+  background: linear-gradient(135deg, var(--accent), #f0e0a0);
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px;
+  box-shadow: 0 0 30px rgba(200,168,75,0.4);
+}
+.login-card h2 { color: #fff; font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
+.login-card p { color: rgba(255,255,255,0.55); font-size: 0.85rem; margin-bottom: 30px; }
+
+.login-field {
+  position: relative; margin-bottom: 16px; text-align: left;
+}
+.login-field label { display: block; color: rgba(255,255,255,0.65); font-size: 0.78rem; font-weight: 500; margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
+.login-field input {
+  width: 100%; padding: 13px 16px 13px 44px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 10px;
+  color: #fff; font-size: 0.95rem; font-family: inherit;
+  transition: border 0.2s, background 0.2s;
+  outline: none;
+}
+.login-field input::placeholder { color: rgba(255,255,255,0.35); }
+.login-field input:focus { border-color: var(--accent); background: rgba(255,255,255,0.15); }
+.login-field .icon {
+  position: absolute; left: 14px; bottom: 13px;
+  font-size: 18px; opacity: 0.5;
+}
+
+.login-btn {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--accent), #b8912d);
+  border: none; border-radius: 10px;
+  color: var(--navy); font-weight: 700; font-size: 1rem;
+  cursor: pointer; font-family: inherit;
+  transition: transform 0.15s, box-shadow 0.15s;
+  margin-top: 8px;
+}
+.login-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(200,168,75,0.4); }
+.login-btn:active { transform: translateY(0); }
+#loginErr { color: #ff6b6b; font-size: 0.82rem; margin-top: 12px; display: none; }
+
+/* ── APP SHELL ── */
+#app-content { display: none; }
+
+/* HEADER */
+.app-header {
+  background: var(--navy);
+  padding: 0 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 62px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+  position: sticky; top: 0; z-index: 50;
+}
+.header-brand {
+  display: flex; align-items: center; gap: 12px;
+}
+.header-badge {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent), #b8912d);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.header-brand h1 { color: #fff; font-size: 1.1rem; font-weight: 700; }
+.header-brand span { color: rgba(255,255,255,0.45); font-size: 0.78rem; display: block; margin-top: -2px; }
+
+.header-right { display: flex; align-items: center; gap: 12px; }
+.live-dot {
+  display: flex; align-items: center; gap: 6px;
+  color: rgba(255,255,255,0.6); font-size: 0.8rem;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #aaa; }
+.dot.green { background: #4ade80; box-shadow: 0 0 8px #4ade80; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+.logout-btn {
+  padding: 7px 16px; background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 7px;
+  color: #fff; font-size: 0.82rem; font-weight: 500; cursor: pointer;
+  font-family: inherit; transition: background 0.2s;
+}
+.logout-btn:hover { background: rgba(255,255,255,0.2); }
+
+/* STATS BAR */
+.stats-bar {
+  background: var(--navy-mid);
+  padding: 12px 28px;
+  display: flex; gap: 24px; flex-wrap: wrap;
+}
+.stat-pill {
+  display: flex; align-items: center; gap: 8px;
+  color: rgba(255,255,255,0.8); font-size: 0.82rem;
+}
+.stat-pill strong { color: var(--accent); font-size: 1rem; font-weight: 700; }
+.stat-sep { color: rgba(255,255,255,0.2); }
+
+/* TOOLBAR */
+.toolbar {
+  padding: 16px 28px;
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.search-wrap {
+  position: relative; flex: 1; min-width: 220px;
+}
+.search-wrap input {
+  width: 100%; padding: 10px 16px 10px 40px;
+  border: 1.5px solid var(--border); border-radius: 9px;
+  font-size: 0.9rem; font-family: inherit; color: var(--text);
+  background: var(--bg); outline: none; transition: border 0.2s, box-shadow 0.2s;
+}
+.search-wrap input:focus { border-color: var(--navy-mid); box-shadow: 0 0 0 3px rgba(26,48,102,0.1); }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--muted); }
+
+.filter-select {
+  padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 9px;
+  font-size: 0.87rem; font-family: inherit; color: var(--text);
+  background: var(--bg); cursor: pointer; outline: none; min-width: 160px;
+}
+
+.btn-add {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, var(--navy), var(--navy-mid));
+  border: none; border-radius: 9px;
+  color: #fff; font-size: 0.87rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 7px;
+  white-space: nowrap; transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-add:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(15,31,69,0.25); }
+
+/* TABLE */
+.table-wrap { padding: 20px 28px; overflow-x: auto; }
+
+table {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  background: var(--card);
+  border-radius: 14px; overflow: hidden;
+  box-shadow: var(--shadow);
+  min-width: 1300px;
+  font-size: 0.84rem;
+}
+thead th {
+  background: var(--navy);
+  color: rgba(255,255,255,0.85);
+  padding: 13px 14px;
+  font-weight: 600; font-size: 0.78rem;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--accent);
+  white-space: nowrap;
+  position: sticky; top: 62px; z-index: 10;
+}
+thead th:first-child { border-radius: 14px 0 0 0; }
+thead th:last-child { border-radius: 0 14px 0 0; }
+
+tbody tr { transition: background 0.15s; }
+tbody tr:hover { background: #f5f7fd; }
+tbody tr:last-child td { border-bottom: none; }
+
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle; word-break: break-word;
+}
+
+.name-cell { font-weight: 600; color: var(--navy); }
+.desig-cell { color: var(--muted); font-size: 0.82rem; }
+
+.stack-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--navy);
+  color: var(--accent);
+  font-family: 'DM Mono', monospace;
+  font-weight: 500; font-size: 0.82rem;
+  padding: 4px 10px; border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 0.78rem; font-weight: 600; white-space: nowrap;
+}
+.status-av { background: #dcfce7; color: #15803d; }
+.status-pao { background: #fef3c7; color: #92400e; }
+.status-staff { background: #dbeafe; color: #1e40af; }
+.status-missing { background: #fee2e2; color: #991b1b; }
+
+.remark-sub { display: block; font-size: 0.75rem; color: var(--muted); margin-top: 4px; font-style: italic; }
+
+.date-cell { font-family: 'DM Mono', monospace; font-size: 0.79rem; color: var(--muted); }
+
+.cat-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 0.75rem; font-weight: 600;
+  background: #f0f4ff; color: var(--navy-mid); border: 1px solid var(--border);
+}
+
+.action-wrap { display: flex; gap: 6px; }
+.btn-edit {
+  padding: 5px 12px; background: #e8f0fe; border: 1px solid #c5d5fa;
+  color: var(--navy-mid); border-radius: 6px; font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: background 0.15s;
+}
+.btn-edit:hover { background: #d0e0fc; }
+.btn-del {
+  padding: 5px 10px; background: #fef2f2; border: 1px solid #fecaca;
+  color: var(--red); border-radius: 6px; font-size: 0.78rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: background 0.15s;
+}
+.btn-del:hover { background: #fee2e2; }
+
+/* EMPTY STATE */
+.empty-state {
+  text-align: center; padding: 60px 20px; color: var(--muted);
+}
+.empty-state div { font-size: 3rem; margin-bottom: 12px; }
+.empty-state p { font-size: 0.9rem; }
+
+/* MODAL */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(10,20,50,0.55); backdrop-filter: blur(4px);
+  z-index: 100; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+
+.modal-card {
+  background: var(--card);
+  border-radius: 16px; width: 780px; max-width: 95%;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.25s ease;
+}
+@keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(-10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+
+.modal-header {
+  padding: 22px 28px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+}
+.modal-header-icon {
+  width: 42px; height: 42px; background: linear-gradient(135deg, var(--navy), var(--navy-mid));
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.modal-header h3 { font-size: 1.15rem; font-weight: 700; color: var(--navy); }
+.modal-close {
+  margin-left: auto; width: 32px; height: 32px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); transition: background 0.15s;
+}
+.modal-close:hover { background: #fee2e2; color: var(--red); }
+
+.modal-body { padding: 24px 28px; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full { grid-column: span 2; }
+.form-group label { font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.form-group input, .form-group select {
+  padding: 10px 14px; border: 1.5px solid var(--border);
+  border-radius: 9px; font-size: 0.9rem; font-family: inherit; color: var(--text);
+  outline: none; transition: border 0.2s, box-shadow 0.2s; background: var(--bg);
+}
+.form-group input:focus, .form-group select:focus {
+  border-color: var(--navy-mid); box-shadow: 0 0 0 3px rgba(26,48,102,0.1);
+  background: #fff;
+}
+
+.status-section {
+  grid-column: span 2;
+  background: #f7f9ff; border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 16px;
+}
+.status-section label { font-size: 0.78rem; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 10px; }
+.status-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.status-radio { display: none; }
+.status-label {
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  font-size: 0.82rem; font-weight: 600; border: 2px solid transparent;
+  transition: all 0.15s; user-select: none;
+}
+.status-label.av { background: #dcfce7; color: #15803d; border-color: #86efac; }
+.status-label.pao { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.status-label.staff { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+.status-radio:checked + .status-label { box-shadow: 0 0 0 3px rgba(26,48,102,0.2); transform: scale(1.03); }
+
+.remark-input-wrap { margin-top: 12px; display: none; }
+.remark-input-wrap input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 0.9rem; font-family: inherit; outline: none; background: #fff; }
+.remark-input-wrap input:focus { border-color: var(--navy-mid); }
+
+.modal-footer {
+  padding: 18px 28px;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+.btn-save {
+  padding: 11px 28px;
+  background: linear-gradient(135deg, var(--navy), var(--navy-mid));
+  border: none; border-radius: 9px;
+  color: #fff; font-size: 0.9rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-save:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(15,31,69,0.3); }
+.btn-cancel {
+  padding: 11px 22px;
+  background: var(--bg); border: 1.5px solid var(--border); border-radius: 9px;
+  color: var(--muted); font-size: 0.9rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: background 0.15s;
+}
+.btn-cancel:hover { background: #fee2e2; color: var(--red); border-color: #fecaca; }
+
+/* SECTION TABS (record category filter) */
+.tabs { display: flex; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; }
+.tab-btn {
+  padding: 7px 16px; border: none; border-radius: 7px;
+  font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  font-family: inherit; color: var(--muted); background: transparent;
+  transition: all 0.15s; white-space: nowrap;
+}
+.tab-btn.active { background: var(--navy); color: #fff; }
+
+@media (max-width: 700px) {
+  .toolbar { padding: 12px 16px; }
+  .table-wrap { padding: 12px 10px; }
+  .app-header { padding: 0 16px; }
+  .stats-bar { padding: 10px 16px; gap: 14px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group.full { grid-column: span 1; }
+  .status-section { grid-column: span 1; }
+}
 </style>
 </head>
 <body>
 
-<!-- Login System -->
-<div class="login-overlay show" id="loginScreen">
-    <div class="login-box">
-        <h2>🔒 Login Required</h2>
-        <input type="text" id="userid" placeholder="User ID">
-        <input type="password" id="pwd" placeholder="Password">
-        <button onclick="login()">Login</button>
-        <p id="loginErr" style="color:red;font-size:0.8rem;margin-top:10px;display:none">Invalid ID or Password!</p>
+<!-- LOGIN -->
+<div id="loginScreen" class="show">
+  <div class="login-card">
+    <div class="login-emblem">📚</div>
+    <h2>Service Book Tracker</h2>
+    <p>CGST Commissionerate, Bhubaneswar<br>Authorized Personnel Only</p>
+    <div class="login-field">
+      <label>User ID</label>
+      <span class="icon">👤</span>
+      <input type="text" id="userid" placeholder="Enter your user ID" autocomplete="username">
     </div>
+    <div class="login-field">
+      <label>Password</label>
+      <span class="icon">🔑</span>
+      <input type="password" id="pwd" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <button class="login-btn" onclick="login()">Sign In →</button>
+    <p id="loginErr">⚠ Invalid credentials. Please try again.</p>
+  </div>
 </div>
 
+<!-- APP -->
 <div id="app-content">
-<header><h3>📚 Service Book Tracker</h3><span id="ls">Connecting...</span></header>
-<div class="bar">
-<input type="text" id="q" placeholder="Search by Name, GPF, Rack..." oninput="ft()">
-<select id="sf" onchange="ft()"><option value="">All Status</option><option>Available</option><option>With Staff</option><option>Sent to PAO</option><option>Missing</option></select>
-<button class="btn g" onclick="oa()">+ Add New Record</button>
-<button class="btn r" onclick="logout()" style="margin-left:auto">Logout</button>
-</div>
-<div style="overflow-x:auto">
-<table id="mt">
-<thead><tr><th>Name</th><th>Designation</th><th>Section/Rack</th><th>GPF/PPO No</th><th>DOB</th><th>Retirement</th><th>Mobile</th><th>Status</th><th>Actions</th></tr></thead>
-<tbody id="tb"></tbody>
-</table>
-</div>
+
+  <header class="app-header">
+    <div class="header-brand">
+      <div class="header-badge">📚</div>
+      <div>
+        <h1>Service Book Tracker</h1>
+        <span>CGST Commissionerate, Bhubaneswar</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-dot">
+        <div class="dot" id="liveDot"></div>
+        <span id="liveLabel">Connecting…</span>
+      </div>
+      <button class="logout-btn" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-pill"><strong id="statTotal">–</strong> Total Records</div>
+    <span class="stat-sep">|</span>
+    <div class="stat-pill"><strong id="statActive">–</strong> Active</div>
+    <span class="stat-sep">|</span>
+    <div class="stat-pill"><strong id="statAvail">–</strong> Available</div>
+    <span class="stat-sep">|</span>
+    <div class="stat-pill"><strong id="statPao">–</strong> Sent to PAO</div>
+    <span class="stat-sep">|</span>
+    <div class="stat-pill"><strong id="statStaff">–</strong> With Staff</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="q" placeholder="Search by name, stack no., designation…" oninput="ft()">
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="setTab('',this)">All</button>
+      <button class="tab-btn" onclick="setTab('Regular Employee',this)">Regular</button>
+      <button class="tab-btn" onclick="setTab('Pensioner/Retired',this)">Retired</button>
+    </div>
+    <select class="filter-select" id="sf" onchange="ft()">
+      <option value="">All Statuses</option>
+      <option>Available</option>
+      <option>Sent to PAO</option>
+      <option>With Office Staff</option>
+    </select>
+    <button class="btn-add" onclick="oa()">＋ Add Record</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:13%">Name</th>
+          <th style="width:9%">Designation</th>
+          <th style="width:7%">Stack No.</th>
+          <th style="width:12%">Status / Remarks</th>
+          <th style="width:11%">Place of Posting</th>
+          <th style="width:9%">Date of Posting</th>
+          <th style="width:7%">DOB</th>
+          <th style="width:8%">Retirement</th>
+          <th style="width:9%">DOJ (Comm.)</th>
+          <th style="width:7%">DOJ (Dept.)</th>
+          <th style="width:5%">Category</th>
+          <th style="width:7%">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
+
 </div>
 
-<!-- Add/Edit Modal -->
-<div class="modal" id="md">
-<div class="mb"><h3 id="mtit" style="margin-bottom:15px;color:#1a237e">Add / Edit Record</h3>
-<div class="fg"><label>Name*</label><input id="fn"></div>
-<div class="fg"><label>Designation</label><input id="fdesig"></div>
-<div class="fg"><label>Section/Rack (e.g. 1(1), 2(3))*</label><input id="fsc"></div>
-<div class="fg"><label>GPF / PPO No</label><input id="fgpf"></div>
-<div class="fg"><label>DOB</label><input type="date" id="fdob"></div>
-<div class="fg"><label>Retirement Date</label><input type="date" id="fret"></div>
-<div class="fg"><label>Mobile No</label><input id="fmob"></div>
-<div class="fg"><label>Email</label><input id="fmail"></div>
-<div class="fg"><label>Status</label><select id="fst"><option>Available in stack</option><option>With Staff</option><option>Sent to PAO</option><option>Missing</option></select></div>
-<div class="fg"><label>Remarks/Location</label><textarea id="fr"></textarea></div>
+<!-- MODAL -->
+<div class="modal-overlay" id="md">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-header-icon">📝</div>
+      <h3 id="mtit">Add New Record</h3>
+      <button class="modal-close" onclick="cl()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input id="fn" placeholder="Employee full name">
+        </div>
+        <div class="form-group">
+          <label>Designation</label>
+          <input id="fdesig" placeholder="e.g. Superintendent">
+        </div>
+        <div class="form-group">
+          <label>Stack / Service Book No. *</label>
+          <input id="fsc" placeholder="e.g. 1(1)">
+        </div>
+        <div class="form-group">
+          <label>Record Category</label>
+          <select id="fcat2">
+            <option value="Regular Employee">Regular Employee</option>
+            <option value="Pensioner/Retired">Pensioner / Retired</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Place of Posting</label>
+          <input id="fpost" placeholder="e.g. Commissionerate HQ, Bhubaneswar">
+        </div>
+        <div class="form-group">
+          <label>Date of Posting (in Station)</label>
+          <input id="fdojs" placeholder="DD-MM-YYYY">
+        </div>
+        <div class="form-group">
+          <label>DOJ in Commissionerate</label>
+          <input id="fdojc" placeholder="DD-MM-YYYY">
+        </div>
+        <div class="form-group">
+          <label>DOJ in Department</label>
+          <input id="fdojd" placeholder="DD-MM-YYYY">
+        </div>
+        <div class="form-group">
+          <label>Date of Birth</label>
+          <input id="fdob" placeholder="DD-MM-YYYY">
+        </div>
+        <div class="form-group">
+          <label>Date of Retirement</label>
+          <input id="fret" placeholder="DD-MM-YYYY">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <input id="fcat" placeholder="UR / OBC / SC / ST / EWS">
+        </div>
+        <div class="form-group">
+          <label>Mobile</label>
+          <input id="fmob" placeholder="Optional">
+        </div>
 
-<div style="display:flex;gap:10px;margin-top:15px">
-<button class="btn g" style="flex:1" onclick="sv()">Save Record</button>
-<button class="btn r" style="flex:1" onclick="cl()">Cancel</button>
-</div>
-</div>
+        <!-- STATUS -->
+        <div class="status-section">
+          <label>Service Book Status *</label>
+          <div class="status-row">
+            <input type="radio" name="sbstatus" id="st1" class="status-radio" value="Available" checked onchange="toggleRemark()">
+            <label for="st1" class="status-label av">✅ Available</label>
+            <input type="radio" name="sbstatus" id="st2" class="status-radio" value="Sent to PAO" onchange="toggleRemark()">
+            <label for="st2" class="status-label pao">📤 Sent to PAO</label>
+            <input type="radio" name="sbstatus" id="st3" class="status-radio" value="With Office Staff" onchange="toggleRemark()">
+            <label for="st3" class="status-label staff">👤 With Office Staff</label>
+          </div>
+          <div class="remark-input-wrap" id="remWrap">
+            <input id="frem" placeholder="Enter details / staff name / date…">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="cl()">Cancel</button>
+      <button class="btn-save" onclick="sv()">💾 Save Record</button>
+    </div>
+  </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// Firebase Config
-const fb = initializeApp({apiKey: "AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI", authDomain: "service-book-tracker.firebaseapp.com", projectId: "service-book-tracker", storageBucket: "service-book-tracker.firebasestorage.app", messagingSenderId: "1080714862635", appId: "1:1080714862635:web:9c5c096b2536d5a976ca6e"});
-const db = getFirestore(fb), col = collection(db, "employees"); 
-let ALL = [], EID = null;
+const fb = initializeApp({
+  apiKey: "AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI",
+  authDomain: "service-book-tracker.firebaseapp.com",
+  projectId: "service-book-tracker",
+  storageBucket: "service-book-tracker.firebasestorage.app",
+  messagingSenderId: "1080714862635",
+  appId: "1:1080714862635:web:9c5c096b2536d5a976ca6e"
+});
+const db = getFirestore(fb), col = collection(db, "employees");
+let ALL = [], EID = null, tabFilter = '';
 
-// --- LOGIN SYSTEM ---
-const USERS = {
-    "admin": "admin123",
-    "saikat": "saikat123",
-    "office": "office123"
-};
+const USERS = { "admin": "admin123", "saikat": "saikat123", "office": "office123" };
 
 window.login = () => {
-    const u = document.getElementById("userid").value.trim().toLowerCase();
-    const p = document.getElementById("pwd").value.trim();
-    if(USERS[u] && USERS[u] === p) {
-        document.getElementById("loginScreen").classList.remove("show");
-        document.getElementById("app-content").style.display = "block";
-        sessionStorage.setItem("loggedIn", "true");
-        loadData(); 
-    } else {
-        document.getElementById("loginErr").style.display = "block";
-    }
-};
-
-window.logout = () => {
-    sessionStorage.removeItem("loggedIn");
-    location.reload();
-};
-
-if(sessionStorage.getItem("loggedIn") === "true") {
+  const u = document.getElementById("userid").value.trim().toLowerCase();
+  const p = document.getElementById("pwd").value.trim();
+  if (USERS[u] && USERS[u] === p) {
     document.getElementById("loginScreen").classList.remove("show");
     document.getElementById("app-content").style.display = "block";
+    sessionStorage.setItem("loggedIn","true");
     loadData();
+  } else {
+    document.getElementById("loginErr").style.display = "block";
+  }
+};
+window.logout = () => { sessionStorage.removeItem("loggedIn"); location.reload(); };
+if (sessionStorage.getItem("loggedIn") === "true") {
+  document.getElementById("loginScreen").classList.remove("show");
+  document.getElementById("app-content").style.display = "block";
+  loadData();
 }
 
-// --- DATA HANDLING ---
 function loadData() {
-    onSnapshot(col, s => { 
-        ALL = s.docs.map(d => ({id: d.id, ...d.data()})); 
-        ALL.sort((a,b)=>(a.name||"").localeCompare(b.name||"")); 
-        document.getElementById("ls").textContent="🟢 Live"; 
-        ft(); 
-    });
+  onSnapshot(col, snap => {
+    ALL = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    ALL.sort((a,b) => (a.name||"").localeCompare(b.name||""));
+    document.getElementById("liveDot").className = "dot green";
+    document.getElementById("liveLabel").textContent = "Live";
+    updateStats();
+    ft();
+  });
 }
 
-window.ft = () => { 
-    const v = document.getElementById("q").value.toLowerCase(), s = document.getElementById("sf").value;
-    const f = ALL.filter(e => (!v || [e.name, e.section, e.designation, e.cpf].some(x=>(x||"").toLowerCase().includes(v))) && (!s || (e.trackingStatus||e.status||"").includes(s)));
-    
-    document.getElementById("tb").innerHTML = f.map(e => `<tr>
-        <td style="font-weight:bold;color:#1a237e">${e.name||""}</td>
-        <td>${e.designation||""}</td>
-        <td class="bold-rack">${e.section||e.stackNumber||"N/A"}</td>
-        <td>${e.cpf||e.ppoNo||""}</td>
-        <td>${e.dob||""}</td>
-        <td>${e.retirement||""}</td>
-        <td>${e.mobile||""}</td>
-        <td><span class="av">${e.trackingStatus||e.status||"Available"}</span></td>
-        <td style="display:flex;gap:5px;">
-            <button class="btn b" onclick="ed('${e.id}')">Edit</button>
-            <button class="btn r" onclick="dl('${e.id}')">Delete</button>
-        </td>
-    </tr>`).join("");
+function updateStats() {
+  document.getElementById("statTotal").textContent = ALL.length;
+  document.getElementById("statActive").textContent = ALL.filter(e => e.employmentStatus === "Active").length;
+  const norm = e => (e.trackingStatus||"").replace("Available in stack","Available");
+  document.getElementById("statAvail").textContent = ALL.filter(e => norm(e) === "Available").length;
+  document.getElementById("statPao").textContent = ALL.filter(e => norm(e) === "Sent to PAO").length;
+  document.getElementById("statStaff").textContent = ALL.filter(e => norm(e) === "With Office Staff").length;
+}
+
+window.setTab = (val, btn) => {
+  tabFilter = val;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ft();
 };
 
-window.oa = () => { 
-    EID=null; 
-    document.getElementById("mtit").innerText = "Add New Record";
-    ["fn","fdesig","fsc","fgpf","fdob","fret","fmob","fmail","fr"].forEach(i=>document.getElementById(i).value=""); 
-    document.getElementById("fst").value="Available in stack";
-    document.getElementById("md").classList.add("show"); 
+window.ft = () => {
+  const v = document.getElementById("q").value.toLowerCase();
+  const s = document.getElementById("sf").value;
+  const f = ALL.filter(e => {
+    const norm = (e.trackingStatus||"").replace("Available in stack","Available");
+    const matchText = !v || [e.name, e.section, e.designation, e.category, e.movementRemark, e.mobile]
+      .some(x => (x||"").toLowerCase().includes(v));
+    const matchStatus = !s || norm === s;
+    const matchTab = !tabFilter || e.recordCategory === tabFilter;
+    return matchText && matchStatus && matchTab;
+  });
+
+  if (f.length === 0) {
+    document.getElementById("tb").innerHTML = `
+      <tr><td colspan="12">
+        <div class="empty-state"><div>🗂</div><p>No records found matching your search.</p></div>
+      </td></tr>`;
+    return;
+  }
+
+  document.getElementById("tb").innerHTML = f.map(e => {
+    let st = (e.trackingStatus||"Available").replace("Available in stack","Available");
+    let badge = `<span class="status-badge status-av">✅ Available</span>`;
+    if (st === "Sent to PAO") badge = `<span class="status-badge status-pao">📤 Sent to PAO</span>`;
+    else if (st === "With Office Staff") badge = `<span class="status-badge status-staff">👤 With Staff</span>`;
+    if (e.movementRemark) badge += `<span class="remark-sub">${e.movementRemark}</span>`;
+
+    return `<tr>
+      <td class="name-cell">${e.name||""}</td>
+      <td class="desig-cell">${e.designation||""}</td>
+      <td><span class="stack-badge">${e.section||"—"}</span></td>
+      <td>${badge}</td>
+      <td style="font-size:0.8rem">${e.placeOfPosting||""}</td>
+      <td class="date-cell">${e.dateJoiningCurrentStation||""}</td>
+      <td class="date-cell">${e.dob||""}</td>
+      <td class="date-cell">${e.dateOfRetirement||e.retirement||""}</td>
+      <td class="date-cell">${e.dateJoiningCommissionerate||""}</td>
+      <td class="date-cell">${e.dateJoiningDepartment||""}</td>
+      <td><span class="cat-badge">${e.category||"—"}</span></td>
+      <td>
+        <div class="action-wrap">
+          <button class="btn-edit" onclick="ed('${e.id}')">✏ Edit</button>
+          <button class="btn-del" onclick="dl('${e.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+};
+
+window.toggleRemark = () => {
+  const v = document.querySelector('input[name="sbstatus"]:checked')?.value;
+  document.getElementById("remWrap").style.display = (v && v !== "Available") ? "block" : "none";
+};
+
+window.oa = () => {
+  EID = null;
+  document.getElementById("mtit").textContent = "Add New Record";
+  ["fn","fdesig","fsc","fpost","fdob","fret","fdojs","fdojc","fdojd","fcat","fmob","frem"].forEach(i => document.getElementById(i).value="");
+  document.getElementById("fcat2").value = "Regular Employee";
+  document.getElementById("st1").checked = true;
+  window.toggleRemark();
+  document.getElementById("md").classList.add("show");
 };
 
 window.cl = () => document.getElementById("md").classList.remove("show");
 
-window.ed = (id) => { 
-    EID=id; const e=ALL.find(x=>x.id===id); 
-    document.getElementById("mtit").innerText = "Edit Record";
-    document.getElementById("fn").value=e.name||""; 
-    document.getElementById("fdesig").value=e.designation||""; 
-    document.getElementById("fsc").value=e.section||e.stackNumber||""; 
-    document.getElementById("fgpf").value=e.cpf||e.ppoNo||""; 
-    document.getElementById("fdob").value=e.dob||""; 
-    document.getElementById("fret").value=e.retirement||""; 
-    document.getElementById("fmob").value=e.mobile||""; 
-    document.getElementById("fmail").value=e.email||""; 
-    document.getElementById("fst").value=e.trackingStatus||e.status||"Available in stack"; 
-    document.getElementById("fr").value=e.remarks||e.location||""; 
-    document.getElementById("md").classList.add("show"); 
+window.ed = (id) => {
+  EID = id;
+  const e = ALL.find(x => x.id === id);
+  document.getElementById("mtit").textContent = "Edit Record";
+  document.getElementById("fn").value = e.name||"";
+  document.getElementById("fdesig").value = e.designation||"";
+  document.getElementById("fsc").value = e.section||"";
+  document.getElementById("fcat2").value = e.recordCategory||"Regular Employee";
+  document.getElementById("fpost").value = e.placeOfPosting||"";
+  document.getElementById("fdob").value = e.dob||"";
+  document.getElementById("fret").value = e.dateOfRetirement||e.retirement||"";
+  document.getElementById("fdojs").value = e.dateJoiningCurrentStation||"";
+  document.getElementById("fdojc").value = e.dateJoiningCommissionerate||"";
+  document.getElementById("fdojd").value = e.dateJoiningDepartment||"";
+  document.getElementById("fcat").value = e.category||"";
+  document.getElementById("fmob").value = e.mobile||"";
+  document.getElementById("frem").value = e.movementRemark||"";
+  let st = (e.trackingStatus||"Available").replace("Available in stack","Available");
+  const radios = document.querySelectorAll('input[name="sbstatus"]');
+  radios.forEach(r => { if(r.value===st) r.checked=true; });
+  window.toggleRemark();
+  document.getElementById("md").classList.add("show");
 };
 
 window.dl = async (id) => {
-    if(confirm("Are you sure you want to permanently DELETE this record?")) {
-        await deleteDoc(doc(db, "employees", id));
-    }
+  if (confirm("Permanently delete this record?")) await deleteDoc(doc(db,"employees",id));
 };
 
-window.sv = async () => { 
-    const obj = {
-        name: document.getElementById("fn").value, 
-        designation: document.getElementById("fdesig").value, 
-        section: document.getElementById("fsc").value, 
-        cpf: document.getElementById("fgpf").value, 
-        dob: document.getElementById("fdob").value, 
-        retirement: document.getElementById("fret").value, 
-        mobile: document.getElementById("fmob").value, 
-        email: document.getElementById("fmail").value, 
-        trackingStatus: document.getElementById("fst").value, 
-        remarks: document.getElementById("fr").value, 
-        updatedAt: serverTimestamp()
-    };
-    if(EID) await updateDoc(doc(db,"employees",EID),obj); 
-    else await addDoc(col,obj); 
-    cl(); 
+window.sv = async () => {
+  const name = document.getElementById("fn").value.trim();
+  if (!name) { alert("Name is required."); return; }
+  const st = document.querySelector('input[name="sbstatus"]:checked')?.value || "Available";
+  const obj = {
+    name, designation: document.getElementById("fdesig").value,
+    section: document.getElementById("fsc").value,
+    recordCategory: document.getElementById("fcat2").value,
+    placeOfPosting: document.getElementById("fpost").value,
+    dob: document.getElementById("fdob").value,
+    dateOfRetirement: document.getElementById("fret").value,
+    dateJoiningCurrentStation: document.getElementById("fdojs").value,
+    dateJoiningCommissionerate: document.getElementById("fdojc").value,
+    dateJoiningDepartment: document.getElementById("fdojd").value,
+    category: document.getElementById("fcat").value,
+    mobile: document.getElementById("fmob").value,
+    trackingStatus: st,
+    movementRemark: document.getElementById("frem").value,
+    updatedAt: serverTimestamp()
+  };
+  if (EID) await updateDoc(doc(db,"employees",EID), obj);
+  else await addDoc(col, obj);
+  cl();
 };
-</script></body></html>
+</script>
+</body>
+</html>
