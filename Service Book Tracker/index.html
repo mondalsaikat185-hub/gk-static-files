@@ -146,6 +146,21 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .otp-input-box{font-size:1.6rem;font-family:'DM Mono',monospace;font-weight:700;text-align:center;letter-spacing:.3em;padding:14px;border:2px solid var(--accent);border-radius:12px;background:#fffbf0;color:var(--navy);width:100%}
 .otp-input-box:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(15,31,69,.15);outline:none}
+/* Telegram Setup Screen */
+#tgSetupScreen{display:none;position:fixed;inset:0;background:linear-gradient(135deg,#0a1628,#1a3066 55%,#0f1f45);z-index:9999;align-items:center;justify-content:center}
+#tgSetupScreen.show{display:flex}
+.setup-card{background:rgba(255,255,255,.07);backdrop-filter:blur(22px);border:1px solid rgba(200,168,75,.35);border-radius:22px;padding:40px 38px;width:460px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,.45)}
+.setup-card h2{color:#fff;font-size:1.3rem;font-weight:800;margin-bottom:6px}
+.setup-card .sub{color:rgba(255,255,255,.5);font-size:.82rem;margin-bottom:24px;line-height:1.6}
+.setup-field{margin-bottom:14px;text-align:left}
+.setup-field label{display:block;color:rgba(255,255,255,.6);font-size:.74rem;font-weight:700;margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase}
+.setup-field input{width:100%;padding:11px 14px;background:rgba(255,255,255,.09);border:1.5px solid rgba(255,255,255,.18);border-radius:10px;color:#fff;font-size:.88rem;font-family:'DM Mono',monospace;outline:none;transition:border .2s}
+.setup-field input:focus{border-color:var(--accent)}
+.setup-field input::placeholder{color:rgba(255,255,255,.3);font-family:'DM Sans',sans-serif}
+.setup-btn{width:100%;padding:13px;margin-top:6px;background:linear-gradient(135deg,var(--accent),#b8912d);border:none;border-radius:10px;color:var(--navy);font-weight:800;font-size:.95rem;font-family:inherit;cursor:pointer}
+.setup-btn:hover{opacity:.9}
+#setupErr{color:#ff7979;font-size:.8rem;margin-top:10px;display:none}
+#setupOk{color:#86efac;font-size:.8rem;margin-top:10px;display:none}
 @media(max-width:720px){
   .toolbar,.app-header,.stats-bar{padding-left:14px;padding-right:14px}
   .table-wrap{padding:4px 10px 24px}
@@ -176,6 +191,27 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
     <div class="login-forgot">
       <span class="forgot-link" onclick="openForgotModal()">🔑 Forgot Password?</span>
     </div>
+  </div>
+</div>
+
+<!-- TELEGRAM SETUP SCREEN (shows only if bot token not saved yet) -->
+<div id="tgSetupScreen">
+  <div class="setup-card">
+    <div style="font-size:2.8rem;margin-bottom:12px">📱</div>
+    <h2>Telegram Setup</h2>
+    <p class="sub">Enter your Telegram Bot Token and your Chat ID.<br>This is saved on this computer and never needs to be entered again.</p>
+    <div class="setup-field">
+      <label>Bot Token (from @BotFather)</label>
+      <input type="text" id="setupToken" placeholder="e.g. 8632319834:AAGdvzbsXE...">
+    </div>
+    <div class="setup-field">
+      <label>Your Telegram Chat ID</label>
+      <input type="text" id="setupChatId" placeholder="e.g. 472365299">
+    </div>
+    <p id="setupErr">❌ Please enter both values.</p>
+    <p id="setupOk">✅ Saved! Testing connection…</p>
+    <button class="setup-btn" onclick="saveTgSetup()">💾 Save &amp; Continue</button>
+    <p style="color:rgba(255,255,255,.35);font-size:.74rem;margin-top:16px">Your Chat ID is <strong style="color:rgba(255,255,255,.55)">472365299</strong> (SAIKAT MONDAL)</p>
   </div>
 </div>
 
@@ -435,8 +471,49 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
      var TELEGRAM_BOT_TOKEN   = "7123456789:AAHxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
      var TELEGRAM_ADMIN_CHAT_ID = "987654321";
 ═══════════════════════════════════════════════════════════════ */
-var TELEGRAM_BOT_TOKEN    = "8632319834:AAGdvzbsXEHbC4A0AjOZHr40mLZBpHTjtIc";       // ← Paste your BotFather token
-var TELEGRAM_ADMIN_CHAT_ID = "472365299";        // ← Paste your Telegram Chat ID
+/* Load from localStorage first (saved via setup screen), fall back to hardcoded values */
+var TELEGRAM_BOT_TOKEN    = localStorage.getItem("tgToken")  || "8632319834:AAGdvzbsXEHbC4A0AjOZHr40mLZBpHTjtIc";
+var TELEGRAM_ADMIN_CHAT_ID = localStorage.getItem("tgChatId") || "472365299";
+
+/* Show setup screen if token still not configured */
+(function(){
+  if(!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN === "YOUR_BOT_TOKEN_HERE"){
+    document.getElementById("tgSetupScreen").classList.add("show");
+  }
+})();
+
+function saveTgSetup(){
+  var tok  = document.getElementById("setupToken").value.trim();
+  var cid  = document.getElementById("setupChatId").value.trim();
+  document.getElementById("setupErr").style.display = "none";
+  document.getElementById("setupOk").style.display  = "none";
+  if(!tok || !cid){ document.getElementById("setupErr").style.display="block"; return; }
+  /* Test the token before saving */
+  fetch("https://api.telegram.org/bot" + tok + "/sendMessage", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({chat_id: cid, text: "Service Book Tracker: Telegram setup successful!"})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(j){
+    if(j.ok){
+      localStorage.setItem("tgToken",  tok);
+      localStorage.setItem("tgChatId", cid);
+      TELEGRAM_BOT_TOKEN    = tok;
+      TELEGRAM_ADMIN_CHAT_ID = cid;
+      document.getElementById("setupOk").style.display = "block";
+      setTimeout(function(){
+        document.getElementById("tgSetupScreen").classList.remove("show");
+      }, 1500);
+    } else {
+      document.getElementById("setupErr").textContent = "❌ Telegram error: " + (j.description||"Wrong token or chat ID.");
+      document.getElementById("setupErr").style.display = "block";
+    }
+  })
+  .catch(function(){
+    document.getElementById("setupErr").textContent = "❌ Network error. Check internet connection.";
+    document.getElementById("setupErr").style.display = "block";
+  });
+}
 
 /* ══════════════════════════════════════════════════════════════
    FIREBASE
@@ -849,8 +926,4 @@ function sv(){
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   };
   if(EID){ col.doc(EID).update(obj).then(cl).catch(function(e){alert("Error: "+e.message);}); }
-  else    { col.add(obj).then(cl).catch(function(e){alert("Error: "+e.message);}); }
-}
-</script>
-</body>
-</html>
+  else    { col.add(obj).then(cl).catch(function(e){alert("Error: "
