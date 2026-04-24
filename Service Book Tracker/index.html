@@ -44,7 +44,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .login-btn { width:100%; padding:14px; margin-top:10px; background:linear-gradient(135deg,var(--accent),#b8912d); border:none; border-radius:11px; color:var(--navy); font-weight:800; font-size:1rem; font-family:inherit; cursor:pointer; transition:transform 0.15s,box-shadow 0.15s; }
 .login-btn:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(200,168,75,0.45); }
 #loginErr { color:#ff7979; font-size:0.82rem; margin-top:12px; display:none; }
-.chpwd-link { display:inline-block; margin-top:18px; color:rgba(255,255,255,0.45); font-size:0.8rem; cursor:pointer; text-decoration:underline; text-underline-offset:3px; transition:color 0.2s; }
+.login-links { display:flex; justify-content:space-between; margin-top:18px; }
+.chpwd-link { color:rgba(255,255,255,0.45); font-size:0.8rem; cursor:pointer; text-decoration:underline; text-underline-offset:3px; transition:color 0.2s; }
 .chpwd-link:hover { color:var(--accent); }
 
 /* ══ HEADER ══ */
@@ -64,7 +65,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .hdr-btn.danger { border-color:rgba(255,100,100,0.35); color:#ffaaaa; }
 .hdr-btn.danger:hover { background:rgba(192,57,43,0.3); }
 
-/* ══ STATS BAR — sticky below header ══ */
+/* ══ STATS BAR ══ */
 .stats-bar { background:var(--navy-mid); padding:0 28px; display:flex; gap:0; align-items:stretch; height:var(--stats-h); overflow-x:auto; position:sticky; top:var(--header-h); z-index:55; border-bottom:1px solid rgba(255,255,255,0.08); }
 .stats-bar::-webkit-scrollbar { display:none; }
 .stat-item { display:flex; align-items:center; gap:8px; padding:0 20px; color:rgba(255,255,255,0.65); font-size:0.8rem; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.1); flex-shrink:0; }
@@ -72,21 +73,18 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .stat-item strong { color:var(--accent); font-size:1.05rem; font-weight:800; }
 .s-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 
-/* ══ TOOLBAR — sticky below header+stats ══ */
+/* ══ TOOLBAR ══ */
 .toolbar { padding:9px 28px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:calc(var(--header-h) + var(--stats-h)); z-index:50; min-height:var(--toolbar-h); }
-
 .search-wrap { position:relative; flex:1; min-width:200px; }
 .search-wrap input { width:100%; padding:9px 36px 9px 38px; border:1.5px solid var(--border); border-radius:9px; font-size:0.88rem; font-family:inherit; color:var(--text); background:var(--bg); outline:none; transition:border 0.2s,box-shadow 0.2s; }
 .search-wrap input:focus { border-color:var(--navy-mid); box-shadow:0 0 0 3px rgba(26,48,102,0.1); background:#fff; }
 .s-ico { position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:15px; color:var(--muted); pointer-events:none; }
 .s-clear { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--muted); font-size:14px; display:none; padding:2px; line-height:1; }
 .s-clear:hover { color:var(--red); }
-
 .tabs { display:flex; gap:3px; background:var(--bg); border-radius:9px; padding:3px; border:1.5px solid var(--border); }
 .tab-btn { padding:6px 13px; border:none; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer; font-family:inherit; color:var(--muted); background:transparent; transition:all 0.15s; white-space:nowrap; }
 .tab-btn.active { background:var(--navy); color:#fff; box-shadow:0 2px 6px rgba(15,31,69,0.25); }
 .tab-btn.retired-tab.active { background:linear-gradient(135deg,#6d2e2e,#9b2226); }
-
 .filter-select { padding:9px 12px; border:1.5px solid var(--border); border-radius:9px; font-size:0.84rem; font-family:inherit; color:var(--text); background:var(--bg); cursor:pointer; outline:none; min-width:150px; }
 .btn-add { padding:9px 18px; background:linear-gradient(135deg,var(--navy),var(--navy-light)); border:none; border-radius:9px; color:#fff; font-size:0.84rem; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:6px; white-space:nowrap; transition:transform 0.15s,box-shadow 0.15s; }
 .btn-add:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(15,31,69,0.28); }
@@ -96,48 +94,88 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .sec-head.retired { color:#7b1f1f; }
 .sec-count { background:var(--bg); border:1px solid var(--border); padding:2px 10px; border-radius:20px; font-size:0.74rem; color:var(--muted); font-weight:600; }
 
-/* ══ TABLE ══ */
+/* ══ TABLE — KEY FIX: no sticky on thead, proper left-aligned layout ══ */
 .table-wrap { padding:4px 28px 24px; overflow-x:auto; }
-table { width:100%; border-collapse:separate; border-spacing:0; background:var(--card); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); min-width:1260px; font-size:0.83rem; }
-thead th { background:var(--navy); color:rgba(255,255,255,0.82); padding:12px 13px; font-weight:700; font-size:0.71rem; text-transform:uppercase; letter-spacing:0.06em; border-bottom:2px solid var(--accent); white-space:nowrap; position:sticky; top:calc(var(--header-h) + var(--stats-h) + var(--toolbar-h)); z-index:10; }
+table { width:100%; border-collapse:collapse; background:var(--card); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); min-width:1300px; font-size:0.83rem; table-layout:fixed; }
+
+/* thead NOT sticky — this prevents the floating header bug */
+thead th {
+  background:var(--navy);
+  color:rgba(255,255,255,0.85);
+  padding:11px 10px;
+  font-weight:700;
+  font-size:0.7rem;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  border-bottom:2px solid var(--accent);
+  white-space:nowrap;
+  text-align:left;
+}
 thead th:first-child { border-radius:14px 0 0 0; }
 thead th:last-child  { border-radius:0 14px 0 0; }
 table.ret-tbl thead th { background:#5c1a1a; border-bottom-color:#e57373; }
+
 tbody tr { transition:background 0.12s; }
 tbody tr:hover { background:#f4f6fd; }
 tbody tr:last-child td { border-bottom:none; }
-td { padding:10px 13px; border-bottom:1px solid var(--border); vertical-align:middle; word-break:break-word; }
+td {
+  padding:9px 10px;
+  border-bottom:1px solid var(--border);
+  vertical-align:middle;
+  text-align:left;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 
-/* ── name: bigger, darker, very bold ── */
-.name-cell { font-weight:800; color:var(--navy); font-size:0.91rem; letter-spacing:-0.01em; }
+/* ── Column widths ── */
+col.c-name   { width:14%; }
+col.c-desig  { width:10%; }
+col.c-stack  { width:7%; }
+col.c-status { width:10%; }
+col.c-place  { width:12%; }
+col.c-dojs   { width:9%; }
+col.c-dob    { width:7%; }
+col.c-ret    { width:8%; }
+col.c-dojc   { width:8%; }
+col.c-dojd   { width:7%; }
+col.c-cat    { width:5%; }
+col.c-act    { width:6%; }
+
+/* ── Name: bold, dark, left-aligned — THE MAIN FIX ── */
+.name-cell {
+  font-weight:800;
+  color:var(--navy);
+  font-size:0.88rem;
+  letter-spacing:-0.01em;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
 .name-cell.ret { color:#6d2e2e; }
-.desig-cell { color:var(--muted); font-size:0.8rem; }
+.desig-cell { color:var(--muted); font-size:0.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-.stack-badge { display:inline-flex; align-items:center; justify-content:center; background:var(--navy); color:var(--accent); font-family:'DM Mono',monospace; font-weight:500; font-size:0.8rem; padding:4px 9px; border-radius:6px; }
+.stack-badge { display:inline-flex; align-items:center; justify-content:center; background:var(--navy); color:var(--accent); font-family:'DM Mono',monospace; font-weight:500; font-size:0.78rem; padding:3px 8px; border-radius:6px; }
 .stack-badge.ret { background:#6d2e2e; color:#ffcdd2; }
 
-.status-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
+.status-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:20px; font-size:0.73rem; font-weight:700; white-space:nowrap; }
 .s-av   { background:#dcfce7; color:#15803d; }
 .s-pao  { background:#fef3c7; color:#92400e; }
 .s-stf  { background:#dbeafe; color:#1e40af; }
-.remark-sub { display:block; font-size:0.73rem; color:var(--muted); margin-top:3px; font-style:italic; }
-.date-cell { font-family:'DM Mono',monospace; font-size:0.78rem; color:var(--muted); }
-.cat-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:0.73rem; font-weight:700; background:#f0f4ff; color:var(--navy-mid); border:1px solid #c8d4f5; }
+.remark-sub { display:block; font-size:0.71rem; color:var(--muted); margin-top:2px; font-style:italic; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.date-cell { font-family:'DM Mono',monospace; font-size:0.76rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cat-badge { display:inline-block; padding:2px 7px; border-radius:4px; font-size:0.71rem; font-weight:700; background:#f0f4ff; color:var(--navy-mid); border:1px solid #c8d4f5; }
 
-/* ── Icon action buttons ── */
 .act-wrap { display:flex; gap:5px; align-items:center; }
-.btn-ico { width:32px; height:32px; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s,transform 0.1s; flex-shrink:0; }
+.btn-ico { width:30px; height:30px; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s,transform 0.1s; flex-shrink:0; }
 .btn-ico:active { transform:scale(0.88); }
 .btn-ico.edit { background:#e8f0fe; color:#1a3066; border:1px solid #c5d5fa; }
 .btn-ico.edit:hover { background:#c8d8fc; }
 .btn-ico.del  { background:#fef2f2; color:#c0392b; border:1px solid #fecaca; }
 .btn-ico.del:hover  { background:#fee2e2; }
-.btn-ico svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.btn-ico svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
-/* search highlight */
 mark { background:#fff3a3; color:inherit; border-radius:2px; padding:0 1px; }
 
-/* empty */
 .empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
 .empty-state .big { font-size:3rem; margin-bottom:10px; }
 
@@ -154,7 +192,6 @@ mark { background:#fff3a3; color:inherit; border-radius:2px; padding:0 1px; }
 .m-close:hover { background:#fee2e2; color:var(--red); }
 .modal-body { padding:22px 26px; }
 .modal-ftr { padding:16px 26px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
-
 .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .fg { display:flex; flex-direction:column; gap:6px; }
 .fg.full { grid-column:span 2; }
@@ -163,7 +200,6 @@ mark { background:#fff3a3; color:inherit; border-radius:2px; padding:0 1px; }
 .fg input:focus, .fg select:focus { border-color:var(--navy-mid); box-shadow:0 0 0 3px rgba(26,48,102,0.1); background:#fff; }
 .sec-div { grid-column:span 2; display:flex; align-items:center; gap:10px; color:var(--muted); font-size:0.74rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; margin:4px 0; }
 .sec-div::before,.sec-div::after { content:''; flex:1; height:1px; background:var(--border); }
-
 .status-sec { grid-column:span 2; background:#f7f9ff; border:1.5px solid var(--border); border-radius:12px; padding:14px 16px; }
 .status-sec > label { display:block; font-size:0.74rem; font-weight:700; color:var(--navy); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px; }
 .st-row { display:flex; gap:8px; flex-wrap:wrap; }
@@ -175,18 +211,22 @@ mark { background:#fff3a3; color:inherit; border-radius:2px; padding:0 1px; }
 .st-radio:checked + .st-lbl { box-shadow:0 0 0 3px rgba(26,48,102,0.22); transform:scale(1.04); }
 .rem-wrap { margin-top:11px; display:none; }
 .rem-wrap input { width:100%; padding:9px 13px; border:1.5px solid var(--border); border-radius:9px; font-size:0.88rem; font-family:inherit; outline:none; background:#fff; }
-
 .btn-save { padding:11px 26px; background:linear-gradient(135deg,var(--navy),var(--navy-light)); border:none; border-radius:9px; color:#fff; font-size:0.88rem; font-weight:700; cursor:pointer; font-family:inherit; transition:transform 0.15s,box-shadow 0.15s; }
 .btn-save:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(15,31,69,0.3); }
 .btn-cancel { padding:11px 20px; background:var(--bg); border:1.5px solid var(--border); border-radius:9px; color:var(--muted); font-size:0.88rem; font-weight:600; cursor:pointer; font-family:inherit; transition:background 0.15s; }
 .btn-cancel:hover { background:#fee2e2; color:var(--red); border-color:#fecaca; }
 
-/* Change Password modal */
-#pwdModal .modal-card { width:430px; }
+/* ══ Password / OTP Modals ══ */
+#pwdModal .modal-card, #otpModal .modal-card { width:460px; }
 .pwd-note { font-size:0.78rem; color:var(--muted); background:#f7f9ff; border-radius:8px; padding:10px 13px; margin-bottom:14px; line-height:1.6; border:1px solid var(--border); }
-#pwdMsg { font-size:0.82rem; margin-top:10px; display:none; border-radius:8px; padding:8px 12px; }
-#pwdMsg.ok  { background:#dcfce7; color:#15803d; }
-#pwdMsg.err { background:#fee2e2; color:#c0392b; }
+#pwdMsg, #otpMsg, #resetMsg { font-size:0.82rem; margin-top:10px; display:none; border-radius:8px; padding:8px 12px; }
+#pwdMsg.ok, #otpMsg.ok, #resetMsg.ok  { background:#dcfce7; color:#15803d; }
+#pwdMsg.err, #otpMsg.err, #resetMsg.err { background:#fee2e2; color:#c0392b; }
+
+/* OTP display box */
+.otp-display { background:var(--navy); color:var(--accent); font-family:'DM Mono',monospace; font-size:2rem; font-weight:700; letter-spacing:0.3em; text-align:center; border-radius:12px; padding:18px; margin:14px 0; border:2px solid var(--accent); }
+.otp-note { font-size:0.78rem; color:var(--muted); text-align:center; margin-bottom:8px; }
+.otp-steps { display:flex; flex-direction:column; gap:10px; }
 
 @media (max-width:720px) {
   .toolbar,.app-header,.stats-bar { padding-left:14px; padding-right:14px; }
@@ -215,7 +255,10 @@ mark { background:#fff3a3; color:inherit; border-radius:2px; padding:0 1px; }
     </div>
     <button class="login-btn" onclick="login()">Sign In →</button>
     <p id="loginErr">⚠ Invalid credentials. Please try again.</p>
-    <span class="chpwd-link" onclick="openPwdModal(true)">🔒 Change my password</span>
+    <div class="login-links">
+      <span class="chpwd-link" onclick="openPwdModal(true)">🔒 Change Password</span>
+      <span class="chpwd-link" onclick="openOtpReset()">📱 Forgot Password?</span>
+    </div>
   </div>
 </div>
 
@@ -289,13 +332,11 @@ mark { background:#fff3a3; color:inherit; border-radius:2px; padding:0 1px; }
         <div class="fg"><label>Date of Retirement</label><input id="fret" placeholder="DD-MM-YYYY"></div>
         <div class="fg"><label>Category</label><input id="fcat" placeholder="UR / OBC / SC / ST / EWS"></div>
         <div class="fg"><label>Mobile</label><input id="fmob" placeholder="Optional"></div>
-
         <div class="sec-div">Posting Details</div>
         <div class="fg full"><label>Place of Posting</label><input id="fpost" placeholder="e.g. Commissionerate HQ, Bhubaneswar"></div>
         <div class="fg"><label>Date of Posting (in Station)</label><input id="fdojs" placeholder="DD-MM-YYYY"></div>
         <div class="fg"><label>DOJ in Commissionerate</label><input id="fdojc" placeholder="DD-MM-YYYY"></div>
         <div class="fg"><label>DOJ in Department</label><input id="fdojd" placeholder="DD-MM-YYYY"></div>
-
         <div class="sec-div">Service Book Status</div>
         <div class="status-sec">
           <label>Current Location of Service Book *</label>
@@ -327,7 +368,7 @@ mark { background:#fff3a3; color:inherit; border-radius:2px; padding:0 1px; }
       <button class="m-close" onclick="closePwd()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="pwd-note">ℹ️ <strong>Note:</strong> Password changes apply for this browser session only. For a permanent change across all devices, the admin must update the credentials in the application source code.</div>
+      <div class="pwd-note">ℹ️ Password changes are saved for this browser session. To make permanent changes across all devices, update the source code credentials.</div>
       <div class="form-grid" style="grid-template-columns:1fr">
         <div class="fg"><label>User ID</label><input type="text" id="pwdUser" placeholder="Your User ID"></div>
         <div class="fg"><label>Current Password</label><input type="password" id="pwdOld" placeholder="Current password"></div>
@@ -339,6 +380,50 @@ mark { background:#fff3a3; color:inherit; border-radius:2px; padding:0 1px; }
     <div class="modal-ftr">
       <button class="btn-cancel" onclick="closePwd()">Cancel</button>
       <button class="btn-save" onclick="doChgPwd()">🔒 Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ OTP RESET MODAL ═══ -->
+<div class="modal-ov" id="otpModal">
+  <div class="modal-card">
+    <div class="modal-hdr">
+      <div class="m-hico">📱</div>
+      <div><h3>Forgot Password</h3><div class="m-sub">Reset via OTP sent to admin mobile</div></div>
+      <button class="m-close" onclick="closeOtp()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Step 1: Enter user ID -->
+      <div id="otpStep1">
+        <div class="pwd-note">📱 An OTP will be displayed that you must share with the admin at <strong>9432490498</strong> to verify your identity. Then set a new password.</div>
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="fg"><label>Your User ID</label><input type="text" id="otpUserId" placeholder="Enter your User ID"></div>
+          <div id="otpMsg"></div>
+        </div>
+        <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn-cancel" onclick="closeOtp()">Cancel</button>
+          <button class="btn-save" onclick="genOtp()">📲 Generate OTP</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Show OTP & verify -->
+      <div id="otpStep2" style="display:none">
+        <div class="otp-note">Your OTP for reset. <strong>Call admin at 9432490498</strong> and read this code:</div>
+        <div class="otp-display" id="otpDisplay">——</div>
+        <div class="otp-note" style="color:var(--red)">⏱ OTP valid for 5 minutes. Do not share with anyone else.</div>
+        <div class="otp-steps form-grid" style="grid-template-columns:1fr; margin-top:16px">
+          <div class="fg"><label>Enter OTP to Confirm</label><input type="text" id="otpEntered" placeholder="Type the OTP shown above" maxlength="6"></div>
+          <div class="fg"><label>New Password</label><input type="password" id="otpNewPwd" placeholder="Minimum 6 characters"></div>
+          <div class="fg"><label>Confirm New Password</label><input type="password" id="otpCnfPwd" placeholder="Re-enter new password"></div>
+          <div id="resetMsg"></div>
+        </div>
+        <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn-cancel" onclick="closeOtp()">Cancel</button>
+          <button class="btn-save" onclick="doOtpReset()">✅ Reset Password</button>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -359,11 +444,14 @@ const fb = initializeApp({
 const db = getFirestore(fb), col = collection(db,"employees");
 let ALL=[], EID=null, TAB='';
 
-/* passwords (session-overridable) */
-let USERS = {admin:"admin123",saikat:"saikat123",office:"office123"};
+/* ── credentials (session-overridable) ── */
+let USERS = {admin:"admin123", saikat:"saikat123", office:"office123"};
 try { const ov=sessionStorage.getItem("pwdOv"); if(ov) USERS={...USERS,...JSON.parse(ov)}; } catch{}
 
-/* ── login / logout ── */
+/* ── OTP state ── */
+let _otp=null, _otpExp=0, _otpUser=null;
+
+/* ─────────── LOGIN / LOGOUT ─────────── */
 window.login = () => {
   const u=document.getElementById("userid").value.trim().toLowerCase();
   const p=document.getElementById("pwd").value.trim();
@@ -373,19 +461,21 @@ window.login = () => {
     sessionStorage.setItem("li",u); loadData();
   } else document.getElementById("loginErr").style.display="block";
 };
-window.logout=()=>{sessionStorage.removeItem("li");location.reload();};
+window.logout=()=>{ sessionStorage.removeItem("li"); location.reload(); };
 if(sessionStorage.getItem("li")){
   document.getElementById("loginScreen").classList.remove("show");
   document.getElementById("app-content").style.display="block";
   loadData();
 }
 
-/* ── change password ── */
+/* ─────────── CHANGE PASSWORD ─────────── */
 window.openPwdModal=(fromLogin)=>{
   document.getElementById("pwdMsg").style.display="none";
   ["pwdUser","pwdOld","pwdNew","pwdCnf"].forEach(i=>document.getElementById(i).value="");
-  if(!fromLogin){ document.getElementById("pwdUser").value=sessionStorage.getItem("li")||""; document.getElementById("pwdUser").readOnly=true; }
-  else document.getElementById("pwdUser").readOnly=false;
+  if(!fromLogin){
+    document.getElementById("pwdUser").value=sessionStorage.getItem("li")||"";
+    document.getElementById("pwdUser").readOnly=true;
+  } else document.getElementById("pwdUser").readOnly=false;
   document.getElementById("pwdModal").classList.add("show");
 };
 window.closePwd=()=>document.getElementById("pwdModal").classList.remove("show");
@@ -402,11 +492,55 @@ window.doChgPwd=()=>{
   USERS[u]=nw;
   const ov=JSON.parse(sessionStorage.getItem("pwdOv")||"{}"); ov[u]=nw;
   sessionStorage.setItem("pwdOv",JSON.stringify(ov));
-  msg.className="ok"; msg.textContent="✅ Password updated for this session!";
+  msg.className="ok"; msg.textContent="✅ Password updated successfully!";
   setTimeout(()=>window.closePwd(),2000);
 };
 
-/* ── firebase ── */
+/* ─────────── OTP RESET ─────────── */
+window.openOtpReset=()=>{
+  _otp=null; _otpExp=0; _otpUser=null;
+  document.getElementById("otpUserId").value="";
+  document.getElementById("otpMsg").style.display="none";
+  document.getElementById("resetMsg").style.display="none";
+  document.getElementById("otpEntered").value="";
+  document.getElementById("otpNewPwd").value="";
+  document.getElementById("otpCnfPwd").value="";
+  document.getElementById("otpStep1").style.display="block";
+  document.getElementById("otpStep2").style.display="none";
+  document.getElementById("otpModal").classList.add("show");
+};
+window.closeOtp=()=>document.getElementById("otpModal").classList.remove("show");
+
+window.genOtp=()=>{
+  const u=document.getElementById("otpUserId").value.trim().toLowerCase();
+  const msg=document.getElementById("otpMsg"); msg.style.display="block";
+  if(!USERS[u]){msg.className="err";msg.textContent="❌ User ID not found.";return;}
+  _otp=String(Math.floor(100000+Math.random()*900000));
+  _otpExp=Date.now()+5*60*1000;
+  _otpUser=u;
+  document.getElementById("otpDisplay").textContent=_otp;
+  document.getElementById("otpStep1").style.display="none";
+  document.getElementById("otpStep2").style.display="block";
+};
+
+window.doOtpReset=()=>{
+  const entered=document.getElementById("otpEntered").value.trim();
+  const nw=document.getElementById("otpNewPwd").value;
+  const cf=document.getElementById("otpCnfPwd").value;
+  const msg=document.getElementById("resetMsg"); msg.style.display="block";
+  if(!_otp||Date.now()>_otpExp){msg.className="err";msg.textContent="❌ OTP expired. Please start again.";return;}
+  if(entered!==_otp){msg.className="err";msg.textContent="❌ Incorrect OTP. Please try again.";return;}
+  if(nw.length<6){msg.className="err";msg.textContent="❌ Password must be ≥6 characters.";return;}
+  if(nw!==cf){msg.className="err";msg.textContent="❌ Passwords do not match.";return;}
+  USERS[_otpUser]=nw;
+  const ov=JSON.parse(sessionStorage.getItem("pwdOv")||"{}"); ov[_otpUser]=nw;
+  sessionStorage.setItem("pwdOv",JSON.stringify(ov));
+  _otp=null;
+  msg.className="ok"; msg.textContent="✅ Password reset successfully! You can now log in.";
+  setTimeout(()=>window.closeOtp(),2500);
+};
+
+/* ─────────── FIREBASE ─────────── */
 function loadData(){
   onSnapshot(col,snap=>{
     ALL=snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -416,6 +550,7 @@ function loadData(){
     stats(); ft();
   });
 }
+
 function stats(){
   const nm=e=>(e.trackingStatus||"").replace("Available in stack","Available");
   document.getElementById("sTotal").textContent  =ALL.length;
@@ -433,41 +568,33 @@ window.setTab=(v,btn)=>{
 };
 window.clearSrch=()=>{ document.getElementById("q").value=""; document.getElementById("clearBtn").style.display="none"; ft(); };
 
-/* highlight */
 function hl(t,q){
   if(!t||!q) return t||"";
-  return String(t).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, "gi"),"<mark>$1</mark>");
+  return String(t).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`,"gi"),"<mark>$1</mark>");
 }
 
-/* ── MAIN RENDER ── */
+/* ─────────── RENDER ─────────── */
 window.ft=()=>{
   const q=document.getElementById("q").value;
   const ql=q.toLowerCase();
   document.getElementById("clearBtn").style.display=q?"block":"none";
   const sf=document.getElementById("sf").value;
   const nm=e=>(e.trackingStatus||"").replace("Available in stack","Available");
-
   const f=ALL.filter(e=>{
     const mt=!ql||[e.name,e.section,e.designation,e.category,e.movementRemark,e.mobile,e.placeOfPosting].some(x=>(x||"").toLowerCase().includes(ql));
     const ms=!sf||nm(e)===sf;
     const mb=!TAB||e.recordCategory===TAB;
     return mt&&ms&&mb;
   });
-
   const wrap=document.getElementById("mainContent");
-
   if(!f.length){
     wrap.innerHTML=`<div class="table-wrap"><div class="empty-state"><div class="big">🗂</div><p>No records found. Try a different search term.</p></div></div>`;
     return;
   }
-
-  /* when "All" tab with no filter, split into two sections */
   if(TAB===''&&!ql&&!sf){
     const reg=f.filter(e=>e.recordCategory!=="Pensioner/Retired");
     const ret=f.filter(e=>e.recordCategory==="Pensioner/Retired");
-    wrap.innerHTML=
-      mkSection(reg,"👔 Regular Employees",false,q)+
-      (ret.length?mkSection(ret,"🎖 Retired / Pensioners",true,q):"");
+    wrap.innerHTML=mkSection(reg,"👔 Regular Employees",false,q)+(ret.length?mkSection(ret,"🎖 Retired / Pensioners",true,q):"");
   } else {
     const isRet=(TAB==="Pensioner/Retired")||(f.length&&f.every(e=>e.recordCategory==="Pensioner/Retired"));
     const title=isRet?"🎖 Retired / Pensioners":TAB?"👔 Regular Employees":"Records";
@@ -481,19 +608,24 @@ function mkSection(rows,title,isRet,q){
 <div class="sec-head${isRet?" retired":""}">${title}<span class="sec-count">${rows.length}</span></div>
 <div class="table-wrap">
 <table${isRet?' class="ret-tbl"':''}>
+<colgroup>
+  <col class="c-name"><col class="c-desig"><col class="c-stack"><col class="c-status">
+  <col class="c-place"><col class="c-dojs"><col class="c-dob"><col class="c-ret">
+  <col class="c-dojc"><col class="c-dojd"><col class="c-cat"><col class="c-act">
+</colgroup>
 <thead><tr>
-  <th style="width:13%">Name</th>
-  <th style="width:9%">Designation</th>
-  <th style="width:7%">Stack No.</th>
-  <th style="width:11%">Status / Remarks</th>
-  <th style="width:10%">Place of Posting</th>
-  <th style="width:9%">Date of Posting</th>
-  <th style="width:7%">DOB</th>
-  <th style="width:8%">Retirement</th>
-  <th style="width:9%">DOJ (Comm.)</th>
-  <th style="width:7%">DOJ (Dept.)</th>
-  <th style="width:5%">Cat.</th>
-  <th style="width:6%">Actions</th>
+  <th>Name</th>
+  <th>Designation</th>
+  <th>Stack No.</th>
+  <th>Status / Remarks</th>
+  <th>Place of Posting</th>
+  <th>Date of Posting</th>
+  <th>DOB</th>
+  <th>Retirement</th>
+  <th>DOJ (Comm.)</th>
+  <th>DOJ (Dept.)</th>
+  <th>Cat.</th>
+  <th>Actions</th>
 </tr></thead>
 <tbody>${rows.map(e=>mkRow(e,isRet,q)).join("")}</tbody>
 </table></div>`;
@@ -504,18 +636,16 @@ function mkRow(e,isRet,q){
   let badge=`<span class="status-badge s-av">✅ Available</span>`;
   if(nm==="Sent to PAO") badge=`<span class="status-badge s-pao">📤 Sent to PAO</span>`;
   else if(nm==="With Office Staff") badge=`<span class="status-badge s-stf">👤 With Staff</span>`;
-  if(e.movementRemark) badge+=`<span class="remark-sub">${e.movementRemark}</span>`;
-
+  if(e.movementRemark) badge+=`<span class="remark-sub" title="${e.movementRemark}">${e.movementRemark}</span>`;
   const pencil=`<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
   const trash=`<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
-
   return `<tr>
-<td class="name-cell${isRet?" ret":""}">${hl(e.name,q)}</td>
-<td class="desig-cell">${hl(e.designation,q)}</td>
+<td class="name-cell${isRet?" ret":""}" title="${e.name||''}">${hl(e.name,q)}</td>
+<td class="desig-cell" title="${e.designation||''}">${hl(e.designation,q)}</td>
 <td><span class="stack-badge${isRet?" ret":""}">${e.section||"—"}</span></td>
 <td>${badge}</td>
-<td style="font-size:.78rem;color:var(--muted)">${e.placeOfPosting||""}</td>
-<td class="date-cell">${e.dateJoiningCurrentStation||""}</td>
+<td style="font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${e.placeOfPosting||''}">${e.placeOfPosting||""}</td>
+<td class="date-cell" title="${e.dateJoiningCurrentStation||''}">${e.dateJoiningCurrentStation||""}</td>
 <td class="date-cell">${e.dob||""}</td>
 <td class="date-cell">${e.dateOfRetirement||e.retirement||""}</td>
 <td class="date-cell">${e.dateJoiningCommissionerate||""}</td>
@@ -528,7 +658,7 @@ function mkRow(e,isRet,q){
 </tr>`;
 }
 
-/* ── modal helpers ── */
+/* ─────────── MODAL HELPERS ─────────── */
 window.togRem=()=>{
   const v=document.querySelector('input[name="sbs"]:checked')?.value;
   document.getElementById("remWrap").style.display=(v&&v!=="Available")?"block":"none";
