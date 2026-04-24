@@ -5,461 +5,253 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Service Book Tracker — CGST Bhubaneswar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
   --navy: #0f1f45;
   --navy-mid: #1a3066;
+  --navy-light: #233580;
   --accent: #c8a84b;
-  --accent-light: #f0e0a0;
   --red: #c0392b;
-  --green: #1a7a4a;
-  --blue: #1565c0;
-  --orange: #b94f00;
-  --bg: #f2f4f8;
+  --bg: #eef1f7;
   --card: #ffffff;
   --border: #dde2ee;
   --text: #1c2a45;
   --muted: #6b7a99;
   --shadow: 0 2px 12px rgba(15,31,69,0.10);
-  --shadow-lg: 0 8px 30px rgba(15,31,69,0.15);
+  --shadow-lg: 0 8px 30px rgba(15,31,69,0.18);
+  --header-h: 62px;
+  --stats-h: 44px;
+  --toolbar-h: 58px;
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-}
+/* ══ LOGIN ══ */
+#loginScreen { display:none; position:fixed; inset:0; background:linear-gradient(135deg,#0a1628 0%,#1a3066 55%,#0f1f45 100%); z-index:999; align-items:center; justify-content:center; }
+#loginScreen.show { display:flex; }
+.login-card { background:rgba(255,255,255,0.07); backdrop-filter:blur(22px); border:1px solid rgba(200,168,75,0.35); border-radius:22px; padding:50px 45px; width:410px; text-align:center; box-shadow:0 30px 70px rgba(0,0,0,0.45); animation:slideUp 0.45s ease; }
+@keyframes slideUp { from{opacity:0;transform:translateY(28px)} to{opacity:1;transform:translateY(0)} }
+.login-emblem { width:72px; height:72px; background:linear-gradient(135deg,var(--accent),#e8c96a); border-radius:50%; margin:0 auto 18px; display:flex; align-items:center; justify-content:center; font-size:32px; box-shadow:0 0 36px rgba(200,168,75,0.5); }
+.login-card h2 { color:#fff; font-size:1.5rem; font-weight:800; margin-bottom:5px; }
+.login-card .sub { color:rgba(255,255,255,0.5); font-size:0.82rem; margin-bottom:32px; line-height:1.5; }
+.login-field { position:relative; margin-bottom:15px; text-align:left; }
+.login-field label { display:block; color:rgba(255,255,255,0.6); font-size:0.75rem; font-weight:600; margin-bottom:6px; letter-spacing:0.07em; text-transform:uppercase; }
+.login-field input { width:100%; padding:12px 16px 12px 44px; background:rgba(255,255,255,0.09); border:1.5px solid rgba(255,255,255,0.18); border-radius:11px; color:#fff; font-size:0.95rem; font-family:inherit; transition:border 0.2s,background 0.2s; outline:none; }
+.login-field input::placeholder { color:rgba(255,255,255,0.3); }
+.login-field input:focus { border-color:var(--accent); background:rgba(255,255,255,0.14); }
+.login-field .ico { position:absolute; left:14px; bottom:12px; font-size:18px; opacity:0.45; }
+.login-btn { width:100%; padding:14px; margin-top:10px; background:linear-gradient(135deg,var(--accent),#b8912d); border:none; border-radius:11px; color:var(--navy); font-weight:800; font-size:1rem; font-family:inherit; cursor:pointer; transition:transform 0.15s,box-shadow 0.15s; }
+.login-btn:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(200,168,75,0.45); }
+#loginErr { color:#ff7979; font-size:0.82rem; margin-top:12px; display:none; }
+.chpwd-link { display:inline-block; margin-top:18px; color:rgba(255,255,255,0.45); font-size:0.8rem; cursor:pointer; text-decoration:underline; text-underline-offset:3px; transition:color 0.2s; }
+.chpwd-link:hover { color:var(--accent); }
 
-/* ── LOGIN SCREEN ── */
-#loginScreen {
-  display: none;
-  position: fixed; inset: 0;
-  background: linear-gradient(135deg, var(--navy) 0%, #1e3a8a 60%, #0f1f45 100%);
-  z-index: 999;
-  align-items: center; justify-content: center;
-}
-#loginScreen.show { display: flex; }
+/* ══ HEADER ══ */
+#app-content { display:none; }
+.app-header { background:var(--navy); padding:0 28px; display:flex; align-items:center; justify-content:space-between; height:var(--header-h); box-shadow:0 2px 14px rgba(0,0,0,0.3); position:sticky; top:0; z-index:60; }
+.header-brand { display:flex; align-items:center; gap:12px; }
+.header-badge { width:38px; height:38px; background:linear-gradient(135deg,var(--accent),#b8912d); border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.header-brand h1 { color:#fff; font-size:1.08rem; font-weight:800; }
+.header-brand span { color:rgba(255,255,255,0.42); font-size:0.76rem; display:block; margin-top:-1px; }
+.header-right { display:flex; align-items:center; gap:10px; }
+.live-pill { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:20px; padding:5px 12px; color:rgba(255,255,255,0.65); font-size:0.78rem; }
+.dot { width:8px; height:8px; border-radius:50%; background:#aaa; flex-shrink:0; }
+.dot.green { background:#4ade80; box-shadow:0 0 8px #4ade80; animation:blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.hdr-btn { padding:7px 16px; border-radius:8px; font-size:0.8rem; font-weight:600; cursor:pointer; font-family:inherit; transition:background 0.2s; border:1px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.09); color:#fff; }
+.hdr-btn:hover { background:rgba(255,255,255,0.18); }
+.hdr-btn.danger { border-color:rgba(255,100,100,0.35); color:#ffaaaa; }
+.hdr-btn.danger:hover { background:rgba(192,57,43,0.3); }
 
-.login-card {
-  background: rgba(255,255,255,0.07);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(200,168,75,0.3);
-  border-radius: 20px;
-  padding: 50px 45px;
-  width: 400px;
-  text-align: center;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.4);
-  animation: slideUp 0.5s ease;
-}
-@keyframes slideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+/* ══ STATS BAR — sticky below header ══ */
+.stats-bar { background:var(--navy-mid); padding:0 28px; display:flex; gap:0; align-items:stretch; height:var(--stats-h); overflow-x:auto; position:sticky; top:var(--header-h); z-index:55; border-bottom:1px solid rgba(255,255,255,0.08); }
+.stats-bar::-webkit-scrollbar { display:none; }
+.stat-item { display:flex; align-items:center; gap:8px; padding:0 20px; color:rgba(255,255,255,0.65); font-size:0.8rem; white-space:nowrap; border-right:1px solid rgba(255,255,255,0.1); flex-shrink:0; }
+.stat-item:first-child { padding-left:0; }
+.stat-item strong { color:var(--accent); font-size:1.05rem; font-weight:800; }
+.s-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 
-.login-emblem {
-  width: 70px; height: 70px;
-  background: linear-gradient(135deg, var(--accent), #f0e0a0);
-  border-radius: 50%;
-  margin: 0 auto 20px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 30px;
-  box-shadow: 0 0 30px rgba(200,168,75,0.4);
-}
-.login-card h2 { color: #fff; font-size: 1.5rem; font-weight: 700; margin-bottom: 6px; }
-.login-card p { color: rgba(255,255,255,0.55); font-size: 0.85rem; margin-bottom: 30px; }
+/* ══ TOOLBAR — sticky below header+stats ══ */
+.toolbar { padding:9px 28px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; background:var(--card); border-bottom:1px solid var(--border); position:sticky; top:calc(var(--header-h) + var(--stats-h)); z-index:50; min-height:var(--toolbar-h); }
 
-.login-field {
-  position: relative; margin-bottom: 16px; text-align: left;
-}
-.login-field label { display: block; color: rgba(255,255,255,0.65); font-size: 0.78rem; font-weight: 500; margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
-.login-field input {
-  width: 100%; padding: 13px 16px 13px 44px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 10px;
-  color: #fff; font-size: 0.95rem; font-family: inherit;
-  transition: border 0.2s, background 0.2s;
-  outline: none;
-}
-.login-field input::placeholder { color: rgba(255,255,255,0.35); }
-.login-field input:focus { border-color: var(--accent); background: rgba(255,255,255,0.15); }
-.login-field .icon {
-  position: absolute; left: 14px; bottom: 13px;
-  font-size: 18px; opacity: 0.5;
-}
+.search-wrap { position:relative; flex:1; min-width:200px; }
+.search-wrap input { width:100%; padding:9px 36px 9px 38px; border:1.5px solid var(--border); border-radius:9px; font-size:0.88rem; font-family:inherit; color:var(--text); background:var(--bg); outline:none; transition:border 0.2s,box-shadow 0.2s; }
+.search-wrap input:focus { border-color:var(--navy-mid); box-shadow:0 0 0 3px rgba(26,48,102,0.1); background:#fff; }
+.s-ico { position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:15px; color:var(--muted); pointer-events:none; }
+.s-clear { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--muted); font-size:14px; display:none; padding:2px; line-height:1; }
+.s-clear:hover { color:var(--red); }
 
-.login-btn {
-  width: 100%; padding: 14px;
-  background: linear-gradient(135deg, var(--accent), #b8912d);
-  border: none; border-radius: 10px;
-  color: var(--navy); font-weight: 700; font-size: 1rem;
-  cursor: pointer; font-family: inherit;
-  transition: transform 0.15s, box-shadow 0.15s;
-  margin-top: 8px;
-}
-.login-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(200,168,75,0.4); }
-.login-btn:active { transform: translateY(0); }
-#loginErr { color: #ff6b6b; font-size: 0.82rem; margin-top: 12px; display: none; }
+.tabs { display:flex; gap:3px; background:var(--bg); border-radius:9px; padding:3px; border:1.5px solid var(--border); }
+.tab-btn { padding:6px 13px; border:none; border-radius:6px; font-size:0.8rem; font-weight:600; cursor:pointer; font-family:inherit; color:var(--muted); background:transparent; transition:all 0.15s; white-space:nowrap; }
+.tab-btn.active { background:var(--navy); color:#fff; box-shadow:0 2px 6px rgba(15,31,69,0.25); }
+.tab-btn.retired-tab.active { background:linear-gradient(135deg,#6d2e2e,#9b2226); }
 
-/* ── APP SHELL ── */
-#app-content { display: none; }
+.filter-select { padding:9px 12px; border:1.5px solid var(--border); border-radius:9px; font-size:0.84rem; font-family:inherit; color:var(--text); background:var(--bg); cursor:pointer; outline:none; min-width:150px; }
+.btn-add { padding:9px 18px; background:linear-gradient(135deg,var(--navy),var(--navy-light)); border:none; border-radius:9px; color:#fff; font-size:0.84rem; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; gap:6px; white-space:nowrap; transition:transform 0.15s,box-shadow 0.15s; }
+.btn-add:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(15,31,69,0.28); }
 
-/* HEADER */
-.app-header {
-  background: var(--navy);
-  padding: 0 28px;
-  display: flex; align-items: center; justify-content: space-between;
-  height: 62px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.25);
-  position: sticky; top: 0; z-index: 50;
-}
-.header-brand {
-  display: flex; align-items: center; gap: 12px;
-}
-.header-badge {
-  width: 36px; height: 36px;
-  background: linear-gradient(135deg, var(--accent), #b8912d);
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
-}
-.header-brand h1 { color: #fff; font-size: 1.1rem; font-weight: 700; }
-.header-brand span { color: rgba(255,255,255,0.45); font-size: 0.78rem; display: block; margin-top: -2px; }
+/* ══ SECTION HEADINGS ══ */
+.sec-head { display:flex; align-items:center; gap:10px; padding:14px 28px 6px; font-size:0.82rem; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; color:var(--muted); }
+.sec-head.retired { color:#7b1f1f; }
+.sec-count { background:var(--bg); border:1px solid var(--border); padding:2px 10px; border-radius:20px; font-size:0.74rem; color:var(--muted); font-weight:600; }
 
-.header-right { display: flex; align-items: center; gap: 12px; }
-.live-dot {
-  display: flex; align-items: center; gap: 6px;
-  color: rgba(255,255,255,0.6); font-size: 0.8rem;
-}
-.dot { width: 8px; height: 8px; border-radius: 50%; background: #aaa; }
-.dot.green { background: #4ade80; box-shadow: 0 0 8px #4ade80; animation: pulse 2s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+/* ══ TABLE ══ */
+.table-wrap { padding:4px 28px 24px; overflow-x:auto; }
+table { width:100%; border-collapse:separate; border-spacing:0; background:var(--card); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); min-width:1260px; font-size:0.83rem; }
+thead th { background:var(--navy); color:rgba(255,255,255,0.82); padding:12px 13px; font-weight:700; font-size:0.71rem; text-transform:uppercase; letter-spacing:0.06em; border-bottom:2px solid var(--accent); white-space:nowrap; position:sticky; top:calc(var(--header-h) + var(--stats-h) + var(--toolbar-h)); z-index:10; }
+thead th:first-child { border-radius:14px 0 0 0; }
+thead th:last-child  { border-radius:0 14px 0 0; }
+table.ret-tbl thead th { background:#5c1a1a; border-bottom-color:#e57373; }
+tbody tr { transition:background 0.12s; }
+tbody tr:hover { background:#f4f6fd; }
+tbody tr:last-child td { border-bottom:none; }
+td { padding:10px 13px; border-bottom:1px solid var(--border); vertical-align:middle; word-break:break-word; }
 
-.logout-btn {
-  padding: 7px 16px; background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2); border-radius: 7px;
-  color: #fff; font-size: 0.82rem; font-weight: 500; cursor: pointer;
-  font-family: inherit; transition: background 0.2s;
-}
-.logout-btn:hover { background: rgba(255,255,255,0.2); }
+/* ── name: bigger, darker, very bold ── */
+.name-cell { font-weight:800; color:var(--navy); font-size:0.91rem; letter-spacing:-0.01em; }
+.name-cell.ret { color:#6d2e2e; }
+.desig-cell { color:var(--muted); font-size:0.8rem; }
 
-/* STATS BAR */
-.stats-bar {
-  background: var(--navy-mid);
-  padding: 12px 28px;
-  display: flex; gap: 24px; flex-wrap: wrap;
-}
-.stat-pill {
-  display: flex; align-items: center; gap: 8px;
-  color: rgba(255,255,255,0.8); font-size: 0.82rem;
-}
-.stat-pill strong { color: var(--accent); font-size: 1rem; font-weight: 700; }
-.stat-sep { color: rgba(255,255,255,0.2); }
+.stack-badge { display:inline-flex; align-items:center; justify-content:center; background:var(--navy); color:var(--accent); font-family:'DM Mono',monospace; font-weight:500; font-size:0.8rem; padding:4px 9px; border-radius:6px; }
+.stack-badge.ret { background:#6d2e2e; color:#ffcdd2; }
 
-/* TOOLBAR */
-.toolbar {
-  padding: 16px 28px;
-  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-}
-.search-wrap {
-  position: relative; flex: 1; min-width: 220px;
-}
-.search-wrap input {
-  width: 100%; padding: 10px 16px 10px 40px;
-  border: 1.5px solid var(--border); border-radius: 9px;
-  font-size: 0.9rem; font-family: inherit; color: var(--text);
-  background: var(--bg); outline: none; transition: border 0.2s, box-shadow 0.2s;
-}
-.search-wrap input:focus { border-color: var(--navy-mid); box-shadow: 0 0 0 3px rgba(26,48,102,0.1); }
-.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--muted); }
+.status-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:0.75rem; font-weight:700; white-space:nowrap; }
+.s-av   { background:#dcfce7; color:#15803d; }
+.s-pao  { background:#fef3c7; color:#92400e; }
+.s-stf  { background:#dbeafe; color:#1e40af; }
+.remark-sub { display:block; font-size:0.73rem; color:var(--muted); margin-top:3px; font-style:italic; }
+.date-cell { font-family:'DM Mono',monospace; font-size:0.78rem; color:var(--muted); }
+.cat-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:0.73rem; font-weight:700; background:#f0f4ff; color:var(--navy-mid); border:1px solid #c8d4f5; }
 
-.filter-select {
-  padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 9px;
-  font-size: 0.87rem; font-family: inherit; color: var(--text);
-  background: var(--bg); cursor: pointer; outline: none; min-width: 160px;
-}
+/* ── Icon action buttons ── */
+.act-wrap { display:flex; gap:5px; align-items:center; }
+.btn-ico { width:32px; height:32px; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s,transform 0.1s; flex-shrink:0; }
+.btn-ico:active { transform:scale(0.88); }
+.btn-ico.edit { background:#e8f0fe; color:#1a3066; border:1px solid #c5d5fa; }
+.btn-ico.edit:hover { background:#c8d8fc; }
+.btn-ico.del  { background:#fef2f2; color:#c0392b; border:1px solid #fecaca; }
+.btn-ico.del:hover  { background:#fee2e2; }
+.btn-ico svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
-.btn-add {
-  padding: 10px 20px;
-  background: linear-gradient(135deg, var(--navy), var(--navy-mid));
-  border: none; border-radius: 9px;
-  color: #fff; font-size: 0.87rem; font-weight: 600;
-  cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 7px;
-  white-space: nowrap; transition: transform 0.15s, box-shadow 0.15s;
-}
-.btn-add:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(15,31,69,0.25); }
+/* search highlight */
+mark { background:#fff3a3; color:inherit; border-radius:2px; padding:0 1px; }
 
-/* TABLE */
-.table-wrap { padding: 20px 28px; overflow-x: auto; }
+/* empty */
+.empty-state { text-align:center; padding:60px 20px; color:var(--muted); }
+.empty-state .big { font-size:3rem; margin-bottom:10px; }
 
-table {
-  width: 100%; border-collapse: separate; border-spacing: 0;
-  background: var(--card);
-  border-radius: 14px; overflow: hidden;
-  box-shadow: var(--shadow);
-  min-width: 1300px;
-  font-size: 0.84rem;
-}
-thead th {
-  background: var(--navy);
-  color: rgba(255,255,255,0.85);
-  padding: 13px 14px;
-  font-weight: 600; font-size: 0.78rem;
-  text-transform: uppercase; letter-spacing: 0.05em;
-  border-bottom: 2px solid var(--accent);
-  white-space: nowrap;
-  position: sticky; top: 62px; z-index: 10;
-}
-thead th:first-child { border-radius: 14px 0 0 0; }
-thead th:last-child { border-radius: 0 14px 0 0; }
+/* ══ MODALS ══ */
+.modal-ov { display:none; position:fixed; inset:0; background:rgba(8,18,45,0.6); backdrop-filter:blur(5px); z-index:100; align-items:center; justify-content:center; }
+.modal-ov.show { display:flex; }
+.modal-card { background:var(--card); border-radius:18px; width:800px; max-width:96%; max-height:92vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:mIn 0.22s ease; }
+@keyframes mIn { from{opacity:0;transform:scale(0.95) translateY(-12px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.modal-hdr { padding:20px 26px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; position:sticky; top:0; background:var(--card); z-index:5; }
+.m-hico { width:42px; height:42px; background:linear-gradient(135deg,var(--navy),var(--navy-light)); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+.modal-hdr h3 { font-size:1.1rem; font-weight:800; color:var(--navy); }
+.modal-hdr .m-sub { font-size:0.78rem; color:var(--muted); }
+.m-close { margin-left:auto; width:32px; height:32px; background:var(--bg); border:1px solid var(--border); border-radius:8px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; color:var(--muted); transition:background 0.15s,color 0.15s; flex-shrink:0; }
+.m-close:hover { background:#fee2e2; color:var(--red); }
+.modal-body { padding:22px 26px; }
+.modal-ftr { padding:16px 26px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
 
-tbody tr { transition: background 0.15s; }
-tbody tr:hover { background: #f5f7fd; }
-tbody tr:last-child td { border-bottom: none; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.fg { display:flex; flex-direction:column; gap:6px; }
+.fg.full { grid-column:span 2; }
+.fg label { font-size:0.74rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; }
+.fg input, .fg select { padding:9px 13px; border:1.5px solid var(--border); border-radius:9px; font-size:0.88rem; font-family:inherit; color:var(--text); outline:none; transition:border 0.2s,box-shadow 0.2s; background:var(--bg); }
+.fg input:focus, .fg select:focus { border-color:var(--navy-mid); box-shadow:0 0 0 3px rgba(26,48,102,0.1); background:#fff; }
+.sec-div { grid-column:span 2; display:flex; align-items:center; gap:10px; color:var(--muted); font-size:0.74rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; margin:4px 0; }
+.sec-div::before,.sec-div::after { content:''; flex:1; height:1px; background:var(--border); }
 
-td {
-  padding: 11px 14px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle; word-break: break-word;
-}
+.status-sec { grid-column:span 2; background:#f7f9ff; border:1.5px solid var(--border); border-radius:12px; padding:14px 16px; }
+.status-sec > label { display:block; font-size:0.74rem; font-weight:700; color:var(--navy); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px; }
+.st-row { display:flex; gap:8px; flex-wrap:wrap; }
+.st-radio { display:none; }
+.st-lbl { padding:8px 15px; border-radius:8px; cursor:pointer; font-size:0.81rem; font-weight:700; border:2px solid transparent; transition:all 0.15s; user-select:none; }
+.st-lbl.av   { background:#dcfce7; color:#15803d; border-color:#86efac; }
+.st-lbl.pao  { background:#fef3c7; color:#92400e; border-color:#fcd34d; }
+.st-lbl.stf  { background:#dbeafe; color:#1e40af; border-color:#93c5fd; }
+.st-radio:checked + .st-lbl { box-shadow:0 0 0 3px rgba(26,48,102,0.22); transform:scale(1.04); }
+.rem-wrap { margin-top:11px; display:none; }
+.rem-wrap input { width:100%; padding:9px 13px; border:1.5px solid var(--border); border-radius:9px; font-size:0.88rem; font-family:inherit; outline:none; background:#fff; }
 
-.name-cell { font-weight: 600; color: var(--navy); }
-.desig-cell { color: var(--muted); font-size: 0.82rem; }
+.btn-save { padding:11px 26px; background:linear-gradient(135deg,var(--navy),var(--navy-light)); border:none; border-radius:9px; color:#fff; font-size:0.88rem; font-weight:700; cursor:pointer; font-family:inherit; transition:transform 0.15s,box-shadow 0.15s; }
+.btn-save:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(15,31,69,0.3); }
+.btn-cancel { padding:11px 20px; background:var(--bg); border:1.5px solid var(--border); border-radius:9px; color:var(--muted); font-size:0.88rem; font-weight:600; cursor:pointer; font-family:inherit; transition:background 0.15s; }
+.btn-cancel:hover { background:#fee2e2; color:var(--red); border-color:#fecaca; }
 
-.stack-badge {
-  display: inline-flex; align-items: center; justify-content: center;
-  background: var(--navy);
-  color: var(--accent);
-  font-family: 'DM Mono', monospace;
-  font-weight: 500; font-size: 0.82rem;
-  padding: 4px 10px; border-radius: 6px;
-  letter-spacing: 0.02em;
-}
+/* Change Password modal */
+#pwdModal .modal-card { width:430px; }
+.pwd-note { font-size:0.78rem; color:var(--muted); background:#f7f9ff; border-radius:8px; padding:10px 13px; margin-bottom:14px; line-height:1.6; border:1px solid var(--border); }
+#pwdMsg { font-size:0.82rem; margin-top:10px; display:none; border-radius:8px; padding:8px 12px; }
+#pwdMsg.ok  { background:#dcfce7; color:#15803d; }
+#pwdMsg.err { background:#fee2e2; color:#c0392b; }
 
-.status-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 10px; border-radius: 20px;
-  font-size: 0.78rem; font-weight: 600; white-space: nowrap;
-}
-.status-av { background: #dcfce7; color: #15803d; }
-.status-pao { background: #fef3c7; color: #92400e; }
-.status-staff { background: #dbeafe; color: #1e40af; }
-.status-missing { background: #fee2e2; color: #991b1b; }
-
-.remark-sub { display: block; font-size: 0.75rem; color: var(--muted); margin-top: 4px; font-style: italic; }
-
-.date-cell { font-family: 'DM Mono', monospace; font-size: 0.79rem; color: var(--muted); }
-
-.cat-badge {
-  display: inline-block; padding: 2px 8px; border-radius: 4px;
-  font-size: 0.75rem; font-weight: 600;
-  background: #f0f4ff; color: var(--navy-mid); border: 1px solid var(--border);
-}
-
-.action-wrap { display: flex; gap: 6px; }
-.btn-edit {
-  padding: 5px 12px; background: #e8f0fe; border: 1px solid #c5d5fa;
-  color: var(--navy-mid); border-radius: 6px; font-size: 0.78rem; font-weight: 600;
-  cursor: pointer; font-family: inherit; transition: background 0.15s;
-}
-.btn-edit:hover { background: #d0e0fc; }
-.btn-del {
-  padding: 5px 10px; background: #fef2f2; border: 1px solid #fecaca;
-  color: var(--red); border-radius: 6px; font-size: 0.78rem; font-weight: 600;
-  cursor: pointer; font-family: inherit; transition: background 0.15s;
-}
-.btn-del:hover { background: #fee2e2; }
-
-/* EMPTY STATE */
-.empty-state {
-  text-align: center; padding: 60px 20px; color: var(--muted);
-}
-.empty-state div { font-size: 3rem; margin-bottom: 12px; }
-.empty-state p { font-size: 0.9rem; }
-
-/* MODAL */
-.modal-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(10,20,50,0.55); backdrop-filter: blur(4px);
-  z-index: 100; align-items: center; justify-content: center;
-}
-.modal-overlay.show { display: flex; }
-
-.modal-card {
-  background: var(--card);
-  border-radius: 16px; width: 780px; max-width: 95%;
-  max-height: 90vh; overflow-y: auto;
-  box-shadow: var(--shadow-lg);
-  animation: modalIn 0.25s ease;
-}
-@keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(-10px); } to { opacity:1; transform:scale(1) translateY(0); } }
-
-.modal-header {
-  padding: 22px 28px 18px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 12px;
-}
-.modal-header-icon {
-  width: 42px; height: 42px; background: linear-gradient(135deg, var(--navy), var(--navy-mid));
-  border-radius: 10px; display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-}
-.modal-header h3 { font-size: 1.15rem; font-weight: 700; color: var(--navy); }
-.modal-close {
-  margin-left: auto; width: 32px; height: 32px;
-  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-  cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
-  color: var(--muted); transition: background 0.15s;
-}
-.modal-close:hover { background: #fee2e2; color: var(--red); }
-
-.modal-body { padding: 24px 28px; }
-
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-group.full { grid-column: span 2; }
-.form-group label { font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-.form-group input, .form-group select {
-  padding: 10px 14px; border: 1.5px solid var(--border);
-  border-radius: 9px; font-size: 0.9rem; font-family: inherit; color: var(--text);
-  outline: none; transition: border 0.2s, box-shadow 0.2s; background: var(--bg);
-}
-.form-group input:focus, .form-group select:focus {
-  border-color: var(--navy-mid); box-shadow: 0 0 0 3px rgba(26,48,102,0.1);
-  background: #fff;
-}
-
-.status-section {
-  grid-column: span 2;
-  background: #f7f9ff; border: 1.5px solid var(--border);
-  border-radius: 12px; padding: 16px;
-}
-.status-section label { font-size: 0.78rem; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 10px; }
-.status-row { display: flex; gap: 10px; flex-wrap: wrap; }
-.status-radio { display: none; }
-.status-label {
-  padding: 8px 16px; border-radius: 8px; cursor: pointer;
-  font-size: 0.82rem; font-weight: 600; border: 2px solid transparent;
-  transition: all 0.15s; user-select: none;
-}
-.status-label.av { background: #dcfce7; color: #15803d; border-color: #86efac; }
-.status-label.pao { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
-.status-label.staff { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
-.status-radio:checked + .status-label { box-shadow: 0 0 0 3px rgba(26,48,102,0.2); transform: scale(1.03); }
-
-.remark-input-wrap { margin-top: 12px; display: none; }
-.remark-input-wrap input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 0.9rem; font-family: inherit; outline: none; background: #fff; }
-.remark-input-wrap input:focus { border-color: var(--navy-mid); }
-
-.modal-footer {
-  padding: 18px 28px;
-  border-top: 1px solid var(--border);
-  display: flex; gap: 10px; justify-content: flex-end;
-}
-.btn-save {
-  padding: 11px 28px;
-  background: linear-gradient(135deg, var(--navy), var(--navy-mid));
-  border: none; border-radius: 9px;
-  color: #fff; font-size: 0.9rem; font-weight: 700;
-  cursor: pointer; font-family: inherit; transition: transform 0.15s, box-shadow 0.15s;
-}
-.btn-save:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(15,31,69,0.3); }
-.btn-cancel {
-  padding: 11px 22px;
-  background: var(--bg); border: 1.5px solid var(--border); border-radius: 9px;
-  color: var(--muted); font-size: 0.9rem; font-weight: 600;
-  cursor: pointer; font-family: inherit; transition: background 0.15s;
-}
-.btn-cancel:hover { background: #fee2e2; color: var(--red); border-color: #fecaca; }
-
-/* SECTION TABS (record category filter) */
-.tabs { display: flex; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; }
-.tab-btn {
-  padding: 7px 16px; border: none; border-radius: 7px;
-  font-size: 0.82rem; font-weight: 600; cursor: pointer;
-  font-family: inherit; color: var(--muted); background: transparent;
-  transition: all 0.15s; white-space: nowrap;
-}
-.tab-btn.active { background: var(--navy); color: #fff; }
-
-@media (max-width: 700px) {
-  .toolbar { padding: 12px 16px; }
-  .table-wrap { padding: 12px 10px; }
-  .app-header { padding: 0 16px; }
-  .stats-bar { padding: 10px 16px; gap: 14px; }
-  .form-grid { grid-template-columns: 1fr; }
-  .form-group.full { grid-column: span 1; }
-  .status-section { grid-column: span 1; }
+@media (max-width:720px) {
+  .toolbar,.app-header,.stats-bar { padding-left:14px; padding-right:14px; }
+  .table-wrap { padding:4px 10px 24px; }
+  .sec-head { padding:10px 14px 4px; }
+  .form-grid { grid-template-columns:1fr; }
+  .fg.full,.sec-div,.status-sec { grid-column:span 1; }
 }
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- ═══ LOGIN ═══ -->
 <div id="loginScreen" class="show">
   <div class="login-card">
     <div class="login-emblem">📚</div>
     <h2>Service Book Tracker</h2>
-    <p>CGST Commissionerate, Bhubaneswar<br>Authorized Personnel Only</p>
+    <p class="sub">CGST Commissionerate, Bhubaneswar<br>Authorized Personnel Only</p>
     <div class="login-field">
-      <label>User ID</label>
-      <span class="icon">👤</span>
-      <input type="text" id="userid" placeholder="Enter your user ID" autocomplete="username">
+      <label>User ID</label><span class="ico">👤</span>
+      <input type="text" id="userid" placeholder="Enter your User ID" autocomplete="username">
     </div>
     <div class="login-field">
-      <label>Password</label>
-      <span class="icon">🔑</span>
+      <label>Password</label><span class="ico">🔑</span>
       <input type="password" id="pwd" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
     </div>
     <button class="login-btn" onclick="login()">Sign In →</button>
     <p id="loginErr">⚠ Invalid credentials. Please try again.</p>
+    <span class="chpwd-link" onclick="openPwdModal(true)">🔒 Change my password</span>
   </div>
 </div>
 
-<!-- APP -->
+<!-- ═══ APP ═══ -->
 <div id="app-content">
-
   <header class="app-header">
     <div class="header-brand">
       <div class="header-badge">📚</div>
-      <div>
-        <h1>Service Book Tracker</h1>
-        <span>CGST Commissionerate, Bhubaneswar</span>
-      </div>
+      <div><h1>Service Book Tracker</h1><span>CGST Commissionerate, Bhubaneswar</span></div>
     </div>
     <div class="header-right">
-      <div class="live-dot">
-        <div class="dot" id="liveDot"></div>
-        <span id="liveLabel">Connecting…</span>
-      </div>
-      <button class="logout-btn" onclick="logout()">Sign Out</button>
+      <div class="live-pill"><div class="dot" id="liveDot"></div><span id="liveLabel">Connecting…</span></div>
+      <button class="hdr-btn" onclick="openPwdModal(false)">🔒 Change Password</button>
+      <button class="hdr-btn danger" onclick="logout()">Sign Out</button>
     </div>
   </header>
 
-  <div class="stats-bar" id="statsBar">
-    <div class="stat-pill"><strong id="statTotal">–</strong> Total Records</div>
-    <span class="stat-sep">|</span>
-    <div class="stat-pill"><strong id="statActive">–</strong> Active</div>
-    <span class="stat-sep">|</span>
-    <div class="stat-pill"><strong id="statAvail">–</strong> Available</div>
-    <span class="stat-sep">|</span>
-    <div class="stat-pill"><strong id="statPao">–</strong> Sent to PAO</div>
-    <span class="stat-sep">|</span>
-    <div class="stat-pill"><strong id="statStaff">–</strong> With Staff</div>
+  <div class="stats-bar">
+    <div class="stat-item"><strong id="sTotal">–</strong>&nbsp;Total</div>
+    <div class="stat-item"><span class="s-dot" style="background:#4ade80"></span><strong id="sActive">–</strong>&nbsp;Active</div>
+    <div class="stat-item"><span class="s-dot" style="background:#86efac"></span><strong id="sAvail">–</strong>&nbsp;Available</div>
+    <div class="stat-item"><span class="s-dot" style="background:#fcd34d"></span><strong id="sPao">–</strong>&nbsp;Sent to PAO</div>
+    <div class="stat-item"><span class="s-dot" style="background:#93c5fd"></span><strong id="sStaff">–</strong>&nbsp;With Staff</div>
+    <div class="stat-item" style="border-right:none"><span class="s-dot" style="background:#fca5a5"></span><strong id="sRetired">–</strong>&nbsp;Retired</div>
   </div>
 
   <div class="toolbar">
     <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="q" placeholder="Search by name, stack no., designation…" oninput="ft()">
+      <span class="s-ico">🔍</span>
+      <input type="text" id="q" placeholder="Search by name, stack no., designation, category…" oninput="ft()">
+      <button class="s-clear" id="clearBtn" onclick="clearSrch()" title="Clear search">✕</button>
     </div>
     <div class="tabs">
-      <button class="tab-btn active" onclick="setTab('',this)">All</button>
-      <button class="tab-btn" onclick="setTab('Regular Employee',this)">Regular</button>
-      <button class="tab-btn" onclick="setTab('Pensioner/Retired',this)">Retired</button>
+      <button class="tab-btn active"       onclick="setTab('',this)">All</button>
+      <button class="tab-btn"             onclick="setTab('Regular Employee',this)">👔 Regular</button>
+      <button class="tab-btn retired-tab" onclick="setTab('Pensioner/Retired',this)">🎖 Retired</button>
     </div>
     <select class="filter-select" id="sf" onchange="ft()">
       <option value="">All Statuses</option>
@@ -467,115 +259,86 @@ td {
       <option>Sent to PAO</option>
       <option>With Office Staff</option>
     </select>
-    <button class="btn-add" onclick="oa()">＋ Add Record</button>
+    <button class="btn-add" onclick="oa()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
+      Add Record
+    </button>
   </div>
 
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:13%">Name</th>
-          <th style="width:9%">Designation</th>
-          <th style="width:7%">Stack No.</th>
-          <th style="width:12%">Status / Remarks</th>
-          <th style="width:11%">Place of Posting</th>
-          <th style="width:9%">Date of Posting</th>
-          <th style="width:7%">DOB</th>
-          <th style="width:8%">Retirement</th>
-          <th style="width:9%">DOJ (Comm.)</th>
-          <th style="width:7%">DOJ (Dept.)</th>
-          <th style="width:5%">Category</th>
-          <th style="width:7%">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="tb"></tbody>
-    </table>
-  </div>
-
+  <div id="mainContent"></div>
 </div>
 
-<!-- MODAL -->
-<div class="modal-overlay" id="md">
+<!-- ═══ ADD / EDIT MODAL ═══ -->
+<div class="modal-ov" id="md">
   <div class="modal-card">
-    <div class="modal-header">
-      <div class="modal-header-icon">📝</div>
-      <h3 id="mtit">Add New Record</h3>
-      <button class="modal-close" onclick="cl()">✕</button>
+    <div class="modal-hdr">
+      <div class="m-hico">📝</div>
+      <div><h3 id="mtit">Add New Record</h3><div class="m-sub" id="msub">Fill in the details below</div></div>
+      <button class="m-close" onclick="cl()">✕</button>
     </div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-group">
-          <label>Full Name *</label>
-          <input id="fn" placeholder="Employee full name">
+        <div class="sec-div">Personal Details</div>
+        <div class="fg"><label>Full Name *</label><input id="fn" placeholder="Employee full name"></div>
+        <div class="fg"><label>Designation</label><input id="fdesig" placeholder="e.g. Superintendent"></div>
+        <div class="fg"><label>Stack / Service Book No. *</label><input id="fsc" placeholder="e.g. 1(1)"></div>
+        <div class="fg"><label>Record Category</label>
+          <select id="fcat2"><option value="Regular Employee">Regular Employee</option><option value="Pensioner/Retired">Pensioner / Retired</option></select>
         </div>
-        <div class="form-group">
-          <label>Designation</label>
-          <input id="fdesig" placeholder="e.g. Superintendent">
-        </div>
-        <div class="form-group">
-          <label>Stack / Service Book No. *</label>
-          <input id="fsc" placeholder="e.g. 1(1)">
-        </div>
-        <div class="form-group">
-          <label>Record Category</label>
-          <select id="fcat2">
-            <option value="Regular Employee">Regular Employee</option>
-            <option value="Pensioner/Retired">Pensioner / Retired</option>
-          </select>
-        </div>
-        <div class="form-group full">
-          <label>Place of Posting</label>
-          <input id="fpost" placeholder="e.g. Commissionerate HQ, Bhubaneswar">
-        </div>
-        <div class="form-group">
-          <label>Date of Posting (in Station)</label>
-          <input id="fdojs" placeholder="DD-MM-YYYY">
-        </div>
-        <div class="form-group">
-          <label>DOJ in Commissionerate</label>
-          <input id="fdojc" placeholder="DD-MM-YYYY">
-        </div>
-        <div class="form-group">
-          <label>DOJ in Department</label>
-          <input id="fdojd" placeholder="DD-MM-YYYY">
-        </div>
-        <div class="form-group">
-          <label>Date of Birth</label>
-          <input id="fdob" placeholder="DD-MM-YYYY">
-        </div>
-        <div class="form-group">
-          <label>Date of Retirement</label>
-          <input id="fret" placeholder="DD-MM-YYYY">
-        </div>
-        <div class="form-group">
-          <label>Category</label>
-          <input id="fcat" placeholder="UR / OBC / SC / ST / EWS">
-        </div>
-        <div class="form-group">
-          <label>Mobile</label>
-          <input id="fmob" placeholder="Optional">
-        </div>
+        <div class="fg"><label>Date of Birth</label><input id="fdob" placeholder="DD-MM-YYYY"></div>
+        <div class="fg"><label>Date of Retirement</label><input id="fret" placeholder="DD-MM-YYYY"></div>
+        <div class="fg"><label>Category</label><input id="fcat" placeholder="UR / OBC / SC / ST / EWS"></div>
+        <div class="fg"><label>Mobile</label><input id="fmob" placeholder="Optional"></div>
 
-        <!-- STATUS -->
-        <div class="status-section">
-          <label>Service Book Status *</label>
-          <div class="status-row">
-            <input type="radio" name="sbstatus" id="st1" class="status-radio" value="Available" checked onchange="toggleRemark()">
-            <label for="st1" class="status-label av">✅ Available</label>
-            <input type="radio" name="sbstatus" id="st2" class="status-radio" value="Sent to PAO" onchange="toggleRemark()">
-            <label for="st2" class="status-label pao">📤 Sent to PAO</label>
-            <input type="radio" name="sbstatus" id="st3" class="status-radio" value="With Office Staff" onchange="toggleRemark()">
-            <label for="st3" class="status-label staff">👤 With Office Staff</label>
+        <div class="sec-div">Posting Details</div>
+        <div class="fg full"><label>Place of Posting</label><input id="fpost" placeholder="e.g. Commissionerate HQ, Bhubaneswar"></div>
+        <div class="fg"><label>Date of Posting (in Station)</label><input id="fdojs" placeholder="DD-MM-YYYY"></div>
+        <div class="fg"><label>DOJ in Commissionerate</label><input id="fdojc" placeholder="DD-MM-YYYY"></div>
+        <div class="fg"><label>DOJ in Department</label><input id="fdojd" placeholder="DD-MM-YYYY"></div>
+
+        <div class="sec-div">Service Book Status</div>
+        <div class="status-sec">
+          <label>Current Location of Service Book *</label>
+          <div class="st-row">
+            <input type="radio" name="sbs" id="st1" class="st-radio" value="Available" checked onchange="togRem()">
+            <label for="st1" class="st-lbl av">✅ Available in Stack</label>
+            <input type="radio" name="sbs" id="st2" class="st-radio" value="Sent to PAO" onchange="togRem()">
+            <label for="st2" class="st-lbl pao">📤 Sent to PAO</label>
+            <input type="radio" name="sbs" id="st3" class="st-radio" value="With Office Staff" onchange="togRem()">
+            <label for="st3" class="st-lbl stf">👤 With Office Staff</label>
           </div>
-          <div class="remark-input-wrap" id="remWrap">
-            <input id="frem" placeholder="Enter details / staff name / date…">
-          </div>
+          <div class="rem-wrap" id="remWrap"><input id="frem" placeholder="Enter staff name / date / details…"></div>
         </div>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-ftr">
       <button class="btn-cancel" onclick="cl()">Cancel</button>
       <button class="btn-save" onclick="sv()">💾 Save Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CHANGE PASSWORD MODAL ═══ -->
+<div class="modal-ov" id="pwdModal">
+  <div class="modal-card">
+    <div class="modal-hdr">
+      <div class="m-hico">🔒</div>
+      <div><h3>Change Password</h3><div class="m-sub">Update your login credentials</div></div>
+      <button class="m-close" onclick="closePwd()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="pwd-note">ℹ️ <strong>Note:</strong> Password changes apply for this browser session only. For a permanent change across all devices, the admin must update the credentials in the application source code.</div>
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <div class="fg"><label>User ID</label><input type="text" id="pwdUser" placeholder="Your User ID"></div>
+        <div class="fg"><label>Current Password</label><input type="password" id="pwdOld" placeholder="Current password"></div>
+        <div class="fg"><label>New Password</label><input type="password" id="pwdNew" placeholder="Minimum 6 characters"></div>
+        <div class="fg"><label>Confirm New Password</label><input type="password" id="pwdCnf" placeholder="Re-enter new password"></div>
+        <div id="pwdMsg"></div>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="closePwd()">Cancel</button>
+      <button class="btn-save" onclick="doChgPwd()">🔒 Update Password</button>
     </div>
   </div>
 </div>
@@ -586,180 +349,232 @@ import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc
   from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const fb = initializeApp({
-  apiKey: "AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI",
-  authDomain: "service-book-tracker.firebaseapp.com",
-  projectId: "service-book-tracker",
-  storageBucket: "service-book-tracker.firebasestorage.app",
-  messagingSenderId: "1080714862635",
-  appId: "1:1080714862635:web:9c5c096b2536d5a976ca6e"
+  apiKey:"AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI",
+  authDomain:"service-book-tracker.firebaseapp.com",
+  projectId:"service-book-tracker",
+  storageBucket:"service-book-tracker.firebasestorage.app",
+  messagingSenderId:"1080714862635",
+  appId:"1:1080714862635:web:9c5c096b2536d5a976ca6e"
 });
-const db = getFirestore(fb), col = collection(db, "employees");
-let ALL = [], EID = null, tabFilter = '';
+const db = getFirestore(fb), col = collection(db,"employees");
+let ALL=[], EID=null, TAB='';
 
-const USERS = { "admin": "admin123", "saikat": "saikat123", "office": "office123" };
+/* passwords (session-overridable) */
+let USERS = {admin:"admin123",saikat:"saikat123",office:"office123"};
+try { const ov=sessionStorage.getItem("pwdOv"); if(ov) USERS={...USERS,...JSON.parse(ov)}; } catch{}
 
+/* ── login / logout ── */
 window.login = () => {
-  const u = document.getElementById("userid").value.trim().toLowerCase();
-  const p = document.getElementById("pwd").value.trim();
-  if (USERS[u] && USERS[u] === p) {
+  const u=document.getElementById("userid").value.trim().toLowerCase();
+  const p=document.getElementById("pwd").value.trim();
+  if(USERS[u]&&USERS[u]===p){
     document.getElementById("loginScreen").classList.remove("show");
-    document.getElementById("app-content").style.display = "block";
-    sessionStorage.setItem("loggedIn","true");
-    loadData();
-  } else {
-    document.getElementById("loginErr").style.display = "block";
-  }
+    document.getElementById("app-content").style.display="block";
+    sessionStorage.setItem("li",u); loadData();
+  } else document.getElementById("loginErr").style.display="block";
 };
-window.logout = () => { sessionStorage.removeItem("loggedIn"); location.reload(); };
-if (sessionStorage.getItem("loggedIn") === "true") {
+window.logout=()=>{sessionStorage.removeItem("li");location.reload();};
+if(sessionStorage.getItem("li")){
   document.getElementById("loginScreen").classList.remove("show");
-  document.getElementById("app-content").style.display = "block";
+  document.getElementById("app-content").style.display="block";
   loadData();
 }
 
-function loadData() {
-  onSnapshot(col, snap => {
-    ALL = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    ALL.sort((a,b) => (a.name||"").localeCompare(b.name||""));
-    document.getElementById("liveDot").className = "dot green";
-    document.getElementById("liveLabel").textContent = "Live";
-    updateStats();
-    ft();
-  });
-}
-
-function updateStats() {
-  document.getElementById("statTotal").textContent = ALL.length;
-  document.getElementById("statActive").textContent = ALL.filter(e => e.employmentStatus === "Active").length;
-  const norm = e => (e.trackingStatus||"").replace("Available in stack","Available");
-  document.getElementById("statAvail").textContent = ALL.filter(e => norm(e) === "Available").length;
-  document.getElementById("statPao").textContent = ALL.filter(e => norm(e) === "Sent to PAO").length;
-  document.getElementById("statStaff").textContent = ALL.filter(e => norm(e) === "With Office Staff").length;
-}
-
-window.setTab = (val, btn) => {
-  tabFilter = val;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  ft();
+/* ── change password ── */
+window.openPwdModal=(fromLogin)=>{
+  document.getElementById("pwdMsg").style.display="none";
+  ["pwdUser","pwdOld","pwdNew","pwdCnf"].forEach(i=>document.getElementById(i).value="");
+  if(!fromLogin){ document.getElementById("pwdUser").value=sessionStorage.getItem("li")||""; document.getElementById("pwdUser").readOnly=true; }
+  else document.getElementById("pwdUser").readOnly=false;
+  document.getElementById("pwdModal").classList.add("show");
+};
+window.closePwd=()=>document.getElementById("pwdModal").classList.remove("show");
+window.doChgPwd=()=>{
+  const u=document.getElementById("pwdUser").value.trim().toLowerCase();
+  const old=document.getElementById("pwdOld").value;
+  const nw=document.getElementById("pwdNew").value;
+  const cf=document.getElementById("pwdCnf").value;
+  const msg=document.getElementById("pwdMsg"); msg.style.display="block";
+  if(!USERS[u]){msg.className="err";msg.textContent="❌ User ID not found.";return;}
+  if(USERS[u]!==old){msg.className="err";msg.textContent="❌ Current password incorrect.";return;}
+  if(nw.length<6){msg.className="err";msg.textContent="❌ New password must be ≥6 characters.";return;}
+  if(nw!==cf){msg.className="err";msg.textContent="❌ Passwords do not match.";return;}
+  USERS[u]=nw;
+  const ov=JSON.parse(sessionStorage.getItem("pwdOv")||"{}"); ov[u]=nw;
+  sessionStorage.setItem("pwdOv",JSON.stringify(ov));
+  msg.className="ok"; msg.textContent="✅ Password updated for this session!";
+  setTimeout(()=>window.closePwd(),2000);
 };
 
-window.ft = () => {
-  const v = document.getElementById("q").value.toLowerCase();
-  const s = document.getElementById("sf").value;
-  const f = ALL.filter(e => {
-    const norm = (e.trackingStatus||"").replace("Available in stack","Available");
-    const matchText = !v || [e.name, e.section, e.designation, e.category, e.movementRemark, e.mobile]
-      .some(x => (x||"").toLowerCase().includes(v));
-    const matchStatus = !s || norm === s;
-    const matchTab = !tabFilter || e.recordCategory === tabFilter;
-    return matchText && matchStatus && matchTab;
+/* ── firebase ── */
+function loadData(){
+  onSnapshot(col,snap=>{
+    ALL=snap.docs.map(d=>({id:d.id,...d.data()}));
+    ALL.sort((a,b)=>(a.name||"").localeCompare(b.name||""));
+    document.getElementById("liveDot").className="dot green";
+    document.getElementById("liveLabel").textContent="Live";
+    stats(); ft();
+  });
+}
+function stats(){
+  const nm=e=>(e.trackingStatus||"").replace("Available in stack","Available");
+  document.getElementById("sTotal").textContent  =ALL.length;
+  document.getElementById("sActive").textContent =ALL.filter(e=>e.employmentStatus==="Active").length;
+  document.getElementById("sAvail").textContent  =ALL.filter(e=>nm(e)==="Available").length;
+  document.getElementById("sPao").textContent    =ALL.filter(e=>nm(e)==="Sent to PAO").length;
+  document.getElementById("sStaff").textContent  =ALL.filter(e=>nm(e)==="With Office Staff").length;
+  document.getElementById("sRetired").textContent=ALL.filter(e=>e.recordCategory==="Pensioner/Retired").length;
+}
+
+window.setTab=(v,btn)=>{
+  TAB=v;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); ft();
+};
+window.clearSrch=()=>{ document.getElementById("q").value=""; document.getElementById("clearBtn").style.display="none"; ft(); };
+
+/* highlight */
+function hl(t,q){
+  if(!t||!q) return t||"";
+  return String(t).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, "gi"),"<mark>$1</mark>");
+}
+
+/* ── MAIN RENDER ── */
+window.ft=()=>{
+  const q=document.getElementById("q").value;
+  const ql=q.toLowerCase();
+  document.getElementById("clearBtn").style.display=q?"block":"none";
+  const sf=document.getElementById("sf").value;
+  const nm=e=>(e.trackingStatus||"").replace("Available in stack","Available");
+
+  const f=ALL.filter(e=>{
+    const mt=!ql||[e.name,e.section,e.designation,e.category,e.movementRemark,e.mobile,e.placeOfPosting].some(x=>(x||"").toLowerCase().includes(ql));
+    const ms=!sf||nm(e)===sf;
+    const mb=!TAB||e.recordCategory===TAB;
+    return mt&&ms&&mb;
   });
 
-  if (f.length === 0) {
-    document.getElementById("tb").innerHTML = `
-      <tr><td colspan="12">
-        <div class="empty-state"><div>🗂</div><p>No records found matching your search.</p></div>
-      </td></tr>`;
+  const wrap=document.getElementById("mainContent");
+
+  if(!f.length){
+    wrap.innerHTML=`<div class="table-wrap"><div class="empty-state"><div class="big">🗂</div><p>No records found. Try a different search term.</p></div></div>`;
     return;
   }
 
-  document.getElementById("tb").innerHTML = f.map(e => {
-    let st = (e.trackingStatus||"Available").replace("Available in stack","Available");
-    let badge = `<span class="status-badge status-av">✅ Available</span>`;
-    if (st === "Sent to PAO") badge = `<span class="status-badge status-pao">📤 Sent to PAO</span>`;
-    else if (st === "With Office Staff") badge = `<span class="status-badge status-staff">👤 With Staff</span>`;
-    if (e.movementRemark) badge += `<span class="remark-sub">${e.movementRemark}</span>`;
-
-    return `<tr>
-      <td class="name-cell">${e.name||""}</td>
-      <td class="desig-cell">${e.designation||""}</td>
-      <td><span class="stack-badge">${e.section||"—"}</span></td>
-      <td>${badge}</td>
-      <td style="font-size:0.8rem">${e.placeOfPosting||""}</td>
-      <td class="date-cell">${e.dateJoiningCurrentStation||""}</td>
-      <td class="date-cell">${e.dob||""}</td>
-      <td class="date-cell">${e.dateOfRetirement||e.retirement||""}</td>
-      <td class="date-cell">${e.dateJoiningCommissionerate||""}</td>
-      <td class="date-cell">${e.dateJoiningDepartment||""}</td>
-      <td><span class="cat-badge">${e.category||"—"}</span></td>
-      <td>
-        <div class="action-wrap">
-          <button class="btn-edit" onclick="ed('${e.id}')">✏ Edit</button>
-          <button class="btn-del" onclick="dl('${e.id}')">🗑</button>
-        </div>
-      </td>
-    </tr>`;
-  }).join("");
+  /* when "All" tab with no filter, split into two sections */
+  if(TAB===''&&!ql&&!sf){
+    const reg=f.filter(e=>e.recordCategory!=="Pensioner/Retired");
+    const ret=f.filter(e=>e.recordCategory==="Pensioner/Retired");
+    wrap.innerHTML=
+      mkSection(reg,"👔 Regular Employees",false,q)+
+      (ret.length?mkSection(ret,"🎖 Retired / Pensioners",true,q):"");
+  } else {
+    const isRet=(TAB==="Pensioner/Retired")||(f.length&&f.every(e=>e.recordCategory==="Pensioner/Retired"));
+    const title=isRet?"🎖 Retired / Pensioners":TAB?"👔 Regular Employees":"Records";
+    wrap.innerHTML=mkSection(f,title,isRet,q);
+  }
 };
 
-window.toggleRemark = () => {
-  const v = document.querySelector('input[name="sbstatus"]:checked')?.value;
-  document.getElementById("remWrap").style.display = (v && v !== "Available") ? "block" : "none";
-};
+function mkSection(rows,title,isRet,q){
+  if(!rows.length) return "";
+  return `
+<div class="sec-head${isRet?" retired":""}">${title}<span class="sec-count">${rows.length}</span></div>
+<div class="table-wrap">
+<table${isRet?' class="ret-tbl"':''}>
+<thead><tr>
+  <th style="width:13%">Name</th>
+  <th style="width:9%">Designation</th>
+  <th style="width:7%">Stack No.</th>
+  <th style="width:11%">Status / Remarks</th>
+  <th style="width:10%">Place of Posting</th>
+  <th style="width:9%">Date of Posting</th>
+  <th style="width:7%">DOB</th>
+  <th style="width:8%">Retirement</th>
+  <th style="width:9%">DOJ (Comm.)</th>
+  <th style="width:7%">DOJ (Dept.)</th>
+  <th style="width:5%">Cat.</th>
+  <th style="width:6%">Actions</th>
+</tr></thead>
+<tbody>${rows.map(e=>mkRow(e,isRet,q)).join("")}</tbody>
+</table></div>`;
+}
 
-window.oa = () => {
-  EID = null;
-  document.getElementById("mtit").textContent = "Add New Record";
-  ["fn","fdesig","fsc","fpost","fdob","fret","fdojs","fdojc","fdojd","fcat","fmob","frem"].forEach(i => document.getElementById(i).value="");
-  document.getElementById("fcat2").value = "Regular Employee";
-  document.getElementById("st1").checked = true;
-  window.toggleRemark();
+function mkRow(e,isRet,q){
+  const nm=(e.trackingStatus||"Available").replace("Available in stack","Available");
+  let badge=`<span class="status-badge s-av">✅ Available</span>`;
+  if(nm==="Sent to PAO") badge=`<span class="status-badge s-pao">📤 Sent to PAO</span>`;
+  else if(nm==="With Office Staff") badge=`<span class="status-badge s-stf">👤 With Staff</span>`;
+  if(e.movementRemark) badge+=`<span class="remark-sub">${e.movementRemark}</span>`;
+
+  const pencil=`<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+  const trash=`<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+
+  return `<tr>
+<td class="name-cell${isRet?" ret":""}">${hl(e.name,q)}</td>
+<td class="desig-cell">${hl(e.designation,q)}</td>
+<td><span class="stack-badge${isRet?" ret":""}">${e.section||"—"}</span></td>
+<td>${badge}</td>
+<td style="font-size:.78rem;color:var(--muted)">${e.placeOfPosting||""}</td>
+<td class="date-cell">${e.dateJoiningCurrentStation||""}</td>
+<td class="date-cell">${e.dob||""}</td>
+<td class="date-cell">${e.dateOfRetirement||e.retirement||""}</td>
+<td class="date-cell">${e.dateJoiningCommissionerate||""}</td>
+<td class="date-cell">${e.dateJoiningDepartment||""}</td>
+<td><span class="cat-badge">${e.category||"—"}</span></td>
+<td><div class="act-wrap">
+  <button class="btn-ico edit" onclick="ed('${e.id}')" title="Edit">${pencil}</button>
+  <button class="btn-ico del"  onclick="dl('${e.id}')" title="Delete">${trash}</button>
+</div></td>
+</tr>`;
+}
+
+/* ── modal helpers ── */
+window.togRem=()=>{
+  const v=document.querySelector('input[name="sbs"]:checked')?.value;
+  document.getElementById("remWrap").style.display=(v&&v!=="Available")?"block":"none";
+};
+window.oa=()=>{
+  EID=null;
+  document.getElementById("mtit").textContent="Add New Record";
+  document.getElementById("msub").textContent="Fill in the details below";
+  ["fn","fdesig","fsc","fpost","fdob","fret","fdojs","fdojc","fdojd","fcat","fmob","frem"].forEach(i=>document.getElementById(i).value="");
+  document.getElementById("fcat2").value="Regular Employee";
+  document.getElementById("st1").checked=true; window.togRem();
   document.getElementById("md").classList.add("show");
 };
-
-window.cl = () => document.getElementById("md").classList.remove("show");
-
-window.ed = (id) => {
-  EID = id;
-  const e = ALL.find(x => x.id === id);
-  document.getElementById("mtit").textContent = "Edit Record";
-  document.getElementById("fn").value = e.name||"";
-  document.getElementById("fdesig").value = e.designation||"";
-  document.getElementById("fsc").value = e.section||"";
-  document.getElementById("fcat2").value = e.recordCategory||"Regular Employee";
-  document.getElementById("fpost").value = e.placeOfPosting||"";
-  document.getElementById("fdob").value = e.dob||"";
-  document.getElementById("fret").value = e.dateOfRetirement||e.retirement||"";
-  document.getElementById("fdojs").value = e.dateJoiningCurrentStation||"";
-  document.getElementById("fdojc").value = e.dateJoiningCommissionerate||"";
-  document.getElementById("fdojd").value = e.dateJoiningDepartment||"";
-  document.getElementById("fcat").value = e.category||"";
-  document.getElementById("fmob").value = e.mobile||"";
-  document.getElementById("frem").value = e.movementRemark||"";
-  let st = (e.trackingStatus||"Available").replace("Available in stack","Available");
-  const radios = document.querySelectorAll('input[name="sbstatus"]');
-  radios.forEach(r => { if(r.value===st) r.checked=true; });
-  window.toggleRemark();
+window.cl=()=>document.getElementById("md").classList.remove("show");
+window.ed=(id)=>{
+  EID=id; const e=ALL.find(x=>x.id===id);
+  document.getElementById("mtit").textContent="Edit Record";
+  document.getElementById("msub").textContent=e.name;
+  document.getElementById("fn").value=e.name||"";
+  document.getElementById("fdesig").value=e.designation||"";
+  document.getElementById("fsc").value=e.section||"";
+  document.getElementById("fcat2").value=e.recordCategory||"Regular Employee";
+  document.getElementById("fpost").value=e.placeOfPosting||"";
+  document.getElementById("fdob").value=e.dob||"";
+  document.getElementById("fret").value=e.dateOfRetirement||e.retirement||"";
+  document.getElementById("fdojs").value=e.dateJoiningCurrentStation||"";
+  document.getElementById("fdojc").value=e.dateJoiningCommissionerate||"";
+  document.getElementById("fdojd").value=e.dateJoiningDepartment||"";
+  document.getElementById("fcat").value=e.category||"";
+  document.getElementById("fmob").value=e.mobile||"";
+  document.getElementById("frem").value=e.movementRemark||"";
+  let st=(e.trackingStatus||"Available").replace("Available in stack","Available");
+  document.querySelectorAll('input[name="sbs"]').forEach(r=>{if(r.value===st)r.checked=true;});
+  window.togRem();
   document.getElementById("md").classList.add("show");
 };
-
-window.dl = async (id) => {
-  if (confirm("Permanently delete this record?")) await deleteDoc(doc(db,"employees",id));
+window.dl=async(id)=>{
+  const e=ALL.find(x=>x.id===id);
+  if(confirm(`Permanently delete record for "${e?.name||"this employee"}"?`)) await deleteDoc(doc(db,"employees",id));
 };
-
-window.sv = async () => {
-  const name = document.getElementById("fn").value.trim();
-  if (!name) { alert("Name is required."); return; }
-  const st = document.querySelector('input[name="sbstatus"]:checked')?.value || "Available";
-  const obj = {
-    name, designation: document.getElementById("fdesig").value,
-    section: document.getElementById("fsc").value,
-    recordCategory: document.getElementById("fcat2").value,
-    placeOfPosting: document.getElementById("fpost").value,
-    dob: document.getElementById("fdob").value,
-    dateOfRetirement: document.getElementById("fret").value,
-    dateJoiningCurrentStation: document.getElementById("fdojs").value,
-    dateJoiningCommissionerate: document.getElementById("fdojc").value,
-    dateJoiningDepartment: document.getElementById("fdojd").value,
-    category: document.getElementById("fcat").value,
-    mobile: document.getElementById("fmob").value,
-    trackingStatus: st,
-    movementRemark: document.getElementById("frem").value,
-    updatedAt: serverTimestamp()
-  };
-  if (EID) await updateDoc(doc(db,"employees",EID), obj);
-  else await addDoc(col, obj);
+window.sv=async()=>{
+  const name=document.getElementById("fn").value.trim();
+  if(!name){alert("Name is required.");return;}
+  const st=document.querySelector('input[name="sbs"]:checked')?.value||"Available";
+  const obj={name,designation:document.getElementById("fdesig").value,section:document.getElementById("fsc").value,recordCategory:document.getElementById("fcat2").value,placeOfPosting:document.getElementById("fpost").value,dob:document.getElementById("fdob").value,dateOfRetirement:document.getElementById("fret").value,dateJoiningCurrentStation:document.getElementById("fdojs").value,dateJoiningCommissionerate:document.getElementById("fdojc").value,dateJoiningDepartment:document.getElementById("fdojd").value,category:document.getElementById("fcat").value,mobile:document.getElementById("fmob").value,trackingStatus:st,movementRemark:document.getElementById("frem").value,updatedAt:serverTimestamp()};
+  if(EID) await updateDoc(doc(db,"employees",EID),obj); else await addDoc(col,obj);
   cl();
 };
 </script>
