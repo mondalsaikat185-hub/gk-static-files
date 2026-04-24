@@ -10,6 +10,8 @@
 :root{--navy:#0f1f45;--navy-mid:#1a3066;--navy-light:#233580;--accent:#c8a84b;--red:#c0392b;--bg:#eef1f7;--card:#ffffff;--border:#dde2ee;--text:#1c2a45;--muted:#6b7a99;--shadow:0 2px 12px rgba(15,31,69,.10);--shadow-lg:0 8px 30px rgba(15,31,69,.18);--header-h:62px;--stats-h:44px;--toolbar-h:58px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── LOGIN ── */
 #loginScreen{display:none;position:fixed;inset:0;background:linear-gradient(135deg,#0a1628,#1a3066 55%,#0f1f45);z-index:999;align-items:center;justify-content:center}
 #loginScreen.show{display:flex}
 .login-card{background:rgba(255,255,255,.07);backdrop-filter:blur(22px);border:1px solid rgba(200,168,75,.35);border-radius:22px;padding:50px 45px;width:410px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,.45);animation:slideUp .45s ease}
@@ -26,9 +28,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .login-btn{width:100%;padding:14px;margin-top:10px;background:linear-gradient(135deg,var(--accent),#b8912d);border:none;border-radius:11px;color:var(--navy);font-weight:800;font-size:1rem;font-family:inherit;cursor:pointer;transition:transform .15s,box-shadow .15s}
 .login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(200,168,75,.45)}
 #loginErr{color:#ff7979;font-size:.82rem;margin-top:12px;display:none}
-.login-links{display:flex;justify-content:space-between;margin-top:18px}
-.chpwd-link{color:rgba(255,255,255,.45);font-size:.8rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;transition:color .2s}
-.chpwd-link:hover{color:var(--accent)}
+/* Only Forgot Password link on login screen — NO change password here */
+.login-forgot{text-align:center;margin-top:18px}
+.forgot-link{color:rgba(255,255,255,.5);font-size:.82rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;transition:color .2s}
+.forgot-link:hover{color:var(--accent)}
+
+/* ── APP ── */
 #app-content{display:none}
 .app-header{background:var(--navy);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:var(--header-h);box-shadow:0 2px 14px rgba(0,0,0,.3);position:sticky;top:0;z-index:60}
 .header-brand{display:flex;align-items:center;gap:12px}
@@ -44,12 +49,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .hdr-btn:hover{background:rgba(255,255,255,.18)}
 .hdr-btn.danger{border-color:rgba(255,100,100,.35);color:#ffaaaa}
 .hdr-btn.danger:hover{background:rgba(192,57,43,.3)}
+
+/* ── STATS ── */
 .stats-bar{background:var(--navy-mid);padding:0 28px;display:flex;align-items:stretch;height:var(--stats-h);overflow-x:auto;position:sticky;top:var(--header-h);z-index:55;border-bottom:1px solid rgba(255,255,255,.08)}
 .stats-bar::-webkit-scrollbar{display:none}
 .stat-item{display:flex;align-items:center;gap:8px;padding:0 20px;color:rgba(255,255,255,.65);font-size:.8rem;white-space:nowrap;border-right:1px solid rgba(255,255,255,.1);flex-shrink:0}
 .stat-item:first-child{padding-left:0}
 .stat-item strong{color:var(--accent);font-size:1.05rem;font-weight:800}
 .s-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── TOOLBAR ── */
 .toolbar{padding:9px 28px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:calc(var(--header-h) + var(--stats-h));z-index:50;min-height:var(--toolbar-h)}
 .search-wrap{position:relative;flex:1;min-width:200px}
 .search-wrap input{width:100%;padding:9px 36px 9px 38px;border:1.5px solid var(--border);border-radius:9px;font-size:.88rem;font-family:inherit;color:var(--text);background:var(--bg);outline:none;transition:border .2s,box-shadow .2s}
@@ -64,9 +73,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .filter-select{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:inherit;color:var(--text);background:var(--bg);cursor:pointer;outline:none;min-width:150px}
 .btn-add{padding:9px 18px;background:linear-gradient(135deg,var(--navy),var(--navy-light));border:none;border-radius:9px;color:#fff;font-size:.84rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:transform .15s,box-shadow .15s}
 .btn-add:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(15,31,69,.28)}
+
+/* ── SECTION HEADS ── */
 .sec-head{display:flex;align-items:center;gap:10px;padding:14px 28px 6px;font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
 .sec-head.retired{color:#7b1f1f}
 .sec-count{background:var(--bg);border:1px solid var(--border);padding:2px 10px;border-radius:20px;font-size:.74rem;color:var(--muted);font-weight:600}
+
+/* ── TABLE ── */
 .table-wrap{padding:4px 28px 24px;overflow-x:auto}
 table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);min-width:1300px;font-size:.83rem;table-layout:fixed}
 col.c-name{width:13%}col.c-desig{width:10%}col.c-stack{width:7%}col.c-status{width:11%}
@@ -96,7 +109,9 @@ td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;
 mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty-state .big{font-size:3rem;margin-bottom:10px}
-.modal-ov{display:none;position:fixed;inset:0;background:rgba(8,18,45,.6);backdrop-filter:blur(5px);z-index:100;align-items:center;justify-content:center}
+
+/* ── MODALS ── */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(8,18,45,.6);backdrop-filter:blur(5px);z-index:200;align-items:center;justify-content:center}
 .modal-ov.show{display:flex}
 .modal-card{background:var(--card);border-radius:18px;width:800px;max-width:96%;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:mIn .22s ease}
 @keyframes mIn{from{opacity:0;transform:scale(.95) translateY(-12px)}to{opacity:1;transform:scale(1) translateY(0)}}
@@ -134,9 +149,10 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 .msg-box{font-size:.82rem;margin-top:10px;display:none;border-radius:8px;padding:8px 12px}
 .msg-box.ok{background:#dcfce7;color:#15803d}
 .msg-box.err{background:#fee2e2;color:#c0392b}
+.pwd-note{font-size:.78rem;color:var(--muted);background:#f7f9ff;border-radius:8px;padding:10px 13px;margin-bottom:14px;line-height:1.6;border:1px solid var(--border)}
 .otp-display{background:var(--navy);color:var(--accent);font-family:'DM Mono',monospace;font-size:2rem;font-weight:700;letter-spacing:.3em;text-align:center;border-radius:12px;padding:18px;margin:14px 0;border:2px solid var(--accent)}
 .otp-note{font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:8px}
-.pwd-note{font-size:.78rem;color:var(--muted);background:#f7f9ff;border-radius:8px;padding:10px 13px;margin-bottom:14px;line-height:1.6;border:1px solid var(--border)}
+
 @media(max-width:720px){
   .toolbar,.app-header,.stats-bar{padding-left:14px;padding-right:14px}
   .table-wrap{padding:4px 10px 24px}
@@ -148,7 +164,7 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- ════ LOGIN SCREEN ════ -->
 <div id="loginScreen" class="show">
   <div class="login-card">
     <div class="login-emblem">📚</div>
@@ -164,14 +180,14 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
     </div>
     <button class="login-btn" onclick="login()">Sign In →</button>
     <p id="loginErr">⚠ Invalid credentials. Please try again.</p>
-    <div class="login-links">
-      <span class="chpwd-link" onclick="openPwdModal(true)">🔒 Change Password</span>
-      <span class="chpwd-link" onclick="openOtpReset()">📱 Forgot Password?</span>
+    <!-- ONLY Forgot Password here — change password is only after login -->
+    <div class="login-forgot">
+      <span class="forgot-link" onclick="openForgotModal()">🔑 Forgot Password?</span>
     </div>
   </div>
 </div>
 
-<!-- APP -->
+<!-- ════ MAIN APP (visible only after login) ════ -->
 <div id="app-content">
   <header class="app-header">
     <div class="header-brand">
@@ -180,7 +196,8 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
     </div>
     <div class="header-right">
       <div class="live-pill"><div class="dot" id="liveDot"></div><span id="liveLabel">Connecting…</span></div>
-      <button class="hdr-btn" onclick="openPwdModal(false)">🔒 Change Password</button>
+      <!-- Change Password only appears here after login -->
+      <button class="hdr-btn" onclick="openChangePwdModal()">🔒 Change Password</button>
       <button class="hdr-btn danger" onclick="logout()">Sign Out</button>
     </div>
   </header>
@@ -217,7 +234,7 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
   <div id="mainContent"></div>
 </div>
 
-<!-- ADD/EDIT MODAL -->
+<!-- ════ ADD / EDIT RECORD MODAL ════ -->
 <div class="modal-ov" id="md">
   <div class="modal-card">
     <div class="modal-hdr">
@@ -265,7 +282,7 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
-<!-- DELETE CONFIRMATION MODAL -->
+<!-- ════ DELETE CONFIRMATION MODAL ════ -->
 <div class="modal-ov" id="delModal">
   <div class="modal-card" style="width:430px;max-width:96%">
     <div class="modal-hdr" style="background:linear-gradient(135deg,#fef2f2,#fff)">
@@ -286,63 +303,64 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
-<!-- CHANGE PASSWORD MODAL -->
-<div class="modal-ov" id="pwdModal">
+<!-- ════ CHANGE PASSWORD MODAL (only accessible after login) ════ -->
+<div class="modal-ov" id="changePwdModal">
   <div class="modal-card" style="width:460px;max-width:96%">
     <div class="modal-hdr">
       <div class="m-hico">🔒</div>
-      <div><h3>Change Password</h3><div class="m-sub">Update your login credentials</div></div>
-      <button class="m-close" onclick="closePwd()">✕</button>
+      <div><h3>Change Password</h3><div class="m-sub" id="cpwdSubtitle">Update your login credentials</div></div>
+      <button class="m-close" onclick="closeChangePwd()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="pwd-note">ℹ️ Password changes are saved for this browser session. To make permanent changes across all devices, update the source code credentials.</div>
+      <div class="pwd-note">ℹ️ Enter your current password, then set a new one. You will need to log in again with the new password.</div>
       <div class="form-grid" style="grid-template-columns:1fr">
-        <div class="fg"><label>User ID</label><input type="text" id="pwdUser" placeholder="Your User ID"></div>
-        <div class="fg"><label>Current Password</label><input type="password" id="pwdOld" placeholder="Current password"></div>
-        <div class="fg"><label>New Password</label><input type="password" id="pwdNew" placeholder="Minimum 6 characters"></div>
-        <div class="fg"><label>Confirm New Password</label><input type="password" id="pwdCnf" placeholder="Re-enter new password"></div>
-        <div id="pwdMsg" class="msg-box"></div>
+        <div class="fg"><label>Current Password</label><input type="password" id="cpOld" placeholder="Enter your current password"></div>
+        <div class="fg"><label>New Password</label><input type="password" id="cpNew" placeholder="Minimum 6 characters"></div>
+        <div class="fg"><label>Confirm New Password</label><input type="password" id="cpCnf" placeholder="Re-enter new password"></div>
+        <div id="cpMsg" class="msg-box"></div>
       </div>
     </div>
     <div class="modal-ftr">
-      <button class="btn-cancel" onclick="closePwd()">Cancel</button>
-      <button class="btn-save" onclick="doChgPwd()">🔒 Update Password</button>
+      <button class="btn-cancel" onclick="closeChangePwd()">Cancel</button>
+      <button class="btn-save" onclick="doChangePwd()">🔒 Update Password</button>
     </div>
   </div>
 </div>
 
-<!-- OTP FORGOT PASSWORD MODAL -->
-<div class="modal-ov" id="otpModal">
+<!-- ════ FORGOT PASSWORD MODAL (OTP — accessible before login) ════ -->
+<div class="modal-ov" id="forgotModal">
   <div class="modal-card" style="width:460px;max-width:96%">
     <div class="modal-hdr">
-      <div class="m-hico">📱</div>
-      <div><h3>Forgot Password</h3><div class="m-sub">Reset via OTP verification</div></div>
-      <button class="m-close" onclick="closeOtp()">✕</button>
+      <div class="m-hico" style="background:linear-gradient(135deg,#e65100,#f57c00)">🔑</div>
+      <div><h3>Forgot Password</h3><div class="m-sub">Reset your password using OTP</div></div>
+      <button class="m-close" onclick="closeForgot()">✕</button>
     </div>
     <div class="modal-body">
-      <div id="otpStep1">
-        <div class="pwd-note">📱 Enter your User ID. An OTP will be shown on screen. Call admin at <strong>9432490498</strong>, share the OTP, then set a new password.</div>
+      <!-- Step 1: Enter User ID -->
+      <div id="forgotStep1">
+        <div class="pwd-note">📱 Enter your User ID. An OTP will appear on screen. Call admin at <strong>9432490498</strong>, share the OTP for verification, then set your new password.</div>
         <div class="form-grid" style="grid-template-columns:1fr">
-          <div class="fg"><label>Your User ID</label><input type="text" id="otpUserId" placeholder="Enter your User ID"></div>
-          <div id="otpMsg" class="msg-box"></div>
+          <div class="fg"><label>Your User ID</label><input type="text" id="fgUserId" placeholder="Enter your User ID" onkeydown="if(event.key==='Enter')genOtp()"></div>
+          <div id="fgMsg1" class="msg-box"></div>
         </div>
         <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
-          <button class="btn-cancel" onclick="closeOtp()">Cancel</button>
+          <button class="btn-cancel" onclick="closeForgot()">Cancel</button>
           <button class="btn-save" onclick="genOtp()">📲 Generate OTP</button>
         </div>
       </div>
-      <div id="otpStep2" style="display:none">
-        <div class="otp-note">Your OTP — <strong>call admin at 9432490498</strong> and read this code:</div>
+      <!-- Step 2: Verify OTP & set new password -->
+      <div id="forgotStep2" style="display:none">
+        <div class="otp-note">Your one-time OTP code — call admin at <strong style="color:var(--navy)">9432490498</strong> and read this:</div>
         <div class="otp-display" id="otpDisplay">——</div>
-        <div class="otp-note" style="color:var(--red)">⏱ OTP valid for 5 minutes only.</div>
+        <div class="otp-note" style="color:var(--red);font-weight:600">⏱ This OTP expires in 5 minutes.</div>
         <div class="form-grid" style="grid-template-columns:1fr;margin-top:16px">
-          <div class="fg"><label>Enter OTP to Confirm</label><input type="text" id="otpEntered" placeholder="Type the OTP shown above" maxlength="6"></div>
-          <div class="fg"><label>New Password</label><input type="password" id="otpNewPwd" placeholder="Minimum 6 characters"></div>
-          <div class="fg"><label>Confirm New Password</label><input type="password" id="otpCnfPwd" placeholder="Re-enter new password"></div>
-          <div id="resetMsg" class="msg-box"></div>
+          <div class="fg"><label>Enter OTP to Verify</label><input type="text" id="fgOtpEntered" placeholder="Type the 6-digit OTP shown above" maxlength="6"></div>
+          <div class="fg"><label>New Password</label><input type="password" id="fgNewPwd" placeholder="Minimum 6 characters"></div>
+          <div class="fg"><label>Confirm New Password</label><input type="password" id="fgCnfPwd" placeholder="Re-enter new password"></div>
+          <div id="fgMsg2" class="msg-box"></div>
         </div>
         <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
-          <button class="btn-cancel" onclick="closeOtp()">Cancel</button>
+          <button class="btn-cancel" onclick="closeForgot()">Cancel</button>
           <button class="btn-save" onclick="doOtpReset()">✅ Reset Password</button>
         </div>
       </div>
@@ -350,10 +368,13 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
-<!-- Firebase compat (global scope) -->
+<!-- Firebase (compat — all functions global) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
+/* ════════════════════════════════════════════
+   FIREBASE INIT
+════════════════════════════════════════════ */
 firebase.initializeApp({
   apiKey:"AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI",
   authDomain:"service-book-tracker.firebaseapp.com",
@@ -362,168 +383,221 @@ firebase.initializeApp({
   messagingSenderId:"1080714862635",
   appId:"1:1080714862635:web:9c5c096b2536d5a976ca6e"
 });
-var db=firebase.firestore(), col=db.collection("employees");
+var db  = firebase.firestore();
+var col = db.collection("employees");
+
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
 var ALL=[], EID=null, TAB='', _delId=null;
-var USERS={admin:"admin123",saikat:"saikat123",office:"office123"};
-try{var _ov=sessionStorage.getItem("pwdOv");if(_ov){var _p=JSON.parse(_ov);for(var k in _p)USERS[k]=_p[k];}}catch(e){}
-var _otp=null,_otpExp=0,_otpUser=null;
+var _otp=null, _otpExp=0, _otpUser=null;
 
-function showMsg(id,cls,txt){var el=document.getElementById(id);el.className="msg-box "+cls;el.textContent=txt;el.style.display="block";}
-function hideMsg(id){document.getElementById(id).style.display="none";}
-function gv(id){return document.getElementById(id).value;}
-function sv2(id,val){document.getElementById(id).value=val;}
+/* Credentials — load any session overrides */
+var USERS = {admin:"admin123", saikat:"saikat123", office:"office123"};
+(function(){
+  try{
+    var ov = sessionStorage.getItem("pwdOv");
+    if(ov){ var p=JSON.parse(ov); for(var k in p) USERS[k]=p[k]; }
+  }catch(e){}
+})();
 
-// LOGIN
+/* ════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════ */
+function gv(id){ return document.getElementById(id).value; }
+function sv2(id,val){ document.getElementById(id).value = val; }
+function showMsg(id,cls,txt){
+  var el=document.getElementById(id);
+  el.className="msg-box "+cls; el.textContent=txt; el.style.display="block";
+}
+function hideMsg(id){ document.getElementById(id).style.display="none"; }
+function savePwdOverride(u, newPwd){
+  USERS[u] = newPwd;
+  var ov = JSON.parse(sessionStorage.getItem("pwdOv")||"{}");
+  ov[u] = newPwd;
+  sessionStorage.setItem("pwdOv", JSON.stringify(ov));
+}
+
+/* ════════════════════════════════════════════
+   LOGIN / LOGOUT
+════════════════════════════════════════════ */
 function login(){
-  var u=gv("userid").trim().toLowerCase(),p=gv("pwd").trim();
+  var u = gv("userid").trim().toLowerCase();
+  var p = gv("pwd").trim();
   document.getElementById("loginErr").style.display="none";
-  if(USERS[u]&&USERS[u]===p){
+  if(USERS[u] && USERS[u]===p){
     document.getElementById("loginScreen").classList.remove("show");
     document.getElementById("app-content").style.display="block";
-    sessionStorage.setItem("li",u);
+    sessionStorage.setItem("li", u);
     loadData();
-  }else{
+  } else {
     document.getElementById("loginErr").style.display="block";
   }
 }
-function logout(){sessionStorage.removeItem("li");location.reload();}
-if(sessionStorage.getItem("li")){
-  document.getElementById("loginScreen").classList.remove("show");
-  document.getElementById("app-content").style.display="block";
-  loadData();
+function logout(){
+  sessionStorage.removeItem("li");
+  location.reload();
+}
+/* Auto-login if session exists */
+(function(){
+  if(sessionStorage.getItem("li")){
+    document.getElementById("loginScreen").classList.remove("show");
+    document.getElementById("app-content").style.display="block";
+    loadData();
+  }
+})();
+
+/* ════════════════════════════════════════════
+   CHANGE PASSWORD (only after login, from header)
+════════════════════════════════════════════ */
+function openChangePwdModal(){
+  hideMsg("cpMsg");
+  sv2("cpOld",""); sv2("cpNew",""); sv2("cpCnf","");
+  var user = sessionStorage.getItem("li") || "";
+  document.getElementById("cpwdSubtitle").textContent = "Logged in as: " + user;
+  document.getElementById("changePwdModal").classList.add("show");
+}
+function closeChangePwd(){
+  document.getElementById("changePwdModal").classList.remove("show");
+}
+function doChangePwd(){
+  var user = sessionStorage.getItem("li") || "";
+  var old  = gv("cpOld");
+  var nw   = gv("cpNew");
+  var cf   = gv("cpCnf");
+  if(!USERS[user]){ showMsg("cpMsg","err","❌ Session error. Please log out and in again."); return; }
+  if(USERS[user] !== old){ showMsg("cpMsg","err","❌ Current password is incorrect."); return; }
+  if(nw.length < 6){ showMsg("cpMsg","err","❌ New password must be at least 6 characters."); return; }
+  if(nw !== cf){ showMsg("cpMsg","err","❌ Passwords do not match."); return; }
+  savePwdOverride(user, nw);
+  showMsg("cpMsg","ok","✅ Password changed successfully!");
+  setTimeout(closeChangePwd, 2000);
 }
 
-// CHANGE PASSWORD
-function openPwdModal(fromLogin){
-  hideMsg("pwdMsg");
-  ["pwdUser","pwdOld","pwdNew","pwdCnf"].forEach(function(i){sv2(i,"");});
-  var uEl=document.getElementById("pwdUser");
-  if(!fromLogin){uEl.value=sessionStorage.getItem("li")||"";uEl.readOnly=true;}
-  else{uEl.readOnly=false;}
-  document.getElementById("pwdModal").classList.add("show");
+/* ════════════════════════════════════════════
+   FORGOT PASSWORD (before login — OTP flow)
+════════════════════════════════════════════ */
+function openForgotModal(){
+  _otp=null; _otpExp=0; _otpUser=null;
+  sv2("fgUserId",""); hideMsg("fgMsg1");
+  sv2("fgOtpEntered",""); sv2("fgNewPwd",""); sv2("fgCnfPwd",""); hideMsg("fgMsg2");
+  document.getElementById("forgotStep1").style.display="block";
+  document.getElementById("forgotStep2").style.display="none";
+  document.getElementById("forgotModal").classList.add("show");
 }
-function closePwd(){document.getElementById("pwdModal").classList.remove("show");}
-function doChgPwd(){
-  var u=gv("pwdUser").trim().toLowerCase(),old=gv("pwdOld"),nw=gv("pwdNew"),cf=gv("pwdCnf");
-  if(!USERS[u]){showMsg("pwdMsg","err","❌ User ID not found.");return;}
-  if(USERS[u]!==old){showMsg("pwdMsg","err","❌ Current password incorrect.");return;}
-  if(nw.length<6){showMsg("pwdMsg","err","❌ New password must be ≥6 characters.");return;}
-  if(nw!==cf){showMsg("pwdMsg","err","❌ Passwords do not match.");return;}
-  USERS[u]=nw;
-  var ov=JSON.parse(sessionStorage.getItem("pwdOv")||"{}");ov[u]=nw;
-  sessionStorage.setItem("pwdOv",JSON.stringify(ov));
-  showMsg("pwdMsg","ok","✅ Password updated successfully!");
-  setTimeout(closePwd,2000);
+function closeForgot(){
+  document.getElementById("forgotModal").classList.remove("show");
 }
-
-// OTP FORGOT PASSWORD
-function openOtpReset(){
-  _otp=null;_otpExp=0;_otpUser=null;
-  sv2("otpUserId","");hideMsg("otpMsg");
-  sv2("otpEntered","");sv2("otpNewPwd","");sv2("otpCnfPwd","");hideMsg("resetMsg");
-  document.getElementById("otpStep1").style.display="block";
-  document.getElementById("otpStep2").style.display="none";
-  document.getElementById("otpModal").classList.add("show");
-}
-function closeOtp(){document.getElementById("otpModal").classList.remove("show");}
 function genOtp(){
-  var u=gv("otpUserId").trim().toLowerCase();
-  if(!USERS[u]){showMsg("otpMsg","err","❌ User ID not found. Check and try again.");return;}
-  _otp=String(Math.floor(100000+Math.random()*900000));
-  _otpExp=Date.now()+5*60*1000;
-  _otpUser=u;
-  document.getElementById("otpDisplay").textContent=_otp;
-  document.getElementById("otpStep1").style.display="none";
-  document.getElementById("otpStep2").style.display="block";
+  var u = gv("fgUserId").trim().toLowerCase();
+  if(!u){ showMsg("fgMsg1","err","❌ Please enter your User ID."); return; }
+  if(!USERS[u]){ showMsg("fgMsg1","err","❌ User ID not found. Please check and try again."); return; }
+  _otp     = String(Math.floor(100000 + Math.random()*900000));
+  _otpExp  = Date.now() + 5*60*1000;
+  _otpUser = u;
+  document.getElementById("otpDisplay").textContent = _otp;
+  document.getElementById("forgotStep1").style.display="none";
+  document.getElementById("forgotStep2").style.display="block";
 }
 function doOtpReset(){
-  var entered=gv("otpEntered").trim(),nw=gv("otpNewPwd"),cf=gv("otpCnfPwd");
-  if(!_otp||Date.now()>_otpExp){showMsg("resetMsg","err","❌ OTP expired. Please start again.");return;}
-  if(entered!==_otp){showMsg("resetMsg","err","❌ Incorrect OTP. Try again.");return;}
-  if(nw.length<6){showMsg("resetMsg","err","❌ Password must be ≥6 characters.");return;}
-  if(nw!==cf){showMsg("resetMsg","err","❌ Passwords do not match.");return;}
-  USERS[_otpUser]=nw;
-  var ov=JSON.parse(sessionStorage.getItem("pwdOv")||"{}");ov[_otpUser]=nw;
-  sessionStorage.setItem("pwdOv",JSON.stringify(ov));
-  _otp=null;
-  showMsg("resetMsg","ok","✅ Password reset! You can now log in.");
-  setTimeout(closeOtp,2500);
+  var entered = gv("fgOtpEntered").trim();
+  var nw      = gv("fgNewPwd");
+  var cf      = gv("fgCnfPwd");
+  if(!_otp || Date.now() > _otpExp){ showMsg("fgMsg2","err","❌ OTP expired. Please start over."); return; }
+  if(entered !== _otp){             showMsg("fgMsg2","err","❌ Incorrect OTP. Try again."); return; }
+  if(nw.length < 6){                showMsg("fgMsg2","err","❌ Password must be at least 6 characters."); return; }
+  if(nw !== cf){                    showMsg("fgMsg2","err","❌ Passwords do not match."); return; }
+  savePwdOverride(_otpUser, nw);
+  _otp = null;
+  showMsg("fgMsg2","ok","✅ Password reset! You can now log in with your new password.");
+  setTimeout(closeForgot, 2500);
 }
 
-// DELETE with confirmation modal
+/* ════════════════════════════════════════════
+   DELETE with confirmation
+════════════════════════════════════════════ */
 function dl(id){
-  var e=ALL.find(function(x){return x.id===id;});
-  _delId=id;
-  var txt=e?('"'+e.name+'"'+(e.designation?' — '+e.designation:'')):"this record";
-  document.getElementById("delName").textContent=txt;
+  var e = ALL.find(function(x){ return x.id===id; });
+  _delId = id;
+  var txt = e ? ('"'+e.name+'"'+(e.designation?' — '+e.designation:'')) : "this record";
+  document.getElementById("delName").textContent = txt;
   document.getElementById("delModal").classList.add("show");
 }
-function cancelDel(){_delId=null;document.getElementById("delModal").classList.remove("show");}
-function confirmDel(){
-  if(!_delId)return;
-  var id=_delId;_delId=null;
+function cancelDel(){
+  _delId = null;
   document.getElementById("delModal").classList.remove("show");
-  col.doc(id).delete().catch(function(err){alert("Error deleting: "+err.message);});
+}
+function confirmDel(){
+  if(!_delId) return;
+  var id = _delId; _delId = null;
+  document.getElementById("delModal").classList.remove("show");
+  col.doc(id).delete().catch(function(err){ alert("Delete error: "+err.message); });
 }
 
-// FIREBASE LOAD
+/* ════════════════════════════════════════════
+   FIREBASE DATA
+════════════════════════════════════════════ */
 function loadData(){
   col.onSnapshot(function(snap){
-    ALL=snap.docs.map(function(d){var o={id:d.id};var dat=d.data();for(var k in dat)o[k]=dat[k];return o;});
-    ALL.sort(function(a,b){return(a.name||"").localeCompare(b.name||"");});
+    ALL = snap.docs.map(function(d){
+      var o={id:d.id}, dat=d.data();
+      for(var k in dat) o[k]=dat[k];
+      return o;
+    });
+    ALL.sort(function(a,b){ return (a.name||"").localeCompare(b.name||""); });
     document.getElementById("liveDot").className="dot green";
     document.getElementById("liveLabel").textContent="Live";
-    stats();ft();
+    stats(); ft();
   });
 }
 function stats(){
-  function nm(e){return(e.trackingStatus||"").replace("Available in stack","Available");}
-  document.getElementById("sTotal").textContent=ALL.length;
-  document.getElementById("sActive").textContent=ALL.filter(function(e){return e.employmentStatus==="Active";}).length;
-  document.getElementById("sAvail").textContent=ALL.filter(function(e){return nm(e)==="Available";}).length;
-  document.getElementById("sPao").textContent=ALL.filter(function(e){return nm(e)==="Sent to PAO";}).length;
-  document.getElementById("sStaff").textContent=ALL.filter(function(e){return nm(e)==="With Office Staff";}).length;
-  document.getElementById("sRetired").textContent=ALL.filter(function(e){return e.recordCategory==="Pensioner/Retired";}).length;
+  function nm(e){ return (e.trackingStatus||"").replace("Available in stack","Available"); }
+  document.getElementById("sTotal").textContent   = ALL.length;
+  document.getElementById("sActive").textContent  = ALL.filter(function(e){return e.employmentStatus==="Active";}).length;
+  document.getElementById("sAvail").textContent   = ALL.filter(function(e){return nm(e)==="Available";}).length;
+  document.getElementById("sPao").textContent     = ALL.filter(function(e){return nm(e)==="Sent to PAO";}).length;
+  document.getElementById("sStaff").textContent   = ALL.filter(function(e){return nm(e)==="With Office Staff";}).length;
+  document.getElementById("sRetired").textContent = ALL.filter(function(e){return e.recordCategory==="Pensioner/Retired";}).length;
 }
 
-// TABS / SEARCH
+/* ════════════════════════════════════════════
+   TABS / SEARCH / RENDER
+════════════════════════════════════════════ */
 function setTab(v,btn){
   TAB=v;
-  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
-  btn.classList.add('active');ft();
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active'); ft();
 }
-function clearSrch(){sv2("q","");document.getElementById("clearBtn").style.display="none";ft();}
+function clearSrch(){ sv2("q",""); document.getElementById("clearBtn").style.display="none"; ft(); }
 function hl(t,q){
-  if(!t||!q)return t||"";
+  if(!t||!q) return t||"";
   return String(t).replace(new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi"),"<mark>$1</mark>");
 }
-
-// RENDER
 function ft(){
-  var q=gv("q"),ql=q.toLowerCase();
-  document.getElementById("clearBtn").style.display=q?"block":"none";
-  var sf=gv("sf");
-  function nm(e){return(e.trackingStatus||"").replace("Available in stack","Available");}
-  var f=ALL.filter(function(e){
-    var mt=!ql||[e.name,e.section,e.designation,e.category,e.movementRemark,e.mobile,e.placeOfPosting].some(function(x){return(x||"").toLowerCase().includes(ql);});
-    var ms=!sf||nm(e)===sf;
-    var mb=!TAB||e.recordCategory===TAB;
+  var q=gv("q"), ql=q.toLowerCase();
+  document.getElementById("clearBtn").style.display = q?"block":"none";
+  var sf = gv("sf");
+  function nm(e){ return (e.trackingStatus||"").replace("Available in stack","Available"); }
+  var f = ALL.filter(function(e){
+    var mt = !ql || [e.name,e.section,e.designation,e.category,e.movementRemark,e.mobile,e.placeOfPosting].some(function(x){return (x||"").toLowerCase().includes(ql);});
+    var ms = !sf || nm(e)===sf;
+    var mb = !TAB || e.recordCategory===TAB;
     return mt&&ms&&mb;
   });
-  var wrap=document.getElementById("mainContent");
-  if(!f.length){wrap.innerHTML='<div class="table-wrap"><div class="empty-state"><div class="big">🗂</div><p>No records found.</p></div></div>';return;}
+  var wrap = document.getElementById("mainContent");
+  if(!f.length){ wrap.innerHTML='<div class="table-wrap"><div class="empty-state"><div class="big">🗂</div><p>No records found.</p></div></div>'; return; }
   if(TAB===''&&!ql&&!sf){
-    var reg=f.filter(function(e){return e.recordCategory!=="Pensioner/Retired";});
-    var ret=f.filter(function(e){return e.recordCategory==="Pensioner/Retired";});
-    wrap.innerHTML=mkSection(reg,"👔 Regular Employees",false,q)+(ret.length?mkSection(ret,"🎖 Retired / Pensioners",true,q):"");
-  }else{
+    var reg = f.filter(function(e){return e.recordCategory!=="Pensioner/Retired";});
+    var ret = f.filter(function(e){return e.recordCategory==="Pensioner/Retired";});
+    wrap.innerHTML = mkSection(reg,"👔 Regular Employees",false,q)+(ret.length?mkSection(ret,"🎖 Retired / Pensioners",true,q):"");
+  } else {
     var isRet=(TAB==="Pensioner/Retired")||(f.length&&f.every(function(e){return e.recordCategory==="Pensioner/Retired";}));
-    wrap.innerHTML=mkSection(f,isRet?"🎖 Retired / Pensioners":TAB?"👔 Regular Employees":"Records",isRet,q);
+    wrap.innerHTML = mkSection(f,isRet?"🎖 Retired / Pensioners":TAB?"👔 Regular Employees":"Records",isRet,q);
   }
 }
 function mkSection(rows,title,isRet,q){
-  if(!rows.length)return"";
-  return'<div class="sec-head'+(isRet?" retired":"")+'">'+title+'<span class="sec-count">'+rows.length+'</span></div>'+
+  if(!rows.length) return "";
+  return '<div class="sec-head'+(isRet?" retired":"")+'">'+title+'<span class="sec-count">'+rows.length+'</span></div>'+
     '<div class="table-wrap"><table'+(isRet?' class="ret-tbl"':'')+'>'+
     '<colgroup><col class="c-name"><col class="c-desig"><col class="c-stack"><col class="c-status"><col class="c-place"><col class="c-dojs"><col class="c-dob"><col class="c-ret"><col class="c-dojc"><col class="c-dojd"><col class="c-cat"><col class="c-act"></colgroup>'+
     '<thead><tr><th>Name</th><th>Designation</th><th>Stack No.</th><th>Status / Remarks</th><th>Place of Posting</th><th>Date of Posting</th><th>DOB</th><th>Retirement</th><th>DOJ (Comm.)</th><th>DOJ (Dept.)</th><th>Cat.</th><th>Actions</th></tr></thead>'+
@@ -532,12 +606,12 @@ function mkSection(rows,title,isRet,q){
 function mkRow(e,isRet,q){
   var nm=(e.trackingStatus||"Available").replace("Available in stack","Available");
   var badge='<span class="status-badge s-av">✅ Available</span>';
-  if(nm==="Sent to PAO")badge='<span class="status-badge s-pao">📤 Sent to PAO</span>';
-  else if(nm==="With Office Staff")badge='<span class="status-badge s-stf">👤 With Staff</span>';
-  if(e.movementRemark)badge+='<span class="remark-sub">'+e.movementRemark+'</span>';
+  if(nm==="Sent to PAO")        badge='<span class="status-badge s-pao">📤 Sent to PAO</span>';
+  else if(nm==="With Office Staff") badge='<span class="status-badge s-stf">👤 With Staff</span>';
+  if(e.movementRemark) badge+='<span class="remark-sub">'+e.movementRemark+'</span>';
   var pencil='<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
   var trash='<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>';
-  return'<tr>'+
+  return '<tr>'+
     '<td class="name-cell'+(isRet?" ret":"")+'" title="'+(e.name||"")+'">'+hl(e.name,q)+'</td>'+
     '<td class="desig-cell" title="'+(e.designation||"")+'">'+hl(e.designation,q)+'</td>'+
     '<td><span class="stack-badge'+(isRet?" ret":"")+'">'+(e.section||"—")+'</span></td>'+
@@ -551,14 +625,16 @@ function mkRow(e,isRet,q){
     '<td><span class="cat-badge">'+(e.category||"—")+'</span></td>'+
     '<td><div class="act-wrap">'+
       '<button class="btn-ico edit" onclick="ed(\''+e.id+'\')" title="Edit">'+pencil+'</button>'+
-      '<button class="btn-ico del" onclick="dl(\''+e.id+'\')" title="Delete">'+trash+'</button>'+
+      '<button class="btn-ico del"  onclick="dl(\''+e.id+'\')" title="Delete">'+trash+'</button>'+
     '</div></td></tr>';
 }
 
-// ADD/EDIT MODAL
+/* ════════════════════════════════════════════
+   ADD / EDIT MODAL
+════════════════════════════════════════════ */
 function togRem(){
-  var c=document.querySelector('input[name="sbs"]:checked');
-  document.getElementById("remWrap").style.display=(c&&c.value!=="Available")?"block":"none";
+  var c = document.querySelector('input[name="sbs"]:checked');
+  document.getElementById("remWrap").style.display = (c&&c.value!=="Available")?"block":"none";
 }
 function oa(){
   EID=null;
@@ -566,21 +642,22 @@ function oa(){
   document.getElementById("msub").textContent="Fill in the details below";
   ["fn","fdesig","fsc","fpost","fdob","fret","fdojs","fdojc","fdojd","fcat","fmob","frem"].forEach(function(i){sv2(i,"");});
   sv2("fcat2","Regular Employee");
-  document.getElementById("st1").checked=true;togRem();
+  document.getElementById("st1").checked=true; togRem();
   document.getElementById("md").classList.add("show");
 }
-function cl(){document.getElementById("md").classList.remove("show");}
+function cl(){ document.getElementById("md").classList.remove("show"); }
 function ed(id){
-  EID=id;var e=ALL.find(function(x){return x.id===id;});
-  if(!e)return;
+  EID=id;
+  var e=ALL.find(function(x){return x.id===id;});
+  if(!e) return;
   document.getElementById("mtit").textContent="Edit Record";
   document.getElementById("msub").textContent=e.name;
-  sv2("fn",e.name||"");sv2("fdesig",e.designation||"");sv2("fsc",e.section||"");
-  sv2("fcat2",e.recordCategory||"Regular Employee");sv2("fpost",e.placeOfPosting||"");
-  sv2("fdob",e.dob||"");sv2("fret",e.dateOfRetirement||e.retirement||"");
-  sv2("fdojs",e.dateJoiningCurrentStation||"");sv2("fdojc",e.dateJoiningCommissionerate||"");
-  sv2("fdojd",e.dateJoiningDepartment||"");sv2("fcat",e.category||"");
-  sv2("fmob",e.mobile||"");sv2("frem",e.movementRemark||"");
+  sv2("fn",e.name||""); sv2("fdesig",e.designation||""); sv2("fsc",e.section||"");
+  sv2("fcat2",e.recordCategory||"Regular Employee"); sv2("fpost",e.placeOfPosting||"");
+  sv2("fdob",e.dob||""); sv2("fret",e.dateOfRetirement||e.retirement||"");
+  sv2("fdojs",e.dateJoiningCurrentStation||""); sv2("fdojc",e.dateJoiningCommissionerate||"");
+  sv2("fdojd",e.dateJoiningDepartment||""); sv2("fcat",e.category||"");
+  sv2("fmob",e.mobile||""); sv2("frem",e.movementRemark||"");
   var st=(e.trackingStatus||"Available").replace("Available in stack","Available");
   document.querySelectorAll('input[name="sbs"]').forEach(function(r){if(r.value===st)r.checked=true;});
   togRem();
@@ -588,20 +665,20 @@ function ed(id){
 }
 function sv(){
   var name=gv("fn").trim();
-  if(!name){alert("Name is required.");return;}
+  if(!name){ alert("Name is required."); return; }
   var c=document.querySelector('input[name="sbs"]:checked');
   var st=c?c.value:"Available";
   var obj={
-    name:name,designation:gv("fdesig"),section:gv("fsc"),
-    recordCategory:gv("fcat2"),placeOfPosting:gv("fpost"),
-    dob:gv("fdob"),dateOfRetirement:gv("fret"),
-    dateJoiningCurrentStation:gv("fdojs"),dateJoiningCommissionerate:gv("fdojc"),
-    dateJoiningDepartment:gv("fdojd"),category:gv("fcat"),
-    mobile:gv("fmob"),trackingStatus:st,movementRemark:gv("frem"),
+    name:name, designation:gv("fdesig"), section:gv("fsc"),
+    recordCategory:gv("fcat2"), placeOfPosting:gv("fpost"),
+    dob:gv("fdob"), dateOfRetirement:gv("fret"),
+    dateJoiningCurrentStation:gv("fdojs"), dateJoiningCommissionerate:gv("fdojc"),
+    dateJoiningDepartment:gv("fdojd"), category:gv("fcat"),
+    mobile:gv("fmob"), trackingStatus:st, movementRemark:gv("frem"),
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   };
-  if(EID){col.doc(EID).update(obj).then(cl).catch(function(e){alert("Error: "+e.message);});}
-  else{col.add(obj).then(cl).catch(function(e){alert("Error: "+e.message);});}
+  if(EID){ col.doc(EID).update(obj).then(cl).catch(function(e){alert("Error: "+e.message);}); }
+  else    { col.add(obj).then(cl).catch(function(e){alert("Error: "+e.message);}); }
 }
 </script>
 </body>
