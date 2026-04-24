@@ -96,7 +96,8 @@ td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;
 mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty-state .big{font-size:3rem;margin-bottom:10px}
-.modal-ov{display:none;position:fixed;inset:0;background:rgba(8,18,45,.6);backdrop-filter:blur(5px);z-index:200;align-items:center;justify-content:center}
+/* ══ MODALS — z-index 1100 so they appear ABOVE the login screen (z-index 999) ══ */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(8,18,45,.6);backdrop-filter:blur(5px);z-index:1100;align-items:center;justify-content:center}
 .modal-ov.show{display:flex}
 .modal-card{background:var(--card);border-radius:18px;width:800px;max-width:96%;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:mIn .22s ease}
 @keyframes mIn{from{opacity:0;transform:scale(.95) translateY(-12px)}to{opacity:1;transform:scale(1) translateY(0)}}
@@ -134,9 +135,17 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 .msg-box{font-size:.82rem;margin-top:10px;display:none;border-radius:8px;padding:8px 12px}
 .msg-box.ok{background:#dcfce7;color:#15803d}
 .msg-box.err{background:#fee2e2;color:#c0392b}
+.msg-box.info{background:#e0f2fe;color:#0369a1}
 .pwd-note{font-size:.78rem;color:var(--muted);background:#f7f9ff;border-radius:8px;padding:10px 13px;margin-bottom:14px;line-height:1.6;border:1px solid var(--border)}
-.otp-display{background:var(--navy);color:var(--accent);font-family:'DM Mono',monospace;font-size:2rem;font-weight:700;letter-spacing:.3em;text-align:center;border-radius:12px;padding:18px;margin:14px 0;border:2px solid var(--accent)}
-.otp-note{font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:8px}
+/* Telegram waiting animation */
+.tg-waiting{background:linear-gradient(135deg,#e8f4fd,#dbeafe);border:2px solid #93c5fd;border-radius:12px;padding:18px;margin:14px 0;text-align:center}
+.tg-icon{font-size:2.4rem;margin-bottom:8px}
+.tg-title{font-weight:800;color:#1e40af;font-size:1rem;margin-bottom:4px}
+.tg-sub{font-size:.8rem;color:#3b82f6;line-height:1.5}
+.tg-spinner{width:28px;height:28px;border:3px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:spin .8s linear infinite;margin:10px auto 0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.otp-input-box{font-size:1.6rem;font-family:'DM Mono',monospace;font-weight:700;text-align:center;letter-spacing:.3em;padding:14px;border:2px solid var(--accent);border-radius:12px;background:#fffbf0;color:var(--navy);width:100%}
+.otp-input-box:focus{border-color:var(--navy);box-shadow:0 0 0 3px rgba(15,31,69,.15);outline:none}
 @media(max-width:720px){
   .toolbar,.app-header,.stats-bar{padding-left:14px;padding-right:14px}
   .table-wrap{padding:4px 10px 24px}
@@ -285,65 +294,114 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
-<!-- CHANGE PASSWORD MODAL (after login only) -->
+<!-- ══════════════════════════════════════════════════════════
+     CHANGE PASSWORD MODAL — Requires Telegram OTP approval
+     (appears after login when user clicks "Change Password")
+════════════════════════════════════════════════════════════ -->
 <div class="modal-ov" id="changePwdModal">
-  <div class="modal-card" style="width:460px;max-width:96%">
+  <div class="modal-card" style="width:480px;max-width:96%">
     <div class="modal-hdr">
       <div class="m-hico">🔒</div>
       <div><h3>Change Password</h3><div class="m-sub" id="cpwdSubtitle">Update your login credentials</div></div>
       <button class="m-close" onclick="closeChangePwd()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="pwd-note">ℹ️ Enter your current password, then set a new one. You will need to log in again with the new password.</div>
-      <div class="form-grid" style="grid-template-columns:1fr">
-        <div class="fg"><label>Current Password</label><input type="password" id="cpOld" placeholder="Enter your current password"></div>
-        <div class="fg"><label>New Password</label><input type="password" id="cpNew" placeholder="Minimum 6 characters"></div>
-        <div class="fg"><label>Confirm New Password</label><input type="password" id="cpCnf" placeholder="Re-enter new password"></div>
-        <div id="cpMsg" class="msg-box"></div>
+
+      <!-- STEP 1: Enter old + new password -->
+      <div id="cpStep1">
+        <div class="pwd-note">ℹ️ Enter your current password and choose a new one. An OTP will be sent to the admin's Telegram for approval.</div>
+        <div class="form-grid" style="grid-template-columns:1fr">
+          <div class="fg"><label>Current Password</label><input type="password" id="cpOld" placeholder="Enter your current password"></div>
+          <div class="fg"><label>New Password</label><input type="password" id="cpNew" placeholder="Minimum 6 characters"></div>
+          <div class="fg"><label>Confirm New Password</label><input type="password" id="cpCnf" placeholder="Re-enter new password"></div>
+          <div id="cpMsg1" class="msg-box"></div>
+        </div>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
+          <button class="btn-cancel" onclick="closeChangePwd()">Cancel</button>
+          <button class="btn-save" onclick="cpRequestOtp()">📲 Send OTP to Admin</button>
+        </div>
       </div>
-    </div>
-    <div class="modal-ftr">
-      <button class="btn-cancel" onclick="closeChangePwd()">Cancel</button>
-      <button class="btn-save" onclick="doChangePwd()">🔒 Update Password</button>
+
+      <!-- STEP 2: Waiting for / entering OTP -->
+      <div id="cpStep2" style="display:none">
+        <div class="tg-waiting">
+          <div class="tg-icon">📱</div>
+          <div class="tg-title">OTP Sent to Admin's Telegram!</div>
+          <div class="tg-sub">A 6-digit OTP has been sent to <strong>SAIKAT MONDAL</strong> on Telegram.<br>Ask the admin to share the OTP with you.</div>
+          <div class="tg-spinner"></div>
+        </div>
+        <div class="form-grid" style="grid-template-columns:1fr;margin-top:4px">
+          <div class="fg"><label>Enter OTP received from admin</label>
+            <input type="text" id="cpOtpEntered" class="otp-input-box" placeholder="_ _ _ _ _ _" maxlength="6" oninput="this.value=this.value.replace(/\D/g,'')">
+          </div>
+          <div id="cpMsg2" class="msg-box"></div>
+        </div>
+        <div style="margin-top:16px;display:flex;justify-content:space-between;gap:10px">
+          <button class="btn-cancel" onclick="cpResend()" style="font-size:.8rem">🔄 Resend OTP</button>
+          <div style="display:flex;gap:10px">
+            <button class="btn-cancel" onclick="closeChangePwd()">Cancel</button>
+            <button class="btn-save" onclick="cpVerifyOtp()">✅ Verify &amp; Change Password</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 
-<!-- FORGOT PASSWORD MODAL (before login — OTP flow) -->
+<!-- ══════════════════════════════════════════════════════════
+     FORGOT PASSWORD MODAL — Requires Telegram OTP approval
+     (appears on login screen — z-index 1100 > login z-index 999)
+════════════════════════════════════════════════════════════ -->
 <div class="modal-ov" id="forgotModal">
-  <div class="modal-card" style="width:460px;max-width:96%">
+  <div class="modal-card" style="width:480px;max-width:96%">
     <div class="modal-hdr">
       <div class="m-hico" style="background:linear-gradient(135deg,#e65100,#f57c00)">🔑</div>
-      <div><h3>Forgot Password</h3><div class="m-sub">Reset your password using OTP</div></div>
+      <div><h3>Forgot Password</h3><div class="m-sub">Reset your password via Telegram OTP</div></div>
       <button class="m-close" onclick="closeForgot()">✕</button>
     </div>
     <div class="modal-body">
+
+      <!-- STEP 1: Enter User ID -->
       <div id="forgotStep1">
-        <div class="pwd-note">📱 Enter your User ID. An OTP will appear on screen. Call admin at <strong>9432490498</strong>, share the OTP for verification, then set your new password.</div>
+        <div class="pwd-note">📱 Enter your User ID. An OTP will be sent to the admin's Telegram (<strong>SAIKAT MONDAL</strong>). The admin will share the OTP with you to verify your identity.</div>
         <div class="form-grid" style="grid-template-columns:1fr">
-          <div class="fg"><label>Your User ID</label><input type="text" id="fgUserId" placeholder="Enter your User ID" onkeydown="if(event.key==='Enter')genOtp()"></div>
+          <div class="fg"><label>Your User ID</label>
+            <input type="text" id="fgUserId" placeholder="Enter your User ID" onkeydown="if(event.key==='Enter')genOtp()">
+          </div>
           <div id="fgMsg1" class="msg-box"></div>
         </div>
         <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
           <button class="btn-cancel" onclick="closeForgot()">Cancel</button>
-          <button class="btn-save" onclick="genOtp()">📲 Generate OTP</button>
+          <button class="btn-save" onclick="genOtp()">📲 Send OTP to Admin</button>
         </div>
       </div>
+
+      <!-- STEP 2: OTP sent — enter OTP + new password -->
       <div id="forgotStep2" style="display:none">
-        <div class="otp-note">Your one-time OTP code — call admin at <strong style="color:var(--navy)">9432490498</strong> and read this:</div>
-        <div class="otp-display" id="otpDisplay">——</div>
-        <div class="otp-note" style="color:var(--red);font-weight:600">⏱ This OTP expires in 5 minutes.</div>
-        <div class="form-grid" style="grid-template-columns:1fr;margin-top:16px">
-          <div class="fg"><label>Enter OTP to Verify</label><input type="text" id="fgOtpEntered" placeholder="Type the 6-digit OTP shown above" maxlength="6"></div>
+        <div class="tg-waiting">
+          <div class="tg-icon">📱</div>
+          <div class="tg-title">OTP Sent to Admin's Telegram!</div>
+          <div class="tg-sub">A 6-digit OTP has been sent to <strong>SAIKAT MONDAL</strong> on Telegram.<br>Ask the admin for the OTP code, then enter your new password below.</div>
+          <div class="tg-spinner"></div>
+        </div>
+        <div class="form-grid" style="grid-template-columns:1fr;margin-top:8px">
+          <div class="fg"><label>OTP received from admin</label>
+            <input type="text" id="fgOtpEntered" class="otp-input-box" placeholder="_ _ _ _ _ _" maxlength="6" oninput="this.value=this.value.replace(/\D/g,'')">
+          </div>
           <div class="fg"><label>New Password</label><input type="password" id="fgNewPwd" placeholder="Minimum 6 characters"></div>
           <div class="fg"><label>Confirm New Password</label><input type="password" id="fgCnfPwd" placeholder="Re-enter new password"></div>
           <div id="fgMsg2" class="msg-box"></div>
         </div>
-        <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
-          <button class="btn-cancel" onclick="closeForgot()">Cancel</button>
-          <button class="btn-save" onclick="doOtpReset()">✅ Reset Password</button>
+        <div style="margin-top:16px;display:flex;justify-content:space-between;gap:10px">
+          <button class="btn-cancel" onclick="fgResend()" style="font-size:.8rem">🔄 Resend OTP</button>
+          <div style="display:flex;gap:10px">
+            <button class="btn-cancel" onclick="closeForgot()">Cancel</button>
+            <button class="btn-save" onclick="doOtpReset()">✅ Reset Password</button>
+          </div>
         </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -352,6 +410,37 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
+/* ══════════════════════════════════════════════════════════════
+   ██████╗  ██████╗ ████████╗    ████████╗ ██████╗ ██╗  ██╗███████╗███╗   ██╗
+   ██╔══██╗██╔═══██╗╚══██╔══╝       ██╔══╝██╔═══██╗██║ ██╔╝██╔════╝████╗  ██║
+   ██████╔╝██║   ██║   ██║          ██║   ██║   ██║█████╔╝ █████╗  ██╔██╗ ██║
+   ██╔══██╗██║   ██║   ██║          ██║   ██║   ██║██╔═██╗ ██╔══╝  ██║╚██╗██║
+   ██████╔╝╚██████╔╝   ██║          ██║   ╚██████╔╝██║  ██╗███████╗██║ ╚████║
+   ╚═════╝  ╚═════╝    ╚═╝          ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝
+
+   TELEGRAM BOT SETUP — ONE-TIME CONFIGURATION
+   ════════════════════════════════════════════
+   Step 1: Open Telegram → search @BotFather → send /newbot
+   Step 2: Give any name (e.g. "ServiceBookOTP") and username (e.g. "ServiceBookOTPBot")
+   Step 3: BotFather will give you a token like: 7123456789:AAHxxxxx...
+            Paste it below as TELEGRAM_BOT_TOKEN
+
+   Step 4: Message your new bot once (say "hello")
+   Step 5: Open this URL in browser (replace YOUR_TOKEN with your token):
+            https://api.telegram.org/botYOUR_TOKEN/getUpdates
+   Step 6: Look for "chat":{"id": followed by a number — that is YOUR_CHAT_ID
+            Paste it below as TELEGRAM_ADMIN_CHAT_ID
+
+   Example:
+     var TELEGRAM_BOT_TOKEN   = "7123456789:AAHxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+     var TELEGRAM_ADMIN_CHAT_ID = "987654321";
+═══════════════════════════════════════════════════════════════ */
+var TELEGRAM_BOT_TOKEN    = "YOUR_BOT_TOKEN_HERE";       // ← Paste your BotFather token
+var TELEGRAM_ADMIN_CHAT_ID = "YOUR_CHAT_ID_HERE";        // ← Paste your Telegram Chat ID
+
+/* ══════════════════════════════════════════════════════════════
+   FIREBASE
+════════════════════════════════════════════════════════════ */
 firebase.initializeApp({
   apiKey:"AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI",
   authDomain:"service-book-tracker.firebaseapp.com",
@@ -362,25 +451,26 @@ firebase.initializeApp({
 });
 var db  = firebase.firestore();
 var col = db.collection("employees");
-
 var ALL=[], EID=null, TAB='', _delId=null;
-var _otp=null, _otpExp=0, _otpUser=null;
 
-/* ══════════════════════════════════════════
-   PASSWORD STORAGE — uses localStorage so
-   changes persist even after browser closes.
-   BUG FIX: was sessionStorage before, which
-   caused reset passwords to be forgotten on
-   next visit, reverting to old password.
-══════════════════════════════════════════ */
+/* OTP state */
+var _otp=null, _otpExp=0, _otpUser=null, _cpNewPwd=null;
+
+/* ══════════════════════════════════════════════════════════════
+   PASSWORD STORAGE
+   Uses localStorage so changes persist even after browser closes.
+════════════════════════════════════════════════════════════ */
 var USERS = {admin:"admin123", saikat:"saikat123", office:"office123"};
 (function(){
   try{
-    var ov = localStorage.getItem("pwdOv");   // ← FIXED: was sessionStorage
+    var ov = localStorage.getItem("pwdOv");
     if(ov){ var p=JSON.parse(ov); for(var k in p) USERS[k]=p[k]; }
   }catch(e){}
 })();
 
+/* ══════════════════════════════════════════════════════════════
+   UTILITY
+════════════════════════════════════════════════════════════ */
 function gv(id){ return document.getElementById(id).value; }
 function sv2(id,val){ document.getElementById(id).value = val; }
 function showMsg(id,cls,txt){
@@ -390,11 +480,54 @@ function showMsg(id,cls,txt){
 function hideMsg(id){ document.getElementById(id).style.display="none"; }
 function savePwdOverride(u, newPwd){
   USERS[u] = newPwd;
-  var ov = JSON.parse(localStorage.getItem("pwdOv")||"{}");  // ← FIXED: was sessionStorage
+  var ov = JSON.parse(localStorage.getItem("pwdOv")||"{}");
   ov[u] = newPwd;
-  localStorage.setItem("pwdOv", JSON.stringify(ov));         // ← FIXED: was sessionStorage
+  localStorage.setItem("pwdOv", JSON.stringify(ov));
+}
+function makeOtp(){
+  return String(Math.floor(100000 + Math.random()*900000));
 }
 
+/* ══════════════════════════════════════════════════════════════
+   TELEGRAM — send OTP notification to admin
+════════════════════════════════════════════════════════════ */
+function sendTelegramOtp(username, otp, actionLabel){
+  if(TELEGRAM_BOT_TOKEN === "YOUR_BOT_TOKEN_HERE"){
+    // Dev mode: log to console if not configured
+    console.warn("⚠️ Telegram not configured. OTP for "+username+" is: "+otp);
+    return Promise.resolve();
+  }
+  var text =
+    "🔐 *Service Book Tracker — Password OTP*\n\n" +
+    "🏢 CGST Commissionerate, Bhubaneswar\n" +
+    "👤 User: *" + username + "*\n" +
+    "🔑 Action: " + (actionLabel||"Password Change") + "\n\n" +
+    "Your OTP is:\n" +
+    "┌─────────────┐\n" +
+    "│  *" + otp + "*  │\n" +
+    "└─────────────┘\n\n" +
+    "⏱ Valid for *5 minutes*. Do not share with anyone else.\n" +
+    "Share this OTP only if you recognise the requestor.";
+
+  return fetch(
+    "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage",
+    {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        chat_id: TELEGRAM_ADMIN_CHAT_ID,
+        text: text,
+        parse_mode: "Markdown"
+      })
+    }
+  ).catch(function(err){
+    console.error("Telegram send error:", err);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LOGIN
+════════════════════════════════════════════════════════════ */
 function login(){
   var u = gv("userid").trim().toLowerCase();
   var p = gv("pwd").trim();
@@ -420,30 +553,70 @@ function logout(){
   }
 })();
 
+/* ══════════════════════════════════════════════════════════════
+   CHANGE PASSWORD (while logged in)
+   Step 1 → validate inputs → send OTP to Telegram
+   Step 2 → enter OTP → verify → save new password
+════════════════════════════════════════════════════════════ */
 function openChangePwdModal(){
-  hideMsg("cpMsg");
-  sv2("cpOld",""); sv2("cpNew",""); sv2("cpCnf","");
+  hideMsg("cpMsg1"); hideMsg("cpMsg2");
+  sv2("cpOld",""); sv2("cpNew",""); sv2("cpCnf",""); sv2("cpOtpEntered","");
+  _cpNewPwd = null; _otp = null;
   var user = sessionStorage.getItem("li") || "";
   document.getElementById("cpwdSubtitle").textContent = "Logged in as: " + user;
+  document.getElementById("cpStep1").style.display = "block";
+  document.getElementById("cpStep2").style.display = "none";
   document.getElementById("changePwdModal").classList.add("show");
 }
 function closeChangePwd(){
+  _otp = null; _cpNewPwd = null;
   document.getElementById("changePwdModal").classList.remove("show");
 }
-function doChangePwd(){
+function cpRequestOtp(){
   var user = sessionStorage.getItem("li") || "";
   var old  = gv("cpOld");
   var nw   = gv("cpNew");
   var cf   = gv("cpCnf");
-  if(!USERS[user]){ showMsg("cpMsg","err","❌ Session error. Please log out and in again."); return; }
-  if(USERS[user] !== old){ showMsg("cpMsg","err","❌ Current password is incorrect."); return; }
-  if(nw.length < 6){ showMsg("cpMsg","err","❌ New password must be at least 6 characters."); return; }
-  if(nw !== cf){ showMsg("cpMsg","err","❌ Passwords do not match."); return; }
-  savePwdOverride(user, nw);
-  showMsg("cpMsg","ok","✅ Password changed successfully!");
-  setTimeout(closeChangePwd, 2000);
+  hideMsg("cpMsg1");
+  if(!USERS[user]){ showMsg("cpMsg1","err","❌ Session error. Please log out and in again."); return; }
+  if(USERS[user] !== old){ showMsg("cpMsg1","err","❌ Current password is incorrect."); return; }
+  if(nw.length < 6){ showMsg("cpMsg1","err","❌ New password must be at least 6 characters."); return; }
+  if(nw !== cf){ showMsg("cpMsg1","err","❌ Passwords do not match."); return; }
+  _cpNewPwd = nw;
+  _otp     = makeOtp();
+  _otpExp  = Date.now() + 5*60*1000;
+  _otpUser = user;
+  sendTelegramOtp(user, _otp, "Change Password").then(function(){
+    document.getElementById("cpStep1").style.display = "none";
+    document.getElementById("cpStep2").style.display = "block";
+    sv2("cpOtpEntered","");
+    hideMsg("cpMsg2");
+  });
+}
+function cpResend(){
+  if(!_otpUser) return;
+  _otp    = makeOtp();
+  _otpExp = Date.now() + 5*60*1000;
+  sendTelegramOtp(_otpUser, _otp, "Change Password (Resend)");
+  showMsg("cpMsg2","info","📲 New OTP sent to admin's Telegram.");
+  sv2("cpOtpEntered","");
+}
+function cpVerifyOtp(){
+  var entered = gv("cpOtpEntered").trim();
+  hideMsg("cpMsg2");
+  if(!_otp || Date.now() > _otpExp){ showMsg("cpMsg2","err","❌ OTP expired. Click Resend."); return; }
+  if(entered !== _otp){             showMsg("cpMsg2","err","❌ Incorrect OTP. Try again."); return; }
+  savePwdOverride(_otpUser, _cpNewPwd);
+  _otp = null; _cpNewPwd = null;
+  showMsg("cpMsg2","ok","✅ Password changed successfully! Please log in again.");
+  setTimeout(function(){ closeChangePwd(); logout(); }, 2500);
 }
 
+/* ══════════════════════════════════════════════════════════════
+   FORGOT PASSWORD (on login screen)
+   Step 1 → enter User ID → send OTP to Telegram
+   Step 2 → enter OTP + new password → verify → save
+════════════════════════════════════════════════════════════ */
 function openForgotModal(){
   _otp=null; _otpExp=0; _otpUser=null;
   sv2("fgUserId",""); hideMsg("fgMsg1");
@@ -453,24 +626,38 @@ function openForgotModal(){
   document.getElementById("forgotModal").classList.add("show");
 }
 function closeForgot(){
+  _otp = null;
   document.getElementById("forgotModal").classList.remove("show");
 }
 function genOtp(){
   var u = gv("fgUserId").trim().toLowerCase();
+  hideMsg("fgMsg1");
   if(!u){ showMsg("fgMsg1","err","❌ Please enter your User ID."); return; }
   if(!USERS[u]){ showMsg("fgMsg1","err","❌ User ID not found. Please check and try again."); return; }
-  _otp     = String(Math.floor(100000 + Math.random()*900000));
+  _otp     = makeOtp();
   _otpExp  = Date.now() + 5*60*1000;
   _otpUser = u;
-  document.getElementById("otpDisplay").textContent = _otp;
-  document.getElementById("forgotStep1").style.display="none";
-  document.getElementById("forgotStep2").style.display="block";
+  sendTelegramOtp(u, _otp, "Forgot Password").then(function(){
+    document.getElementById("forgotStep1").style.display="none";
+    document.getElementById("forgotStep2").style.display="block";
+    sv2("fgOtpEntered","");
+    hideMsg("fgMsg2");
+  });
+}
+function fgResend(){
+  if(!_otpUser) return;
+  _otp    = makeOtp();
+  _otpExp = Date.now() + 5*60*1000;
+  sendTelegramOtp(_otpUser, _otp, "Forgot Password (Resend)");
+  showMsg("fgMsg2","info","📲 New OTP sent to admin's Telegram.");
+  sv2("fgOtpEntered","");
 }
 function doOtpReset(){
   var entered = gv("fgOtpEntered").trim();
   var nw      = gv("fgNewPwd");
   var cf      = gv("fgCnfPwd");
-  if(!_otp || Date.now() > _otpExp){ showMsg("fgMsg2","err","❌ OTP expired. Please start over."); return; }
+  hideMsg("fgMsg2");
+  if(!_otp || Date.now() > _otpExp){ showMsg("fgMsg2","err","❌ OTP expired. Click Resend to get a new one."); return; }
   if(entered !== _otp){             showMsg("fgMsg2","err","❌ Incorrect OTP. Try again."); return; }
   if(nw.length < 6){                showMsg("fgMsg2","err","❌ Password must be at least 6 characters."); return; }
   if(nw !== cf){                    showMsg("fgMsg2","err","❌ Passwords do not match."); return; }
@@ -480,6 +667,9 @@ function doOtpReset(){
   setTimeout(closeForgot, 2500);
 }
 
+/* ══════════════════════════════════════════════════════════════
+   DELETE RECORD
+════════════════════════════════════════════════════════════ */
 function dl(id){
   var e = ALL.find(function(x){ return x.id===id; });
   _delId = id;
@@ -498,6 +688,9 @@ function confirmDel(){
   col.doc(id).delete().catch(function(err){ alert("Delete error: "+err.message); });
 }
 
+/* ══════════════════════════════════════════════════════════════
+   FIREBASE DATA
+════════════════════════════════════════════════════════════ */
 function loadData(){
   col.onSnapshot(function(snap){
     ALL = snap.docs.map(function(d){
@@ -520,7 +713,6 @@ function stats(){
   document.getElementById("sStaff").textContent   = ALL.filter(function(e){return nm(e)==="With Office Staff";}).length;
   document.getElementById("sRetired").textContent = ALL.filter(function(e){return e.recordCategory==="Pensioner/Retired";}).length;
 }
-
 function setTab(v,btn){
   TAB=v;
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
@@ -587,6 +779,9 @@ function mkRow(e,isRet,q){
     '</div></td></tr>';
 }
 
+/* ══════════════════════════════════════════════════════════════
+   ADD / EDIT RECORD
+════════════════════════════════════════════════════════════ */
 function togRem(){
   var c = document.querySelector('input[name="sbs"]:checked');
   document.getElementById("remWrap").style.display = (c&&c.value!=="Available")?"block":"none";
