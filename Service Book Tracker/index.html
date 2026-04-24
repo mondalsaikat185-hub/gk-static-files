@@ -10,8 +10,6 @@
 :root{--navy:#0f1f45;--navy-mid:#1a3066;--navy-light:#233580;--accent:#c8a84b;--red:#c0392b;--bg:#eef1f7;--card:#ffffff;--border:#dde2ee;--text:#1c2a45;--muted:#6b7a99;--shadow:0 2px 12px rgba(15,31,69,.10);--shadow-lg:0 8px 30px rgba(15,31,69,.18);--header-h:62px;--stats-h:44px;--toolbar-h:58px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-
-/* ── LOGIN ── */
 #loginScreen{display:none;position:fixed;inset:0;background:linear-gradient(135deg,#0a1628,#1a3066 55%,#0f1f45);z-index:999;align-items:center;justify-content:center}
 #loginScreen.show{display:flex}
 .login-card{background:rgba(255,255,255,.07);backdrop-filter:blur(22px);border:1px solid rgba(200,168,75,.35);border-radius:22px;padding:50px 45px;width:410px;text-align:center;box-shadow:0 30px 70px rgba(0,0,0,.45);animation:slideUp .45s ease}
@@ -28,12 +26,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .login-btn{width:100%;padding:14px;margin-top:10px;background:linear-gradient(135deg,var(--accent),#b8912d);border:none;border-radius:11px;color:var(--navy);font-weight:800;font-size:1rem;font-family:inherit;cursor:pointer;transition:transform .15s,box-shadow .15s}
 .login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(200,168,75,.45)}
 #loginErr{color:#ff7979;font-size:.82rem;margin-top:12px;display:none}
-/* Only Forgot Password link on login screen — NO change password here */
 .login-forgot{text-align:center;margin-top:18px}
 .forgot-link{color:rgba(255,255,255,.5);font-size:.82rem;cursor:pointer;text-decoration:underline;text-underline-offset:3px;transition:color .2s}
 .forgot-link:hover{color:var(--accent)}
-
-/* ── APP ── */
 #app-content{display:none}
 .app-header{background:var(--navy);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:var(--header-h);box-shadow:0 2px 14px rgba(0,0,0,.3);position:sticky;top:0;z-index:60}
 .header-brand{display:flex;align-items:center;gap:12px}
@@ -49,16 +44,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .hdr-btn:hover{background:rgba(255,255,255,.18)}
 .hdr-btn.danger{border-color:rgba(255,100,100,.35);color:#ffaaaa}
 .hdr-btn.danger:hover{background:rgba(192,57,43,.3)}
-
-/* ── STATS ── */
 .stats-bar{background:var(--navy-mid);padding:0 28px;display:flex;align-items:stretch;height:var(--stats-h);overflow-x:auto;position:sticky;top:var(--header-h);z-index:55;border-bottom:1px solid rgba(255,255,255,.08)}
 .stats-bar::-webkit-scrollbar{display:none}
 .stat-item{display:flex;align-items:center;gap:8px;padding:0 20px;color:rgba(255,255,255,.65);font-size:.8rem;white-space:nowrap;border-right:1px solid rgba(255,255,255,.1);flex-shrink:0}
 .stat-item:first-child{padding-left:0}
 .stat-item strong{color:var(--accent);font-size:1.05rem;font-weight:800}
 .s-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-
-/* ── TOOLBAR ── */
 .toolbar{padding:9px 28px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:calc(var(--header-h) + var(--stats-h));z-index:50;min-height:var(--toolbar-h)}
 .search-wrap{position:relative;flex:1;min-width:200px}
 .search-wrap input{width:100%;padding:9px 36px 9px 38px;border:1.5px solid var(--border);border-radius:9px;font-size:.88rem;font-family:inherit;color:var(--text);background:var(--bg);outline:none;transition:border .2s,box-shadow .2s}
@@ -73,13 +64,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .filter-select{padding:9px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:.84rem;font-family:inherit;color:var(--text);background:var(--bg);cursor:pointer;outline:none;min-width:150px}
 .btn-add{padding:9px 18px;background:linear-gradient(135deg,var(--navy),var(--navy-light));border:none;border-radius:9px;color:#fff;font-size:.84rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:transform .15s,box-shadow .15s}
 .btn-add:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(15,31,69,.28)}
-
-/* ── SECTION HEADS ── */
 .sec-head{display:flex;align-items:center;gap:10px;padding:14px 28px 6px;font-size:.82rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
 .sec-head.retired{color:#7b1f1f}
 .sec-count{background:var(--bg);border:1px solid var(--border);padding:2px 10px;border-radius:20px;font-size:.74rem;color:var(--muted);font-weight:600}
-
-/* ── TABLE ── */
 .table-wrap{padding:4px 28px 24px;overflow-x:auto}
 table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);min-width:1300px;font-size:.83rem;table-layout:fixed}
 col.c-name{width:13%}col.c-desig{width:10%}col.c-stack{width:7%}col.c-status{width:11%}
@@ -109,8 +96,6 @@ td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;
 mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty-state .big{font-size:3rem;margin-bottom:10px}
-
-/* ── MODALS ── */
 .modal-ov{display:none;position:fixed;inset:0;background:rgba(8,18,45,.6);backdrop-filter:blur(5px);z-index:200;align-items:center;justify-content:center}
 .modal-ov.show{display:flex}
 .modal-card{background:var(--card);border-radius:18px;width:800px;max-width:96%;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:mIn .22s ease}
@@ -152,7 +137,6 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 .pwd-note{font-size:.78rem;color:var(--muted);background:#f7f9ff;border-radius:8px;padding:10px 13px;margin-bottom:14px;line-height:1.6;border:1px solid var(--border)}
 .otp-display{background:var(--navy);color:var(--accent);font-family:'DM Mono',monospace;font-size:2rem;font-weight:700;letter-spacing:.3em;text-align:center;border-radius:12px;padding:18px;margin:14px 0;border:2px solid var(--accent)}
 .otp-note{font-size:.78rem;color:var(--muted);text-align:center;margin-bottom:8px}
-
 @media(max-width:720px){
   .toolbar,.app-header,.stats-bar{padding-left:14px;padding-right:14px}
   .table-wrap{padding:4px 10px 24px}
@@ -164,7 +148,7 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 </head>
 <body>
 
-<!-- ════ LOGIN SCREEN ════ -->
+<!-- LOGIN SCREEN -->
 <div id="loginScreen" class="show">
   <div class="login-card">
     <div class="login-emblem">📚</div>
@@ -180,14 +164,13 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
     </div>
     <button class="login-btn" onclick="login()">Sign In →</button>
     <p id="loginErr">⚠ Invalid credentials. Please try again.</p>
-    <!-- ONLY Forgot Password here — change password is only after login -->
     <div class="login-forgot">
       <span class="forgot-link" onclick="openForgotModal()">🔑 Forgot Password?</span>
     </div>
   </div>
 </div>
 
-<!-- ════ MAIN APP (visible only after login) ════ -->
+<!-- MAIN APP -->
 <div id="app-content">
   <header class="app-header">
     <div class="header-brand">
@@ -196,7 +179,6 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
     </div>
     <div class="header-right">
       <div class="live-pill"><div class="dot" id="liveDot"></div><span id="liveLabel">Connecting…</span></div>
-      <!-- Change Password only appears here after login -->
       <button class="hdr-btn" onclick="openChangePwdModal()">🔒 Change Password</button>
       <button class="hdr-btn danger" onclick="logout()">Sign Out</button>
     </div>
@@ -234,7 +216,7 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
   <div id="mainContent"></div>
 </div>
 
-<!-- ════ ADD / EDIT RECORD MODAL ════ -->
+<!-- ADD / EDIT RECORD MODAL -->
 <div class="modal-ov" id="md">
   <div class="modal-card">
     <div class="modal-hdr">
@@ -282,7 +264,7 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
-<!-- ════ DELETE CONFIRMATION MODAL ════ -->
+<!-- DELETE CONFIRMATION MODAL -->
 <div class="modal-ov" id="delModal">
   <div class="modal-card" style="width:430px;max-width:96%">
     <div class="modal-hdr" style="background:linear-gradient(135deg,#fef2f2,#fff)">
@@ -303,7 +285,7 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
-<!-- ════ CHANGE PASSWORD MODAL (only accessible after login) ════ -->
+<!-- CHANGE PASSWORD MODAL (after login only) -->
 <div class="modal-ov" id="changePwdModal">
   <div class="modal-card" style="width:460px;max-width:96%">
     <div class="modal-hdr">
@@ -327,7 +309,7 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
-<!-- ════ FORGOT PASSWORD MODAL (OTP — accessible before login) ════ -->
+<!-- FORGOT PASSWORD MODAL (before login — OTP flow) -->
 <div class="modal-ov" id="forgotModal">
   <div class="modal-card" style="width:460px;max-width:96%">
     <div class="modal-hdr">
@@ -336,7 +318,6 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
       <button class="m-close" onclick="closeForgot()">✕</button>
     </div>
     <div class="modal-body">
-      <!-- Step 1: Enter User ID -->
       <div id="forgotStep1">
         <div class="pwd-note">📱 Enter your User ID. An OTP will appear on screen. Call admin at <strong>9432490498</strong>, share the OTP for verification, then set your new password.</div>
         <div class="form-grid" style="grid-template-columns:1fr">
@@ -348,7 +329,6 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
           <button class="btn-save" onclick="genOtp()">📲 Generate OTP</button>
         </div>
       </div>
-      <!-- Step 2: Verify OTP & set new password -->
       <div id="forgotStep2" style="display:none">
         <div class="otp-note">Your one-time OTP code — call admin at <strong style="color:var(--navy)">9432490498</strong> and read this:</div>
         <div class="otp-display" id="otpDisplay">——</div>
@@ -368,13 +348,10 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
-<!-- Firebase (compat — all functions global) -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
-/* ════════════════════════════════════════════
-   FIREBASE INIT
-════════════════════════════════════════════ */
 firebase.initializeApp({
   apiKey:"AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI",
   authDomain:"service-book-tracker.firebaseapp.com",
@@ -386,24 +363,24 @@ firebase.initializeApp({
 var db  = firebase.firestore();
 var col = db.collection("employees");
 
-/* ════════════════════════════════════════════
-   STATE
-════════════════════════════════════════════ */
 var ALL=[], EID=null, TAB='', _delId=null;
 var _otp=null, _otpExp=0, _otpUser=null;
 
-/* Credentials — load any session overrides */
+/* ══════════════════════════════════════════
+   PASSWORD STORAGE — uses localStorage so
+   changes persist even after browser closes.
+   BUG FIX: was sessionStorage before, which
+   caused reset passwords to be forgotten on
+   next visit, reverting to old password.
+══════════════════════════════════════════ */
 var USERS = {admin:"admin123", saikat:"saikat123", office:"office123"};
 (function(){
   try{
-    var ov = sessionStorage.getItem("pwdOv");
+    var ov = localStorage.getItem("pwdOv");   // ← FIXED: was sessionStorage
     if(ov){ var p=JSON.parse(ov); for(var k in p) USERS[k]=p[k]; }
   }catch(e){}
 })();
 
-/* ════════════════════════════════════════════
-   HELPERS
-════════════════════════════════════════════ */
 function gv(id){ return document.getElementById(id).value; }
 function sv2(id,val){ document.getElementById(id).value = val; }
 function showMsg(id,cls,txt){
@@ -413,14 +390,11 @@ function showMsg(id,cls,txt){
 function hideMsg(id){ document.getElementById(id).style.display="none"; }
 function savePwdOverride(u, newPwd){
   USERS[u] = newPwd;
-  var ov = JSON.parse(sessionStorage.getItem("pwdOv")||"{}");
+  var ov = JSON.parse(localStorage.getItem("pwdOv")||"{}");  // ← FIXED: was sessionStorage
   ov[u] = newPwd;
-  sessionStorage.setItem("pwdOv", JSON.stringify(ov));
+  localStorage.setItem("pwdOv", JSON.stringify(ov));         // ← FIXED: was sessionStorage
 }
 
-/* ════════════════════════════════════════════
-   LOGIN / LOGOUT
-════════════════════════════════════════════ */
 function login(){
   var u = gv("userid").trim().toLowerCase();
   var p = gv("pwd").trim();
@@ -438,7 +412,6 @@ function logout(){
   sessionStorage.removeItem("li");
   location.reload();
 }
-/* Auto-login if session exists */
 (function(){
   if(sessionStorage.getItem("li")){
     document.getElementById("loginScreen").classList.remove("show");
@@ -447,9 +420,6 @@ function logout(){
   }
 })();
 
-/* ════════════════════════════════════════════
-   CHANGE PASSWORD (only after login, from header)
-════════════════════════════════════════════ */
 function openChangePwdModal(){
   hideMsg("cpMsg");
   sv2("cpOld",""); sv2("cpNew",""); sv2("cpCnf","");
@@ -474,9 +444,6 @@ function doChangePwd(){
   setTimeout(closeChangePwd, 2000);
 }
 
-/* ════════════════════════════════════════════
-   FORGOT PASSWORD (before login — OTP flow)
-════════════════════════════════════════════ */
 function openForgotModal(){
   _otp=null; _otpExp=0; _otpUser=null;
   sv2("fgUserId",""); hideMsg("fgMsg1");
@@ -513,9 +480,6 @@ function doOtpReset(){
   setTimeout(closeForgot, 2500);
 }
 
-/* ════════════════════════════════════════════
-   DELETE with confirmation
-════════════════════════════════════════════ */
 function dl(id){
   var e = ALL.find(function(x){ return x.id===id; });
   _delId = id;
@@ -534,9 +498,6 @@ function confirmDel(){
   col.doc(id).delete().catch(function(err){ alert("Delete error: "+err.message); });
 }
 
-/* ════════════════════════════════════════════
-   FIREBASE DATA
-════════════════════════════════════════════ */
 function loadData(){
   col.onSnapshot(function(snap){
     ALL = snap.docs.map(function(d){
@@ -560,9 +521,6 @@ function stats(){
   document.getElementById("sRetired").textContent = ALL.filter(function(e){return e.recordCategory==="Pensioner/Retired";}).length;
 }
 
-/* ════════════════════════════════════════════
-   TABS / SEARCH / RENDER
-════════════════════════════════════════════ */
 function setTab(v,btn){
   TAB=v;
   document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
@@ -629,9 +587,6 @@ function mkRow(e,isRet,q){
     '</div></td></tr>';
 }
 
-/* ════════════════════════════════════════════
-   ADD / EDIT MODAL
-════════════════════════════════════════════ */
 function togRem(){
   var c = document.querySelector('input[name="sbs"]:checked');
   document.getElementById("remWrap").style.display = (c&&c.value!=="Available")?"block":"none";
