@@ -96,7 +96,6 @@ td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;
 mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty-state .big{font-size:3rem;margin-bottom:10px}
-/* ══ MODALS — z-index 1100 so they appear ABOVE the login screen (z-index 999) ══ */
 .modal-ov{display:none;position:fixed;inset:0;background:rgba(8,18,45,.6);backdrop-filter:blur(5px);z-index:1100;align-items:center;justify-content:center}
 .modal-ov.show{display:flex}
 .modal-card{background:var(--card);border-radius:18px;width:800px;max-width:96%;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:mIn .22s ease}
@@ -137,7 +136,6 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
 .msg-box.err{background:#fee2e2;color:#c0392b}
 .msg-box.info{background:#e0f2fe;color:#0369a1}
 .pwd-note{font-size:.78rem;color:var(--muted);background:#f7f9ff;border-radius:8px;padding:10px 13px;margin-bottom:14px;line-height:1.6;border:1px solid var(--border)}
-/* Telegram waiting animation */
 .tg-waiting{background:linear-gradient(135deg,#e8f4fd,#dbeafe);border:2px solid #93c5fd;border-radius:12px;padding:18px;margin:14px 0;text-align:center}
 .tg-icon{font-size:2.4rem;margin-bottom:8px}
 .tg-title{font-weight:800;color:#1e40af;font-size:1rem;margin-bottom:4px}
@@ -171,10 +169,10 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
       <label>Password</label><span class="ico">🔑</span>
       <input type="password" id="pwd" placeholder="Enter password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
     </div>
-    <button class="login-btn" onclick="login()">Sign In →</button>
-    <p id="loginErr">⚠ Invalid credentials. Please try again.</p>
+    <button class="login-btn" onclick="login()">Sign In</button>
+    <p id="loginErr">Invalid credentials. Please try again.</p>
     <div class="login-forgot">
-      <span class="forgot-link" onclick="openForgotModal()">🔑 Forgot Password?</span>
+      <span class="forgot-link" onclick="openForgotModal()">Forgot Password?</span>
     </div>
   </div>
 </div>
@@ -187,29 +185,29 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
       <div><h1>Service Book Tracker</h1><span>CGST Commissionerate, Bhubaneswar</span></div>
     </div>
     <div class="header-right">
-      <div class="live-pill"><div class="dot" id="liveDot"></div><span id="liveLabel">Connecting…</span></div>
-      <button class="hdr-btn" onclick="openChangePwdModal()">🔒 Change Password</button>
+      <div class="live-pill"><div class="dot" id="liveDot"></div><span id="liveLabel">Connecting</span></div>
+      <button class="hdr-btn" onclick="openChangePwdModal()">Change Password</button>
       <button class="hdr-btn danger" onclick="logout()">Sign Out</button>
     </div>
   </header>
   <div class="stats-bar">
-    <div class="stat-item"><strong id="sTotal">–</strong>&nbsp;Total</div>
-    <div class="stat-item"><span class="s-dot" style="background:#4ade80"></span><strong id="sActive">–</strong>&nbsp;Active</div>
-    <div class="stat-item"><span class="s-dot" style="background:#86efac"></span><strong id="sAvail">–</strong>&nbsp;Available</div>
-    <div class="stat-item"><span class="s-dot" style="background:#fcd34d"></span><strong id="sPao">–</strong>&nbsp;Sent to PAO</div>
-    <div class="stat-item"><span class="s-dot" style="background:#93c5fd"></span><strong id="sStaff">–</strong>&nbsp;With Staff</div>
-    <div class="stat-item" style="border-right:none"><span class="s-dot" style="background:#fca5a5"></span><strong id="sRetired">–</strong>&nbsp;Retired</div>
+    <div class="stat-item"><strong id="sTotal">-</strong>&nbsp;Total</div>
+    <div class="stat-item"><span class="s-dot" style="background:#4ade80"></span><strong id="sActive">-</strong>&nbsp;Active</div>
+    <div class="stat-item"><span class="s-dot" style="background:#86efac"></span><strong id="sAvail">-</strong>&nbsp;Available</div>
+    <div class="stat-item"><span class="s-dot" style="background:#fcd34d"></span><strong id="sPao">-</strong>&nbsp;Sent to PAO</div>
+    <div class="stat-item"><span class="s-dot" style="background:#93c5fd"></span><strong id="sStaff">-</strong>&nbsp;With Staff</div>
+    <div class="stat-item" style="border-right:none"><span class="s-dot" style="background:#fca5a5"></span><strong id="sRetired">-</strong>&nbsp;Retired</div>
   </div>
   <div class="toolbar">
     <div class="search-wrap">
-      <span class="s-ico">🔍</span>
-      <input type="text" id="q" placeholder="Search by name, stack no., designation, category…" oninput="ft()">
-      <button class="s-clear" id="clearBtn" onclick="clearSrch()" title="Clear">✕</button>
+      <span class="s-ico">&#128269;</span>
+      <input type="text" id="q" placeholder="Search by name, stack no., designation..." oninput="ft()">
+      <button class="s-clear" id="clearBtn" onclick="clearSrch()" title="Clear">X</button>
     </div>
     <div class="tabs">
       <button class="tab-btn active" onclick="setTab('',this)">All</button>
-      <button class="tab-btn" onclick="setTab('Regular Employee',this)">👔 Regular</button>
-      <button class="tab-btn retired-tab" onclick="setTab('Pensioner/Retired',this)">🎖 Retired</button>
+      <button class="tab-btn" onclick="setTab('Regular Employee',this)">Regular</button>
+      <button class="tab-btn retired-tab" onclick="setTab('Pensioner/Retired',this)">Retired</button>
     </div>
     <select class="filter-select" id="sf" onchange="ft()">
       <option value="">All Statuses</option>
@@ -217,21 +215,18 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
       <option>Sent to PAO</option>
       <option>With Office Staff</option>
     </select>
-    <button class="btn-add" onclick="oa()">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
-      Add Record
-    </button>
+    <button class="btn-add" onclick="oa()">+ Add Record</button>
   </div>
   <div id="mainContent"></div>
 </div>
 
-<!-- ADD / EDIT RECORD MODAL -->
+<!-- ADD / EDIT MODAL -->
 <div class="modal-ov" id="md">
   <div class="modal-card">
     <div class="modal-hdr">
       <div class="m-hico">📝</div>
       <div><h3 id="mtit">Add New Record</h3><div class="m-sub" id="msub">Fill in the details below</div></div>
-      <button class="m-close" onclick="cl()">✕</button>
+      <button class="m-close" onclick="cl()">X</button>
     </div>
     <div class="modal-body">
       <div class="form-grid">
@@ -256,60 +251,54 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
           <label>Current Location of Service Book *</label>
           <div class="st-row">
             <input type="radio" name="sbs" id="st1" class="st-radio" value="Available" checked onchange="togRem()">
-            <label for="st1" class="st-lbl av">✅ Available in Stack</label>
+            <label for="st1" class="st-lbl av">Available in Stack</label>
             <input type="radio" name="sbs" id="st2" class="st-radio" value="Sent to PAO" onchange="togRem()">
-            <label for="st2" class="st-lbl pao">📤 Sent to PAO</label>
+            <label for="st2" class="st-lbl pao">Sent to PAO</label>
             <input type="radio" name="sbs" id="st3" class="st-radio" value="With Office Staff" onchange="togRem()">
-            <label for="st3" class="st-lbl stf">👤 With Office Staff</label>
+            <label for="st3" class="st-lbl stf">With Office Staff</label>
           </div>
-          <div class="rem-wrap" id="remWrap"><input id="frem" placeholder="Enter staff name / date / details…"></div>
+          <div class="rem-wrap" id="remWrap"><input id="frem" placeholder="Enter staff name / date / details..."></div>
         </div>
       </div>
     </div>
     <div class="modal-ftr">
       <button class="btn-cancel" onclick="cl()">Cancel</button>
-      <button class="btn-save" onclick="sv()">💾 Save Record</button>
+      <button class="btn-save" onclick="sv()">Save Record</button>
     </div>
   </div>
 </div>
 
-<!-- DELETE CONFIRMATION MODAL -->
+<!-- DELETE MODAL -->
 <div class="modal-ov" id="delModal">
   <div class="modal-card" style="width:430px;max-width:96%">
     <div class="modal-hdr" style="background:linear-gradient(135deg,#fef2f2,#fff)">
-      <div class="m-hico" style="background:linear-gradient(135deg,#c0392b,#e74c3c)">🗑️</div>
+      <div class="m-hico" style="background:linear-gradient(135deg,#c0392b,#e74c3c)">🗑</div>
       <div><h3 style="color:#c0392b">Confirm Deletion</h3><div class="m-sub">This action cannot be undone</div></div>
-      <button class="m-close" onclick="cancelDel()">✕</button>
+      <button class="m-close" onclick="cancelDel()">X</button>
     </div>
     <div class="modal-body" style="text-align:center;padding:28px 26px">
-      <div style="font-size:3.5rem;margin-bottom:12px">⚠️</div>
       <p style="font-size:1rem;font-weight:800;color:var(--navy);margin-bottom:14px">Are you sure you want to delete this record?</p>
-      <div id="delName" style="font-size:.88rem;color:var(--muted);background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-weight:600;word-break:break-word;margin-bottom:10px">—</div>
-      <p style="font-size:.78rem;color:var(--red)">⚠ Once deleted, this record cannot be recovered.</p>
+      <div id="delName" style="font-size:.88rem;color:var(--muted);background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;font-weight:600;margin-bottom:10px">-</div>
+      <p style="font-size:.78rem;color:var(--red)">Once deleted, this record cannot be recovered.</p>
     </div>
     <div class="modal-ftr" style="justify-content:center;gap:16px">
-      <button class="btn-cancel" style="min-width:130px" onclick="cancelDel()">✕ No, Keep It</button>
-      <button class="btn-save" style="min-width:130px;background:linear-gradient(135deg,#c0392b,#e74c3c)" onclick="confirmDel()">🗑️ Yes, Delete</button>
+      <button class="btn-cancel" style="min-width:130px" onclick="cancelDel()">No, Keep It</button>
+      <button class="btn-save" style="min-width:130px;background:linear-gradient(135deg,#c0392b,#e74c3c)" onclick="confirmDel()">Yes, Delete</button>
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     CHANGE PASSWORD MODAL — Requires Telegram OTP approval
-     (appears after login when user clicks "Change Password")
-════════════════════════════════════════════════════════════ -->
+<!-- CHANGE PASSWORD MODAL -->
 <div class="modal-ov" id="changePwdModal">
   <div class="modal-card" style="width:480px;max-width:96%">
     <div class="modal-hdr">
       <div class="m-hico">🔒</div>
       <div><h3>Change Password</h3><div class="m-sub" id="cpwdSubtitle">Update your login credentials</div></div>
-      <button class="m-close" onclick="closeChangePwd()">✕</button>
+      <button class="m-close" onclick="closeChangePwd()">X</button>
     </div>
     <div class="modal-body">
-
-      <!-- STEP 1: Enter old + new password -->
       <div id="cpStep1">
-        <div class="pwd-note">ℹ️ Enter your current password and choose a new one. An OTP will be sent to the admin's Telegram for approval.</div>
+        <div class="pwd-note">Enter your current password and choose a new one. An OTP will be sent to the admin Telegram for approval.</div>
         <div class="form-grid" style="grid-template-columns:1fr">
           <div class="fg"><label>Current Password</label><input type="password" id="cpOld" placeholder="Enter your current password"></div>
           <div class="fg"><label>New Password</label><input type="password" id="cpNew" placeholder="Minimum 6 characters"></div>
@@ -318,53 +307,44 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
         </div>
         <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
           <button class="btn-cancel" onclick="closeChangePwd()">Cancel</button>
-          <button class="btn-save" onclick="cpRequestOtp()">📲 Send OTP to Admin</button>
+          <button class="btn-save" onclick="cpRequestOtp()">Send OTP to Admin</button>
         </div>
       </div>
-
-      <!-- STEP 2: Waiting for / entering OTP -->
       <div id="cpStep2" style="display:none">
         <div class="tg-waiting">
           <div class="tg-icon">📱</div>
-          <div class="tg-title">OTP Sent to Admin's Telegram!</div>
-          <div class="tg-sub">A 6-digit OTP has been sent to <strong>SAIKAT MONDAL</strong> on Telegram.<br>Ask the admin to share the OTP with you.</div>
-          <div class="tg-spinner"></div>
+          <div class="tg-title">OTP Sent to Admin Telegram!</div>
+          <div class="tg-sub">A 6-digit OTP has been sent to <strong>SAIKAT MONDAL</strong>.<br>Get the OTP from admin and enter it below.</div>
         </div>
         <div class="form-grid" style="grid-template-columns:1fr;margin-top:4px">
-          <div class="fg"><label>Enter OTP received from admin</label>
-            <input type="text" id="cpOtpEntered" class="otp-input-box" placeholder="_ _ _ _ _ _" maxlength="6" oninput="this.value=this.value.replace(/\D/g,'')">
+          <div class="fg"><label>Enter OTP from admin</label>
+            <input type="text" id="cpOtpEntered" class="otp-input-box" placeholder="______" maxlength="6" oninput="this.value=this.value.replace(/\D/g,'')">
           </div>
           <div id="cpMsg2" class="msg-box"></div>
         </div>
         <div style="margin-top:16px;display:flex;justify-content:space-between;gap:10px">
-          <button class="btn-cancel" onclick="cpResend()" style="font-size:.8rem">🔄 Resend OTP</button>
+          <button class="btn-cancel" onclick="cpResend()" style="font-size:.8rem">Resend OTP</button>
           <div style="display:flex;gap:10px">
             <button class="btn-cancel" onclick="closeChangePwd()">Cancel</button>
-            <button class="btn-save" onclick="cpVerifyOtp()">✅ Verify &amp; Change Password</button>
+            <button class="btn-save" onclick="cpVerifyOtp()">Verify and Change Password</button>
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     FORGOT PASSWORD MODAL — Requires Telegram OTP approval
-     (appears on login screen — z-index 1100 > login z-index 999)
-════════════════════════════════════════════════════════════ -->
+<!-- FORGOT PASSWORD MODAL -->
 <div class="modal-ov" id="forgotModal">
   <div class="modal-card" style="width:480px;max-width:96%">
     <div class="modal-hdr">
       <div class="m-hico" style="background:linear-gradient(135deg,#e65100,#f57c00)">🔑</div>
       <div><h3>Forgot Password</h3><div class="m-sub">Reset your password via Telegram OTP</div></div>
-      <button class="m-close" onclick="closeForgot()">✕</button>
+      <button class="m-close" onclick="closeForgot()">X</button>
     </div>
     <div class="modal-body">
-
-      <!-- STEP 1: Enter User ID -->
       <div id="forgotStep1">
-        <div class="pwd-note">📱 Enter your User ID. An OTP will be sent to the admin's Telegram (<strong>SAIKAT MONDAL</strong>). The admin will share the OTP with you to verify your identity.</div>
+        <div class="pwd-note">Enter your User ID. An OTP will be sent to admin Telegram (SAIKAT MONDAL). Get the OTP from admin to reset your password.</div>
         <div class="form-grid" style="grid-template-columns:1fr">
           <div class="fg"><label>Your User ID</label>
             <input type="text" id="fgUserId" placeholder="Enter your User ID" onkeydown="if(event.key==='Enter')genOtp()">
@@ -373,74 +353,43 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
         </div>
         <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px">
           <button class="btn-cancel" onclick="closeForgot()">Cancel</button>
-          <button class="btn-save" onclick="genOtp()">📲 Send OTP to Admin</button>
+          <button class="btn-save" onclick="genOtp()">Send OTP to Admin</button>
         </div>
       </div>
-
-      <!-- STEP 2: OTP sent — enter OTP + new password -->
       <div id="forgotStep2" style="display:none">
         <div class="tg-waiting">
           <div class="tg-icon">📱</div>
-          <div class="tg-title">OTP Sent to Admin's Telegram!</div>
-          <div class="tg-sub">A 6-digit OTP has been sent to <strong>SAIKAT MONDAL</strong> on Telegram.<br>Ask the admin for the OTP code, then enter your new password below.</div>
-          <div class="tg-spinner"></div>
+          <div class="tg-title">OTP Sent to Admin Telegram!</div>
+          <div class="tg-sub">A 6-digit OTP has been sent to <strong>SAIKAT MONDAL</strong>.<br>Get the OTP from admin, then set your new password below.</div>
         </div>
         <div class="form-grid" style="grid-template-columns:1fr;margin-top:8px">
-          <div class="fg"><label>OTP received from admin</label>
-            <input type="text" id="fgOtpEntered" class="otp-input-box" placeholder="_ _ _ _ _ _" maxlength="6" oninput="this.value=this.value.replace(/\D/g,'')">
+          <div class="fg"><label>OTP from admin</label>
+            <input type="text" id="fgOtpEntered" class="otp-input-box" placeholder="______" maxlength="6" oninput="this.value=this.value.replace(/\D/g,'')">
           </div>
           <div class="fg"><label>New Password</label><input type="password" id="fgNewPwd" placeholder="Minimum 6 characters"></div>
           <div class="fg"><label>Confirm New Password</label><input type="password" id="fgCnfPwd" placeholder="Re-enter new password"></div>
           <div id="fgMsg2" class="msg-box"></div>
         </div>
         <div style="margin-top:16px;display:flex;justify-content:space-between;gap:10px">
-          <button class="btn-cancel" onclick="fgResend()" style="font-size:.8rem">🔄 Resend OTP</button>
+          <button class="btn-cancel" onclick="fgResend()" style="font-size:.8rem">Resend OTP</button>
           <div style="display:flex;gap:10px">
             <button class="btn-cancel" onclick="closeForgot()">Cancel</button>
-            <button class="btn-save" onclick="doOtpReset()">✅ Reset Password</button>
+            <button class="btn-save" onclick="doOtpReset()">Reset Password</button>
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </div>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
-/* ══════════════════════════════════════════════════════════════
-   ██████╗  ██████╗ ████████╗    ████████╗ ██████╗ ██╗  ██╗███████╗███╗   ██╗
-   ██╔══██╗██╔═══██╗╚══██╔══╝       ██╔══╝██╔═══██╗██║ ██╔╝██╔════╝████╗  ██║
-   ██████╔╝██║   ██║   ██║          ██║   ██║   ██║█████╔╝ █████╗  ██╔██╗ ██║
-   ██╔══██╗██║   ██║   ██║          ██║   ██║   ██║██╔═██╗ ██╔══╝  ██║╚██╗██║
-   ██████╔╝╚██████╔╝   ██║          ██║   ╚██████╔╝██║  ██╗███████╗██║ ╚████║
-   ╚═════╝  ╚═════╝    ╚═╝          ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝
+/* ── TELEGRAM CONFIG ── */
+var TG_TOKEN   = "8632319834:AAGdvzbsXEHbC4A0AjOZHr40mLZBpHTjtIc";
+var TG_CHAT_ID = "472365299";
 
-   TELEGRAM BOT SETUP — ONE-TIME CONFIGURATION
-   ════════════════════════════════════════════
-   Step 1: Open Telegram → search @BotFather → send /newbot
-   Step 2: Give any name (e.g. "ServiceBookOTP") and username (e.g. "ServiceBookOTPBot")
-   Step 3: BotFather will give you a token like: 7123456789:AAHxxxxx...
-            Paste it below as TELEGRAM_BOT_TOKEN
-
-   Step 4: Message your new bot once (say "hello")
-   Step 5: Open this URL in browser (replace YOUR_TOKEN with your token):
-            https://api.telegram.org/botYOUR_TOKEN/getUpdates
-   Step 6: Look for "chat":{"id": followed by a number — that is YOUR_CHAT_ID
-            Paste it below as TELEGRAM_ADMIN_CHAT_ID
-
-   Example:
-     var TELEGRAM_BOT_TOKEN   = "7123456789:AAHxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
-     var TELEGRAM_ADMIN_CHAT_ID = "987654321";
-═══════════════════════════════════════════════════════════════ */
-var TELEGRAM_BOT_TOKEN    = "8632319834:AAGdvzbsXEHbC4A0AjOZHr40mLZBpHTjtIc";
-var TELEGRAM_ADMIN_CHAT_ID = "472365299";
-
-/* ══════════════════════════════════════════════════════════════
-   FIREBASE
-════════════════════════════════════════════════════════════ */
+/* ── FIREBASE ── */
 firebase.initializeApp({
   apiKey:"AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI",
   authDomain:"service-book-tracker.firebaseapp.com",
@@ -452,103 +401,46 @@ firebase.initializeApp({
 var db  = firebase.firestore();
 var col = db.collection("employees");
 var ALL=[], EID=null, TAB='', _delId=null;
-
-/* OTP state */
 var _otp=null, _otpExp=0, _otpUser=null, _cpNewPwd=null;
 
-/* ══════════════════════════════════════════════════════════════
-   PASSWORD STORAGE
-   Uses localStorage so changes persist even after browser closes.
-════════════════════════════════════════════════════════════ */
+/* ── PASSWORDS ── */
 var USERS = {admin:"admin123", saikat:"saikat123", office:"office123"};
 (function(){
-  try{
-    var ov = localStorage.getItem("pwdOv");
-    if(ov){ var p=JSON.parse(ov); for(var k in p) USERS[k]=p[k]; }
-  }catch(e){}
+  try{ var ov=localStorage.getItem("pwdOv"); if(ov){var p=JSON.parse(ov);for(var k in p)USERS[k]=p[k];} }catch(e){}
 })();
 
-/* ══════════════════════════════════════════════════════════════
-   UTILITY
-════════════════════════════════════════════════════════════ */
+/* ── UTILS ── */
 function gv(id){ return document.getElementById(id).value; }
-function sv2(id,val){ document.getElementById(id).value = val; }
-function showMsg(id,cls,txt){
-  var el=document.getElementById(id);
-  el.className="msg-box "+cls; el.textContent=txt; el.style.display="block";
-}
+function sv2(id,v){ document.getElementById(id).value=v; }
+function showMsg(id,cls,txt){ var e=document.getElementById(id); e.className="msg-box "+cls; e.textContent=txt; e.style.display="block"; }
 function hideMsg(id){ document.getElementById(id).style.display="none"; }
-function savePwdOverride(u, newPwd){
-  USERS[u] = newPwd;
-  var ov = JSON.parse(localStorage.getItem("pwdOv")||"{}");
-  ov[u] = newPwd;
-  localStorage.setItem("pwdOv", JSON.stringify(ov));
-}
-function makeOtp(){
-  return String(Math.floor(100000 + Math.random()*900000));
-}
+function savePwd(u,p){ USERS[u]=p; var ov=JSON.parse(localStorage.getItem("pwdOv")||"{}"); ov[u]=p; localStorage.setItem("pwdOv",JSON.stringify(ov)); }
+function makeOtp(){ return String(Math.floor(100000+Math.random()*900000)); }
 
-/* ══════════════════════════════════════════════════════════════
-   TELEGRAM — send OTP notification to admin
-════════════════════════════════════════════════════════════ */
-function sendTelegramOtp(username, otp, actionLabel){
-  if(TELEGRAM_BOT_TOKEN === "8632319834:AAGdvzbsXEHbC4A0AjOZHr40mLZBpHTjtIc"){
-    return Promise.resolve({ok:false, error:"Telegram not configured. Open HTML in Notepad and paste your Bot Token and Chat ID."});
-  }
-  var text =
-    "SERVICE BOOK TRACKER - Password OTP\n" +
-    "CGST Commissionerate, Bhubaneswar\n\n" +
-    "User: " + username + "\n" +
-    "Action: " + (actionLabel||"Password Change") + "\n\n" +
-    "OTP CODE: " + otp + "\n\n" +
-    "Valid for 5 minutes only.\n" +
-    "Share this OTP only if you recognise the requestor.";
-
-  /* 10-second timeout — so it never hangs forever */
-  var timeoutPromise = new Promise(function(resolve){
-    setTimeout(function(){ resolve({ok:false, error:"Request timed out (10s). Check your internet connection or firewall."}); }, 10000);
-  });
-
-  var fetchPromise = fetch(
-    "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage",
-    {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({chat_id: TELEGRAM_ADMIN_CHAT_ID, text: text})
-    }
-  )
-  .then(function(res){ return res.json(); })
-  .then(function(json){
-    if(json.ok) return {ok:true};
-    return {ok:false, error:"Telegram API error: " + (json.description||"Unknown. Check Bot Token and Chat ID.")};
-  })
-  .catch(function(err){
-    return {ok:false, error:"Network error: " + err.message + ". Check internet connection."};
-  });
-
-  return Promise.race([fetchPromise, timeoutPromise]);
+/* ── TELEGRAM ── */
+function sendOtp(user, otp, label){
+  var msg = "SERVICE BOOK TRACKER - OTP\nCGST Commissionerate, Bhubaneswar\n\nUser: "+user+"\nAction: "+label+"\n\nOTP: "+otp+"\n\nValid 5 minutes only.";
+  var timeout = new Promise(function(res){ setTimeout(function(){ res({ok:false,error:"Timeout - check internet"}); },10000); });
+  var req = fetch("https://api.telegram.org/bot"+TG_TOKEN+"/sendMessage",{
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({chat_id:TG_CHAT_ID, text:msg})
+  }).then(function(r){return r.json();}).then(function(j){
+    return j.ok ? {ok:true} : {ok:false,error:j.description||"Telegram error"};
+  }).catch(function(e){ return {ok:false,error:e.message}; });
+  return Promise.race([req, timeout]);
 }
 
-/* ══════════════════════════════════════════════════════════════
-   LOGIN
-════════════════════════════════════════════════════════════ */
+/* ── LOGIN ── */
 function login(){
-  var u = gv("userid").trim().toLowerCase();
-  var p = gv("pwd").trim();
+  var u=gv("userid").trim().toLowerCase(), p=gv("pwd").trim();
   document.getElementById("loginErr").style.display="none";
-  if(USERS[u] && USERS[u]===p){
+  if(USERS[u]&&USERS[u]===p){
     document.getElementById("loginScreen").classList.remove("show");
     document.getElementById("app-content").style.display="block";
-    sessionStorage.setItem("li", u);
-    loadData();
-  } else {
-    document.getElementById("loginErr").style.display="block";
-  }
+    sessionStorage.setItem("li",u); loadData();
+  } else { document.getElementById("loginErr").style.display="block"; }
 }
-function logout(){
-  sessionStorage.removeItem("li");
-  location.reload();
-}
+function logout(){ sessionStorage.removeItem("li"); location.reload(); }
 (function(){
   if(sessionStorage.getItem("li")){
     document.getElementById("loginScreen").classList.remove("show");
@@ -557,79 +449,53 @@ function logout(){
   }
 })();
 
-/* ══════════════════════════════════════════════════════════════
-   CHANGE PASSWORD (while logged in)
-   Step 1 → validate inputs → send OTP to Telegram
-   Step 2 → enter OTP → verify → save new password
-════════════════════════════════════════════════════════════ */
+/* ── CHANGE PASSWORD ── */
 function openChangePwdModal(){
   hideMsg("cpMsg1"); hideMsg("cpMsg2");
   sv2("cpOld",""); sv2("cpNew",""); sv2("cpCnf",""); sv2("cpOtpEntered","");
-  _cpNewPwd = null; _otp = null;
-  var user = sessionStorage.getItem("li") || "";
-  document.getElementById("cpwdSubtitle").textContent = "Logged in as: " + user;
-  document.getElementById("cpStep1").style.display = "block";
-  document.getElementById("cpStep2").style.display = "none";
+  _cpNewPwd=null; _otp=null;
+  document.getElementById("cpwdSubtitle").textContent="Logged in as: "+(sessionStorage.getItem("li")||"");
+  document.getElementById("cpStep1").style.display="block";
+  document.getElementById("cpStep2").style.display="none";
   document.getElementById("changePwdModal").classList.add("show");
 }
-function closeChangePwd(){
-  _otp = null; _cpNewPwd = null;
-  document.getElementById("changePwdModal").classList.remove("show");
-}
+function closeChangePwd(){ _otp=null; _cpNewPwd=null; document.getElementById("changePwdModal").classList.remove("show"); }
 function cpRequestOtp(){
-  var user = sessionStorage.getItem("li") || "";
-  var old  = gv("cpOld");
-  var nw   = gv("cpNew");
-  var cf   = gv("cpCnf");
+  var user=sessionStorage.getItem("li")||"", old=gv("cpOld"), nw=gv("cpNew"), cf=gv("cpCnf");
   hideMsg("cpMsg1");
-  if(!USERS[user]){ showMsg("cpMsg1","err","❌ Session error. Please log out and in again."); return; }
-  if(USERS[user] !== old){ showMsg("cpMsg1","err","❌ Current password is incorrect."); return; }
-  if(nw.length < 6){ showMsg("cpMsg1","err","❌ New password must be at least 6 characters."); return; }
-  if(nw !== cf){ showMsg("cpMsg1","err","❌ Passwords do not match."); return; }
-  _cpNewPwd = nw;
-  _otp     = makeOtp();
-  _otpExp  = Date.now() + 5*60*1000;
-  _otpUser = user;
+  if(!USERS[user]){ showMsg("cpMsg1","err","Session error. Please log out and in again."); return; }
+  if(USERS[user]!==old){ showMsg("cpMsg1","err","Current password is incorrect."); return; }
+  if(nw.length<6){ showMsg("cpMsg1","err","New password must be at least 6 characters."); return; }
+  if(nw!==cf){ showMsg("cpMsg1","err","Passwords do not match."); return; }
+  _cpNewPwd=nw; _otp=makeOtp(); _otpExp=Date.now()+5*60*1000; _otpUser=user;
   showMsg("cpMsg1","info","Sending OTP to Telegram...");
-  sendTelegramOtp(user, _otp, "Change Password").then(function(result){
-    if(!result.ok){
-      showMsg("cpMsg1","err","Could not send Telegram OTP. " + (result.error||"") + " Please check your Bot Token and Chat ID in the HTML file.");
-      return;
-    }
+  sendOtp(user,_otp,"Change Password").then(function(r){
+    if(!r.ok){ showMsg("cpMsg1","err","Could not send OTP: "+r.error); return; }
     hideMsg("cpMsg1");
-    document.getElementById("cpStep1").style.display = "none";
-    document.getElementById("cpStep2").style.display = "block";
-    sv2("cpOtpEntered","");
-    hideMsg("cpMsg2");
+    document.getElementById("cpStep1").style.display="none";
+    document.getElementById("cpStep2").style.display="block";
+    sv2("cpOtpEntered",""); hideMsg("cpMsg2");
   });
 }
 function cpResend(){
   if(!_otpUser) return;
-  _otp    = makeOtp();
-  _otpExp = Date.now() + 5*60*1000;
+  _otp=makeOtp(); _otpExp=Date.now()+5*60*1000;
   showMsg("cpMsg2","info","Sending...");
-  sendTelegramOtp(_otpUser, _otp, "Change Password (Resend)").then(function(result){
-    if(result.ok) showMsg("cpMsg2","info","OTP sent to admin Telegram.");
-    else showMsg("cpMsg2","err","Send failed: " + (result.error||"Unknown error"));
+  sendOtp(_otpUser,_otp,"Change Password Resend").then(function(r){
+    showMsg("cpMsg2", r.ok?"info":"err", r.ok?"New OTP sent to admin Telegram.":"Send failed: "+r.error);
   });
   sv2("cpOtpEntered","");
 }
 function cpVerifyOtp(){
-  var entered = gv("cpOtpEntered").trim();
-  hideMsg("cpMsg2");
-  if(!_otp || Date.now() > _otpExp){ showMsg("cpMsg2","err","❌ OTP expired. Click Resend."); return; }
-  if(entered !== _otp){             showMsg("cpMsg2","err","❌ Incorrect OTP. Try again."); return; }
-  savePwdOverride(_otpUser, _cpNewPwd);
-  _otp = null; _cpNewPwd = null;
-  showMsg("cpMsg2","ok","✅ Password changed successfully! Please log in again.");
-  setTimeout(function(){ closeChangePwd(); logout(); }, 2500);
+  var entered=gv("cpOtpEntered").trim(); hideMsg("cpMsg2");
+  if(!_otp||Date.now()>_otpExp){ showMsg("cpMsg2","err","OTP expired. Click Resend."); return; }
+  if(entered!==_otp){ showMsg("cpMsg2","err","Incorrect OTP. Try again."); return; }
+  savePwd(_otpUser,_cpNewPwd); _otp=null; _cpNewPwd=null;
+  showMsg("cpMsg2","ok","Password changed! Logging out...");
+  setTimeout(function(){ closeChangePwd(); logout(); },2000);
 }
 
-/* ══════════════════════════════════════════════════════════════
-   FORGOT PASSWORD (on login screen)
-   Step 1 → enter User ID → send OTP to Telegram
-   Step 2 → enter OTP + new password → verify → save
-════════════════════════════════════════════════════════════ */
+/* ── FORGOT PASSWORD ── */
 function openForgotModal(){
   _otp=null; _otpExp=0; _otpUser=null;
   sv2("fgUserId",""); hideMsg("fgMsg1");
@@ -638,106 +504,77 @@ function openForgotModal(){
   document.getElementById("forgotStep2").style.display="none";
   document.getElementById("forgotModal").classList.add("show");
 }
-function closeForgot(){
-  _otp = null;
-  document.getElementById("forgotModal").classList.remove("show");
-}
+function closeForgot(){ _otp=null; document.getElementById("forgotModal").classList.remove("show"); }
 function genOtp(){
-  var u = gv("fgUserId").trim().toLowerCase();
-  hideMsg("fgMsg1");
-  if(!u){ showMsg("fgMsg1","err","❌ Please enter your User ID."); return; }
-  if(!USERS[u]){ showMsg("fgMsg1","err","❌ User ID not found. Please check and try again."); return; }
-  _otp     = makeOtp();
-  _otpExp  = Date.now() + 5*60*1000;
-  _otpUser = u;
+  var u=gv("fgUserId").trim().toLowerCase(); hideMsg("fgMsg1");
+  if(!u){ showMsg("fgMsg1","err","Please enter your User ID."); return; }
+  if(!USERS[u]){ showMsg("fgMsg1","err","User ID not found."); return; }
+  _otp=makeOtp(); _otpExp=Date.now()+5*60*1000; _otpUser=u;
   showMsg("fgMsg1","info","Sending OTP to Telegram...");
-  sendTelegramOtp(u, _otp, "Forgot Password").then(function(result){
-    if(!result.ok){
-      showMsg("fgMsg1","err","Could not send Telegram OTP. " + (result.error||"") + " Please check your Bot Token and Chat ID in the HTML file.");
-      return;
-    }
+  sendOtp(u,_otp,"Forgot Password").then(function(r){
+    if(!r.ok){ showMsg("fgMsg1","err","Could not send OTP: "+r.error); return; }
     document.getElementById("forgotStep1").style.display="none";
     document.getElementById("forgotStep2").style.display="block";
-    sv2("fgOtpEntered","");
-    hideMsg("fgMsg2");
+    sv2("fgOtpEntered",""); hideMsg("fgMsg2");
   });
 }
 function fgResend(){
   if(!_otpUser) return;
-  _otp    = makeOtp();
-  _otpExp = Date.now() + 5*60*1000;
+  _otp=makeOtp(); _otpExp=Date.now()+5*60*1000;
   showMsg("fgMsg2","info","Sending...");
-  sendTelegramOtp(_otpUser, _otp, "Forgot Password (Resend)").then(function(result){
-    if(result.ok) showMsg("fgMsg2","info","OTP sent to admin Telegram.");
-    else showMsg("fgMsg2","err","Send failed: " + (result.error||"Unknown error"));
+  sendOtp(_otpUser,_otp,"Forgot Password Resend").then(function(r){
+    showMsg("fgMsg2", r.ok?"info":"err", r.ok?"New OTP sent to admin Telegram.":"Send failed: "+r.error);
   });
   sv2("fgOtpEntered","");
 }
 function doOtpReset(){
-  var entered = gv("fgOtpEntered").trim();
-  var nw      = gv("fgNewPwd");
-  var cf      = gv("fgCnfPwd");
-  hideMsg("fgMsg2");
-  if(!_otp || Date.now() > _otpExp){ showMsg("fgMsg2","err","❌ OTP expired. Click Resend to get a new one."); return; }
-  if(entered !== _otp){             showMsg("fgMsg2","err","❌ Incorrect OTP. Try again."); return; }
-  if(nw.length < 6){                showMsg("fgMsg2","err","❌ Password must be at least 6 characters."); return; }
-  if(nw !== cf){                    showMsg("fgMsg2","err","❌ Passwords do not match."); return; }
-  savePwdOverride(_otpUser, nw);
-  _otp = null;
-  showMsg("fgMsg2","ok","✅ Password reset! You can now log in with your new password.");
-  setTimeout(closeForgot, 2500);
+  var entered=gv("fgOtpEntered").trim(), nw=gv("fgNewPwd"), cf=gv("fgCnfPwd"); hideMsg("fgMsg2");
+  if(!_otp||Date.now()>_otpExp){ showMsg("fgMsg2","err","OTP expired. Click Resend."); return; }
+  if(entered!==_otp){ showMsg("fgMsg2","err","Incorrect OTP."); return; }
+  if(nw.length<6){ showMsg("fgMsg2","err","Password must be at least 6 characters."); return; }
+  if(nw!==cf){ showMsg("fgMsg2","err","Passwords do not match."); return; }
+  savePwd(_otpUser,nw); _otp=null;
+  showMsg("fgMsg2","ok","Password reset! You can now log in.");
+  setTimeout(closeForgot,2000);
 }
 
-/* ══════════════════════════════════════════════════════════════
-   DELETE RECORD
-════════════════════════════════════════════════════════════ */
+/* ── DELETE ── */
 function dl(id){
-  var e = ALL.find(function(x){ return x.id===id; });
-  _delId = id;
-  var txt = e ? ('"'+e.name+'"'+(e.designation?' — '+e.designation:'')) : "this record";
-  document.getElementById("delName").textContent = txt;
+  var e=ALL.find(function(x){return x.id===id;}); _delId=id;
+  document.getElementById("delName").textContent=e?('"'+e.name+'"'+(e.designation?" - "+e.designation:"")):"this record";
   document.getElementById("delModal").classList.add("show");
 }
-function cancelDel(){
-  _delId = null;
-  document.getElementById("delModal").classList.remove("show");
-}
+function cancelDel(){ _delId=null; document.getElementById("delModal").classList.remove("show"); }
 function confirmDel(){
   if(!_delId) return;
-  var id = _delId; _delId = null;
+  var id=_delId; _delId=null;
   document.getElementById("delModal").classList.remove("show");
-  col.doc(id).delete().catch(function(err){ alert("Delete error: "+err.message); });
+  col.doc(id).delete().catch(function(e){alert("Delete error: "+e.message);});
 }
 
-/* ══════════════════════════════════════════════════════════════
-   FIREBASE DATA
-════════════════════════════════════════════════════════════ */
+/* ── FIREBASE DATA ── */
 function loadData(){
   col.onSnapshot(function(snap){
-    ALL = snap.docs.map(function(d){
-      var o={id:d.id}, dat=d.data();
-      for(var k in dat) o[k]=dat[k];
-      return o;
-    });
-    ALL.sort(function(a,b){ return (a.name||"").localeCompare(b.name||""); });
+    ALL=snap.docs.map(function(d){var o={id:d.id},dat=d.data();for(var k in dat)o[k]=dat[k];return o;});
+    ALL.sort(function(a,b){return (a.name||"").localeCompare(b.name||"");});
     document.getElementById("liveDot").className="dot green";
     document.getElementById("liveLabel").textContent="Live";
     stats(); ft();
   });
 }
 function stats(){
-  function nm(e){ return (e.trackingStatus||"").replace("Available in stack","Available"); }
-  document.getElementById("sTotal").textContent   = ALL.length;
-  document.getElementById("sActive").textContent  = ALL.filter(function(e){return e.employmentStatus==="Active";}).length;
-  document.getElementById("sAvail").textContent   = ALL.filter(function(e){return nm(e)==="Available";}).length;
-  document.getElementById("sPao").textContent     = ALL.filter(function(e){return nm(e)==="Sent to PAO";}).length;
-  document.getElementById("sStaff").textContent   = ALL.filter(function(e){return nm(e)==="With Office Staff";}).length;
-  document.getElementById("sRetired").textContent = ALL.filter(function(e){return e.recordCategory==="Pensioner/Retired";}).length;
+  function nm(e){return (e.trackingStatus||"").replace("Available in stack","Available");}
+  document.getElementById("sTotal").textContent=ALL.length;
+  document.getElementById("sActive").textContent=ALL.filter(function(e){return e.employmentStatus==="Active";}).length;
+  document.getElementById("sAvail").textContent=ALL.filter(function(e){return nm(e)==="Available";}).length;
+  document.getElementById("sPao").textContent=ALL.filter(function(e){return nm(e)==="Sent to PAO";}).length;
+  document.getElementById("sStaff").textContent=ALL.filter(function(e){return nm(e)==="With Office Staff";}).length;
+  document.getElementById("sRetired").textContent=ALL.filter(function(e){return e.recordCategory==="Pensioner/Retired";}).length;
 }
 function setTab(v,btn){
   TAB=v;
-  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active'); ft();
+  document.querySelectorAll(".tab-btn").forEach(function(b){b.classList.remove("active");});
+  btn.classList.add("active"); ft();
 }
 function clearSrch(){ sv2("q",""); document.getElementById("clearBtn").style.display="none"; ft(); }
 function hl(t,q){
@@ -745,67 +582,63 @@ function hl(t,q){
   return String(t).replace(new RegExp("("+q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi"),"<mark>$1</mark>");
 }
 function ft(){
-  var q=gv("q"), ql=q.toLowerCase();
-  document.getElementById("clearBtn").style.display = q?"block":"none";
-  var sf = gv("sf");
-  function nm(e){ return (e.trackingStatus||"").replace("Available in stack","Available"); }
-  var f = ALL.filter(function(e){
-    var mt = !ql || [e.name,e.section,e.designation,e.category,e.movementRemark,e.mobile,e.placeOfPosting].some(function(x){return (x||"").toLowerCase().includes(ql);});
-    var ms = !sf || nm(e)===sf;
-    var mb = !TAB || e.recordCategory===TAB;
-    return mt&&ms&&mb;
+  var q=gv("q"),ql=q.toLowerCase();
+  document.getElementById("clearBtn").style.display=q?"block":"none";
+  var sf=gv("sf");
+  function nm(e){return (e.trackingStatus||"").replace("Available in stack","Available");}
+  var f=ALL.filter(function(e){
+    var mt=!ql||[e.name,e.section,e.designation,e.category,e.movementRemark,e.mobile,e.placeOfPosting].some(function(x){return (x||"").toLowerCase().includes(ql);});
+    return mt&&(!sf||nm(e)===sf)&&(!TAB||e.recordCategory===TAB);
   });
-  var wrap = document.getElementById("mainContent");
-  if(!f.length){ wrap.innerHTML='<div class="table-wrap"><div class="empty-state"><div class="big">🗂</div><p>No records found.</p></div></div>'; return; }
+  var wrap=document.getElementById("mainContent");
+  if(!f.length){wrap.innerHTML='<div class="table-wrap"><div class="empty-state"><div class="big">📂</div><p>No records found.</p></div></div>';return;}
   if(TAB===''&&!ql&&!sf){
-    var reg = f.filter(function(e){return e.recordCategory!=="Pensioner/Retired";});
-    var ret = f.filter(function(e){return e.recordCategory==="Pensioner/Retired";});
-    wrap.innerHTML = mkSection(reg,"👔 Regular Employees",false,q)+(ret.length?mkSection(ret,"🎖 Retired / Pensioners",true,q):"");
+    var reg=f.filter(function(e){return e.recordCategory!=="Pensioner/Retired";});
+    var ret=f.filter(function(e){return e.recordCategory==="Pensioner/Retired";});
+    wrap.innerHTML=mkSec(reg,"Regular Employees",false,q)+(ret.length?mkSec(ret,"Retired / Pensioners",true,q):"");
   } else {
-    var isRet=(TAB==="Pensioner/Retired")||(f.length&&f.every(function(e){return e.recordCategory==="Pensioner/Retired";}));
-    wrap.innerHTML = mkSection(f,isRet?"🎖 Retired / Pensioners":TAB?"👔 Regular Employees":"Records",isRet,q);
+    var isR=(TAB==="Pensioner/Retired")||(f.length&&f.every(function(e){return e.recordCategory==="Pensioner/Retired";}));
+    wrap.innerHTML=mkSec(f,isR?"Retired / Pensioners":TAB?"Regular Employees":"Records",isR,q);
   }
 }
-function mkSection(rows,title,isRet,q){
+function mkSec(rows,title,isRet,q){
   if(!rows.length) return "";
   return '<div class="sec-head'+(isRet?" retired":"")+'">'+title+'<span class="sec-count">'+rows.length+'</span></div>'+
     '<div class="table-wrap"><table'+(isRet?' class="ret-tbl"':'')+'>'+
     '<colgroup><col class="c-name"><col class="c-desig"><col class="c-stack"><col class="c-status"><col class="c-place"><col class="c-dojs"><col class="c-dob"><col class="c-ret"><col class="c-dojc"><col class="c-dojd"><col class="c-cat"><col class="c-act"></colgroup>'+
-    '<thead><tr><th>Name</th><th>Designation</th><th>Stack No.</th><th>Status / Remarks</th><th>Place of Posting</th><th>Date of Posting</th><th>DOB</th><th>Retirement</th><th>DOJ (Comm.)</th><th>DOJ (Dept.)</th><th>Cat.</th><th>Actions</th></tr></thead>'+
+    '<thead><tr><th>Name</th><th>Designation</th><th>Stack No.</th><th>Status</th><th>Place of Posting</th><th>Date of Posting</th><th>DOB</th><th>Retirement</th><th>DOJ Comm.</th><th>DOJ Dept.</th><th>Cat.</th><th>Actions</th></tr></thead>'+
     '<tbody>'+rows.map(function(e){return mkRow(e,isRet,q);}).join("")+'</tbody></table></div>';
 }
 function mkRow(e,isRet,q){
   var nm=(e.trackingStatus||"Available").replace("Available in stack","Available");
-  var badge='<span class="status-badge s-av">✅ Available</span>';
-  if(nm==="Sent to PAO")        badge='<span class="status-badge s-pao">📤 Sent to PAO</span>';
-  else if(nm==="With Office Staff") badge='<span class="status-badge s-stf">👤 With Staff</span>';
+  var badge='<span class="status-badge s-av">Available</span>';
+  if(nm==="Sent to PAO") badge='<span class="status-badge s-pao">Sent to PAO</span>';
+  else if(nm==="With Office Staff") badge='<span class="status-badge s-stf">With Staff</span>';
   if(e.movementRemark) badge+='<span class="remark-sub">'+e.movementRemark+'</span>';
-  var pencil='<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
-  var trash='<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>';
+  var pen='<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+  var tr='<svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>';
   return '<tr>'+
     '<td class="name-cell'+(isRet?" ret":"")+'" title="'+(e.name||"")+'">'+hl(e.name,q)+'</td>'+
-    '<td class="desig-cell" title="'+(e.designation||"")+'">'+hl(e.designation,q)+'</td>'+
-    '<td><span class="stack-badge'+(isRet?" ret":"")+'">'+(e.section||"—")+'</span></td>'+
+    '<td class="desig-cell">'+hl(e.designation,q)+'</td>'+
+    '<td><span class="stack-badge'+(isRet?" ret":"")+'">'+(e.section||"-")+'</span></td>'+
     '<td>'+badge+'</td>'+
-    '<td style="font-size:.76rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(e.placeOfPosting||"")+'">'+(e.placeOfPosting||"")+'</td>'+
+    '<td style="font-size:.76rem;color:var(--muted)">'+(e.placeOfPosting||"")+'</td>'+
     '<td class="date-cell">'+(e.dateJoiningCurrentStation||"")+'</td>'+
     '<td class="date-cell">'+(e.dob||"")+'</td>'+
     '<td class="date-cell">'+(e.dateOfRetirement||e.retirement||"")+'</td>'+
     '<td class="date-cell">'+(e.dateJoiningCommissionerate||"")+'</td>'+
     '<td class="date-cell">'+(e.dateJoiningDepartment||"")+'</td>'+
-    '<td><span class="cat-badge">'+(e.category||"—")+'</span></td>'+
+    '<td><span class="cat-badge">'+(e.category||"-")+'</span></td>'+
     '<td><div class="act-wrap">'+
-      '<button class="btn-ico edit" onclick="ed(\''+e.id+'\')" title="Edit">'+pencil+'</button>'+
-      '<button class="btn-ico del"  onclick="dl(\''+e.id+'\')" title="Delete">'+trash+'</button>'+
+      '<button class="btn-ico edit" onclick="ed(\''+e.id+'\')" title="Edit">'+pen+'</button>'+
+      '<button class="btn-ico del" onclick="dl(\''+e.id+'\')" title="Delete">'+tr+'</button>'+
     '</div></td></tr>';
 }
 
-/* ══════════════════════════════════════════════════════════════
-   ADD / EDIT RECORD
-════════════════════════════════════════════════════════════ */
+/* ── ADD / EDIT ── */
 function togRem(){
-  var c = document.querySelector('input[name="sbs"]:checked');
-  document.getElementById("remWrap").style.display = (c&&c.value!=="Available")?"block":"none";
+  var c=document.querySelector('input[name="sbs"]:checked');
+  document.getElementById("remWrap").style.display=(c&&c.value!=="Available")?"block":"none";
 }
 function oa(){
   EID=null;
@@ -818,9 +651,7 @@ function oa(){
 }
 function cl(){ document.getElementById("md").classList.remove("show"); }
 function ed(id){
-  EID=id;
-  var e=ALL.find(function(x){return x.id===id;});
-  if(!e) return;
+  EID=id; var e=ALL.find(function(x){return x.id===id;}); if(!e) return;
   document.getElementById("mtit").textContent="Edit Record";
   document.getElementById("msub").textContent=e.name;
   sv2("fn",e.name||""); sv2("fdesig",e.designation||""); sv2("fsc",e.section||"");
@@ -836,17 +667,20 @@ function ed(id){
 }
 function sv(){
   var name=gv("fn").trim();
-  if(!name){ alert("Name is required."); return; }
+  if(!name){alert("Name is required.");return;}
   var c=document.querySelector('input[name="sbs"]:checked');
-  var st=c?c.value:"Available";
   var obj={
     name:name, designation:gv("fdesig"), section:gv("fsc"),
     recordCategory:gv("fcat2"), placeOfPosting:gv("fpost"),
     dob:gv("fdob"), dateOfRetirement:gv("fret"),
     dateJoiningCurrentStation:gv("fdojs"), dateJoiningCommissionerate:gv("fdojc"),
     dateJoiningDepartment:gv("fdojd"), category:gv("fcat"),
-    mobile:gv("fmob"), trackingStatus:st, movementRemark:gv("frem"),
-    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    mobile:gv("fmob"), trackingStatus:c?c.value:"Available",
+    movementRemark:gv("frem"), updatedAt:firebase.firestore.FieldValue.serverTimestamp()
   };
-  if(EID){ col.doc(EID).update(obj).then(cl).catch(function(e){alert("Error: "+e.message);}); }
-  else    { col.add(obj).then(cl).catch(function(e){alert("Error: "
+  if(EID){col.doc(EID).update(obj).then(cl).catch(function(e){alert("Error: "+e.message);});}
+  else{col.add(obj).then(cl).catch(function(e){alert("Error: "+e.message);});}
+}
+</script>
+</body>
+</html>
