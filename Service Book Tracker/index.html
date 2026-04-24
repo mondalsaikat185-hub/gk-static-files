@@ -493,20 +493,16 @@ function makeOtp(){
 ════════════════════════════════════════════════════════════ */
 function sendTelegramOtp(username, otp, actionLabel){
   if(TELEGRAM_BOT_TOKEN === "YOUR_BOT_TOKEN_HERE"){
-    // Dev mode: log to console if not configured
-    console.warn("⚠️ Telegram not configured. OTP for "+username+" is: "+otp);
-    return Promise.resolve();
+    return Promise.resolve({ok:false, error:"Telegram not configured in the HTML file."});
   }
+  // Plain text only — no parse_mode, no special characters that can cause API errors
   var text =
-    "🔐 *Service Book Tracker — Password OTP*\n\n" +
-    "🏢 CGST Commissionerate, Bhubaneswar\n" +
-    "👤 User: *" + username + "*\n" +
-    "🔑 Action: " + (actionLabel||"Password Change") + "\n\n" +
-    "Your OTP is:\n" +
-    "┌─────────────┐\n" +
-    "│  *" + otp + "*  │\n" +
-    "└─────────────┘\n\n" +
-    "⏱ Valid for *5 minutes*. Do not share with anyone else.\n" +
+    "SERVICE BOOK TRACKER - Password OTP\n" +
+    "CGST Commissionerate, Bhubaneswar\n\n" +
+    "User: " + username + "\n" +
+    "Action: " + (actionLabel||"Password Change") + "\n\n" +
+    "OTP CODE: " + otp + "\n\n" +
+    "Valid for 5 minutes only.\n" +
     "Share this OTP only if you recognise the requestor.";
 
   return fetch(
@@ -516,12 +512,17 @@ function sendTelegramOtp(username, otp, actionLabel){
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
         chat_id: TELEGRAM_ADMIN_CHAT_ID,
-        text: text,
-        parse_mode: "Markdown"
+        text: text
       })
     }
-  ).catch(function(err){
-    console.error("Telegram send error:", err);
+  )
+  .then(function(res){ return res.json(); })
+  .then(function(json){
+    if(json.ok) return {ok:true};
+    return {ok:false, error:"Telegram error: " + (json.description||"Unknown")};
+  })
+  .catch(function(err){
+    return {ok:false, error:"Network error: " + err.message};
   });
 }
 
@@ -586,7 +587,13 @@ function cpRequestOtp(){
   _otp     = makeOtp();
   _otpExp  = Date.now() + 5*60*1000;
   _otpUser = user;
-  sendTelegramOtp(user, _otp, "Change Password").then(function(){
+  showMsg("cpMsg1","info","Sending OTP to Telegram...");
+  sendTelegramOtp(user, _otp, "Change Password").then(function(result){
+    if(!result.ok){
+      showMsg("cpMsg1","err","Could not send Telegram OTP. " + (result.error||"") + " Please check your Bot Token and Chat ID in the HTML file.");
+      return;
+    }
+    hideMsg("cpMsg1");
     document.getElementById("cpStep1").style.display = "none";
     document.getElementById("cpStep2").style.display = "block";
     sv2("cpOtpEntered","");
@@ -597,8 +604,11 @@ function cpResend(){
   if(!_otpUser) return;
   _otp    = makeOtp();
   _otpExp = Date.now() + 5*60*1000;
-  sendTelegramOtp(_otpUser, _otp, "Change Password (Resend)");
-  showMsg("cpMsg2","info","📲 New OTP sent to admin's Telegram.");
+  showMsg("cpMsg2","info","Sending...");
+  sendTelegramOtp(_otpUser, _otp, "Change Password (Resend)").then(function(result){
+    if(result.ok) showMsg("cpMsg2","info","OTP sent to admin Telegram.");
+    else showMsg("cpMsg2","err","Send failed: " + (result.error||"Unknown error"));
+  });
   sv2("cpOtpEntered","");
 }
 function cpVerifyOtp(){
@@ -637,7 +647,12 @@ function genOtp(){
   _otp     = makeOtp();
   _otpExp  = Date.now() + 5*60*1000;
   _otpUser = u;
-  sendTelegramOtp(u, _otp, "Forgot Password").then(function(){
+  showMsg("fgMsg1","info","Sending OTP to Telegram...");
+  sendTelegramOtp(u, _otp, "Forgot Password").then(function(result){
+    if(!result.ok){
+      showMsg("fgMsg1","err","Could not send Telegram OTP. " + (result.error||"") + " Please check your Bot Token and Chat ID in the HTML file.");
+      return;
+    }
     document.getElementById("forgotStep1").style.display="none";
     document.getElementById("forgotStep2").style.display="block";
     sv2("fgOtpEntered","");
@@ -648,8 +663,11 @@ function fgResend(){
   if(!_otpUser) return;
   _otp    = makeOtp();
   _otpExp = Date.now() + 5*60*1000;
-  sendTelegramOtp(_otpUser, _otp, "Forgot Password (Resend)");
-  showMsg("fgMsg2","info","📲 New OTP sent to admin's Telegram.");
+  showMsg("fgMsg2","info","Sending...");
+  sendTelegramOtp(_otpUser, _otp, "Forgot Password (Resend)").then(function(result){
+    if(result.ok) showMsg("fgMsg2","info","OTP sent to admin Telegram.");
+    else showMsg("fgMsg2","err","Send failed: " + (result.error||"Unknown error"));
+  });
   sv2("fgOtpEntered","");
 }
 function doOtpReset(){
