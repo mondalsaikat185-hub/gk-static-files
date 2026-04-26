@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Office AI">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.jpeg">
+<link rel="icon" type="image/jpeg" href="icon.jpeg">
+<title>AI Office Assistant</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.umd.min.js"></script>
+<style>
+/* ===== RESET & VARIABLES ===== */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--card:#1c2128;--card2:#21262d;
+  --blue:#4a90d9;--purple:#7b5ea7;--glow:#58a6ff;
+  --text:#e6edf3;--muted:#8b949e;--border:#30363d;
+  --green:#3fb950;--red:#f85149;--yellow:#d29922;
+  --radius:12px;--shadow:0 8px 32px rgba(0,0,0,.4);
+}
+html,body{height:100%;overflow:hidden;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+  background:var(--bg);color:var(--text);
+  display:flex;flex-direction:column;
+  max-width:520px;margin:0 auto;position:relative;
+}
+.hidden{display:none!important;}
+
+/* ===== SCROLLABLE PANELS ===== */
+.panel{flex:1;overflow-y:auto;padding:16px;padding-bottom:80px;}
+
+/* ===== SETUP SCREEN ===== */
+#setupScreen{
+  display:flex;flex-direction:column;align-items:center;
+  min-height:100vh;overflow-y:auto;
+  background:linear-gradient(160deg,#0d1117 0%,#0d1f3c 50%,#1a0d2e 100%);
+  padding:40px 20px 60px;
+}
+.setup-logo{width:90px;height:90px;border-radius:20px;box-shadow:0 0 40px rgba(74,144,217,.6);margin-bottom:14px;}
+.setup-title{font-size:22px;font-weight:700;text-align:center;margin-bottom:6px;}
+.setup-sub{color:var(--muted);font-size:13px;text-align:center;margin-bottom:28px;line-height:1.5;}
+.step-dots{display:flex;gap:8px;margin-bottom:24px;}
+.dot{width:8px;height:8px;border-radius:4px;background:var(--border);transition:all .3s;}
+.dot.active{width:24px;background:var(--blue);}
+.dot.done{background:var(--green);}
+.setup-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:400px;margin-bottom:16px;}
+.setup-card h3{font-size:17px;margin-bottom:6px;}
+.setup-card .hint{color:var(--muted);font-size:12px;margin-bottom:18px;line-height:1.5;}
+.setup-nav{display:flex;gap:10px;width:100%;max-width:400px;}
+
+/* ===== FORM ELEMENTS ===== */
+.fg{margin-bottom:14px;}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;}
+input,textarea,select{
+  width:100%;padding:10px 13px;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-size:14px;
+  font-family:inherit;transition:border-color .2s,box-shadow .2s;
+}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(74,144,217,.15);}
+textarea{resize:vertical;min-height:80px;line-height:1.5;}
+select option{background:var(--card);}
+.input-hint{font-size:11px;color:var(--muted);margin-top:4px;}
+
+/* ===== BUTTONS ===== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:10px 18px;border-radius:8px;border:none;
+  font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;
+  font-family:inherit;
+}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover{background:#5aa0e9;transform:translateY(-1px);}
+.btn-secondary{background:var(--bg2);color:var(--text);border:1px solid var(--border);}
+.btn-secondary:hover{border-color:var(--blue);}
+.btn-success{background:var(--green);color:#0d1117;}
+.btn-success:hover{filter:brightness(1.1);}
+.btn-danger{background:var(--red);color:#fff;}
+.btn-sm{padding:7px 14px;font-size:13px;}
+.btn-full{width:100%;padding:12px;}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;}
+
+/* ===== TOP BAR ===== */
+#topBar{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:10px 14px;display:flex;align-items:center;gap:10px;
+  flex-shrink:0;
+}
+.tb-logo{width:30px;height:30px;border-radius:7px;object-fit:cover;}
+.tb-title{font-weight:700;font-size:15px;flex:1;}
+.posting-chip{
+  background:rgba(74,144,217,.12);color:var(--blue);
+  border:1px solid rgba(74,144,217,.3);border-radius:20px;
+  padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;
+  white-space:nowrap;
+}
+.icon-btn{
+  width:34px;height:34px;border-radius:8px;border:1px solid var(--border);
+  background:transparent;color:var(--text);cursor:pointer;font-size:15px;
+  display:flex;align-items:center;justify-content:center;
+}
+.icon-btn:hover{border-color:var(--blue);}
+
+/* ===== BOTTOM NAV ===== */
+#bottomNav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:520px;
+  background:var(--bg2);border-top:1px solid var(--border);
+  display:flex;flex-shrink:0;z-index:20;
+  padding-bottom:env(safe-area-inset-bottom,0);
+}
+.nav-btn{
+  flex:1;padding:9px 4px 7px;border:none;background:transparent;
+  color:var(--muted);cursor:pointer;display:flex;flex-direction:column;
+  align-items:center;gap:2px;font-size:10px;font-weight:500;
+  transition:color .2s;font-family:inherit;
+}
+.nav-btn .ni{font-size:19px;line-height:1;}
+.nav-btn.active{color:var(--blue);}
+
+/* ===== CARDS ===== */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;}
+.card-title{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+
+/* ===== HOME ===== */
+.greeting{margin-bottom:16px;}
+.greeting h2{font-size:19px;font-weight:700;}
+.greeting p{color:var(--muted);font-size:13px;margin-top:3px;}
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.qcard{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px;cursor:pointer;transition:all .2s;text-align:center;
+}
+.qcard:hover{border-color:var(--blue);transform:translateY(-2px);}
+.qcard .qi{font-size:26px;margin-bottom:7px;}
+.qcard .ql{font-size:13px;font-weight:700;}
+.qcard .qs{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ===== LETTER LIST ===== */
+.letter-item{
+  display:flex;align-items:center;gap:12px;padding:11px 0;
+  border-bottom:1px solid var(--border);cursor:pointer;
+}
+.letter-item:last-child{border-bottom:none;}
+.li-icon{
+  width:38px;height:38px;border-radius:9px;flex-shrink:0;
+  background:rgba(74,144,217,.1);display:flex;align-items:center;justify-content:center;font-size:17px;
+}
+.li-info{flex:1;overflow:hidden;}
+.li-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.li-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+.li-action{color:var(--muted);font-size:16px;flex-shrink:0;}
+.empty-state{text-align:center;padding:32px 16px;color:var(--muted);}
+.empty-state .es-icon{font-size:40px;margin-bottom:10px;}
+.empty-state p{font-size:13px;line-height:1.5;}
+
+/* ===== WRITE SECTION ===== */
+.section-title{font-size:17px;font-weight:700;margin-bottom:14px;}
+.step-bar{display:flex;gap:4px;margin-bottom:14px;overflow-x:auto;padding-bottom:2px;}
+.step-pill{
+  padding:6px 13px;border-radius:20px;font-size:12px;font-weight:600;
+  border:1px solid var(--border);background:transparent;color:var(--muted);
+  cursor:pointer;white-space:nowrap;transition:all .2s;font-family:inherit;
+}
+.step-pill.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.step-pill.done{border-color:var(--green);color:var(--green);}
+
+/* Posting type grid */
+.posting-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.pcard{
+  border:2px solid var(--border);border-radius:10px;padding:12px;
+  cursor:pointer;transition:all .2s;background:var(--bg2);
+}
+.pcard:hover,.pcard.sel{border-color:var(--blue);background:rgba(74,144,217,.06);}
+.pcard .pc-icon{font-size:22px;margin-bottom:5px;}
+.pcard .pc-name{font-size:13px;font-weight:700;}
+.pcard .pc-desc{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* Letter type grid */
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.tcard{
+  border:2px solid var(--border);border-radius:9px;padding:11px 10px;
+  cursor:pointer;transition:all .2s;background:var(--bg2);
+}
+.tcard:hover,.tcard.sel{border-color:var(--blue);background:rgba(74,144,217,.06);}
+.tcard .tc-name{font-size:13px;font-weight:600;}
+.tcard .tc-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* Generated draft area */
+.draft-area{
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:14px;font-size:13px;line-height:1.75;white-space:pre-wrap;
+  font-family:'Courier New',Courier,monospace;
+  min-height:200px;max-height:420px;overflow-y:auto;margin-bottom:12px;
+  color:var(--text);
+}
+.draft-area[contenteditable]:focus{outline:none;border-color:var(--blue);}
+.draft-area.empty::before{content:'Generated letter will appear here…';color:var(--muted);}
+
+/* ===== OCR SECTION ===== */
+.upload-area{
+  border:2px dashed var(--border);border-radius:12px;padding:36px 20px;
+  text-align:center;cursor:pointer;transition:all .2s;
+}
+.upload-area:hover,.upload-area.drag{border-color:var(--blue);background:rgba(74,144,217,.05);}
+.upload-area .ua-icon{font-size:44px;margin-bottom:10px;}
+.upload-area .ua-text{font-size:14px;font-weight:600;margin-bottom:4px;}
+.upload-area .ua-sub{font-size:12px;color:var(--muted);}
+#fileInput{display:none;}
+.ocr-result{
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:14px;font-size:13px;line-height:1.65;white-space:pre-wrap;
+  max-height:360px;overflow-y:auto;margin-top:12px;
+}
+
+/* ===== SETTINGS ===== */
+.settings-group{margin-bottom:22px;}
+.sg-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:8px;padding:0 2px;}
+.si{
+  display:flex;align-items:center;padding:13px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:10px;margin-bottom:6px;cursor:pointer;transition:border-color .2s;
+}
+.si:hover{border-color:var(--blue);}
+.si-icon{font-size:18px;margin-right:12px;width:24px;text-align:center;flex-shrink:0;}
+.si-info{flex:1;}
+.si-title{font-size:14px;font-weight:600;}
+.si-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.si-arrow{color:var(--muted);font-size:14px;}
+.si-value{font-size:12px;color:var(--blue);margin-right:6px;}
+
+/* ===== MODAL ===== */
+.overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);
+  display:flex;align-items:flex-end;justify-content:center;z-index:50;
+}
+.modal{
+  background:var(--bg2);border-radius:20px 20px 0 0;
+  padding:18px 18px 32px;width:100%;max-width:520px;
+  max-height:85vh;overflow-y:auto;
+}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:14px;}
+.modal-close{float:right;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;}
+
+/* ===== TOAST ===== */
+#toast{
+  position:fixed;bottom:82px;left:50%;transform:translateX(-50%);
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  padding:9px 20px;border-radius:20px;font-size:13px;z-index:100;
+  opacity:0;transition:opacity .25s;pointer-events:none;
+  white-space:nowrap;max-width:300px;text-align:center;
+}
+#toast.show{opacity:1;}
+#toast.ok{border-color:var(--green);color:var(--green);}
+#toast.err{border-color:var(--red);color:var(--red);}
+
+/* ===== SPINNER ===== */
+.spin{display:inline-block;width:15px;height:15px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+/* ===== MISC ===== */
+.divider{height:1px;background:var(--border);margin:14px 0;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge-blue{background:rgba(74,144,217,.2);color:var(--blue);}
+.badge-green{background:rgba(63,185,80,.2);color:var(--green);}
+.badge-yellow{background:rgba(210,153,34,.2);color:var(--yellow);}
+.info-box{background:rgba(74,144,217,.07);border:1px solid rgba(74,144,217,.2);border-radius:8px;padding:11px 13px;font-size:13px;line-height:1.5;margin-bottom:12px;}
+.info-box a{color:var(--blue);}
+.warn-box{background:rgba(210,153,34,.07);border:1px solid rgba(210,153,34,.25);border-radius:8px;padding:11px 13px;font-size:13px;line-height:1.5;margin-bottom:12px;color:var(--yellow);}
+.row{display:flex;gap:10px;}
+.row .fg{flex:1;}
+
+@media(max-width:360px){
+  .quick-grid,.posting-grid,.type-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===========================
+     SETUP SCREEN
+=========================== -->
+<div id="setupScreen">
+  <img src="icon.jpeg" class="setup-logo" alt="Office AI">
+  <div class="setup-title">AI Office Assistant</div>
+  <div class="setup-sub">Smart letter drafting for government officers.<br>Setup takes less than 2 minutes.</div>
+
+  <div class="step-dots">
+    <div class="dot active" id="dot0"></div>
+    <div class="dot" id="dot1"></div>
+    <div class="dot" id="dot2"></div>
+  </div>
+
+  <!-- Step 0: API Key -->
+  <div class="setup-card" id="setupStep0">
+    <h3>🔑 AI Provider Key</h3>
+    <p class="hint">Enter your free Gemini API key. Get one in 30 seconds at <strong>aistudio.google.com</strong> → "Get API Key". You can also add a Mistral key for backup.</p>
+    <div class="fg">
+      <label>Gemini API Key (Primary — Free)</label>
+      <input type="password" id="s0_gemini" placeholder="AIza…" autocomplete="off">
+      <div class="input-hint">Free tier: 1 million tokens/day. No payment needed.</div>
+    </div>
+    <div class="fg">
+      <label>Mistral API Key (Backup — Optional)</label>
+      <input type="password" id="s0_mistral" placeholder="Paste if you have one" autocomplete="off">
+    </div>
+  </div>
+
+  <!-- Step 1: Office Info -->
+  <div class="setup-card hidden" id="setupStep1">
+    <h3>🏛️ Office Information</h3>
+    <p class="hint">This will appear on every letter you generate. You can change it anytime from Settings.</p>
+    <div class="fg"><label>Office / Department Name</label><input type="text" id="s1_office" placeholder="e.g. Office of the Commissioner, GST"></div>
+    <div class="fg"><label>Ministry / Organisation</label><input type="text" id="s1_ministry" placeholder="e.g. Central Board of Indirect Taxes &amp; Customs"></div>
+    <div class="fg"><label>Office Address</label><textarea id="s1_address" rows="2" placeholder="Full address for letterhead"></textarea></div>
+    <div class="row">
+      <div class="fg"><label>Your Name</label><input type="text" id="s1_name" placeholder="Full name"></div>
+      <div class="fg"><label>Your Designation</label><input type="text" id="s1_desig" placeholder="e.g. Inspector"></div>
+    </div>
+    <div class="fg"><label>File No. Prefix</label><input type="text" id="s1_prefix" placeholder="e.g. C.No. / F.No."></div>
+  </div>
+
+  <!-- Step 2: Current Posting -->
+  <div class="setup-card hidden" id="setupStep2">
+    <h3>📋 Current Posting</h3>
+    <p class="hint">Select your current role. You can switch anytime — all your posting profiles are saved separately.</p>
+    <div class="posting-grid" id="setupPostingGrid"></div>
+  </div>
+
+  <div class="setup-nav" id="setupNavRow">
+    <button class="btn btn-secondary" id="btnSetupBack" onclick="setupBack()" style="display:none">← Back</button>
+    <button class="btn btn-primary btn-full" id="btnSetupNext" onclick="setupNext()">Next →</button>
+  </div>
+</div>
+
+<!-- ===========================
+     MAIN APP
+=========================== -->
+<div id="mainApp" class="hidden" style="display:flex;flex-direction:column;height:100vh;">
+
+  <!-- Top Bar -->
+  <div id="topBar">
+    <img src="icon.jpeg" class="tb-logo" alt="">
+    <span class="tb-title">Office AI</span>
+    <span class="posting-chip" onclick="openModal('postingModal')" id="postingChip">Admin</span>
+    <button class="icon-btn" onclick="showSection('settings')" title="Settings">⚙️</button>
+  </div>
+
+  <!-- Main content area -->
+  <div class="panel" id="mainPanel">
+
+    <!-- ── HOME ── -->
+    <div id="secHome">
+      <div class="greeting">
+        <h2 id="greetMsg">Good morning!</h2>
+        <p id="greetSub">What would you like to draft today?</p>
+      </div>
+
+      <div class="quick-grid">
+        <div class="qcard" onclick="showSection('write')">
+          <div class="qi">✍️</div>
+          <div class="ql">New Letter</div>
+          <div class="qs">Draft with AI</div>
+        </div>
+        <div class="qcard" onclick="showSection('ocr')">
+          <div class="qi">📷</div>
+          <div class="ql">Scan / OCR</div>
+          <div class="qs">Extract text</div>
+        </div>
+        <div class="qcard" onclick="showSection('history')">
+          <div class="qi">📋</div>
+          <div class="ql">History</div>
+          <div class="qs">Past letters</div>
+        </div>
+        <div class="qcard" onclick="showSection('settings')">
+          <div class="qi">⚙️</div>
+          <div class="ql">Settings</div>
+          <div class="qs">Configure app</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📄 Recent Letters</div>
+        <div id="recentList"><div class="empty-state"><div class="es-icon">📭</div><p>No letters yet.<br>Tap "New Letter" to create your first draft.</p></div></div>
+      </div>
+    </div><!-- /secHome -->
+
+    <!-- ── WRITE ── -->
+    <div id="secWrite" class="hidden">
+      <div class="section-title">✍️ New Letter</div>
+
+      <div class="step-bar">
+        <button class="step-pill active" id="sp1" onclick="goWriteStep(1)">1. Type</button>
+        <button class="step-pill" id="sp2" onclick="goWriteStep(2)">2. Details</button>
+        <button class="step-pill" id="sp3" onclick="goWriteStep(3)">3. Context</button>
+        <button class="step-pill" id="sp4" onclick="goWriteStep(4)">4. Generate</button>
+      </div>
+
+      <!-- Step 1: Choose letter type -->
+      <div id="ws1">
+        <div class="info-box">Showing letter types for <strong id="ws1PostingLabel">your current posting</strong>. <span style="color:var(--blue);cursor:pointer" onclick="openModal('postingModal')">Switch posting →</span></div>
+        <div class="type-grid" id="typeGrid"></div>
+      </div>
+
+      <!-- Step 2: Fill details -->
+      <div id="ws2" class="hidden">
+        <div class="card-title" id="ws2TypeTitle">Letter Details</div>
+        <div id="ws2Fields"></div>
+        <div class="fg">
+          <label>Additional Instructions (optional)</label>
+          <textarea id="ws2Extra" rows="2" placeholder="Any specific points, tone, or references to include…"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-secondary" onclick="goWriteStep(1)">← Back</button>
+          <button class="btn btn-primary btn-full" onclick="goWriteStep(3)">Next →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Paste OCR / reference text -->
+      <div id="ws3" class="hidden">
+        <div class="info-box">Paste text from a scanned document, or leave blank if not needed.</div>
+        <div class="fg">
+          <label>Reference Document Text (Paste from OCR or type key points)</label>
+          <textarea id="ws3OCR" rows="6" placeholder="Paste the content of the incoming letter / legal document here…&#10;&#10;Or use the Scan/OCR tab to extract text from an image, then copy it here."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-secondary" onclick="goWriteStep(2)">← Back</button>
+          <button class="btn btn-primary btn-full" onclick="goWriteStep(4)">Generate →</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Generate & Download -->
+      <div id="ws4" class="hidden">
+        <div class="row" style="margin-bottom:12px;align-items:center;">
+          <div style="flex:1;font-size:14px;font-weight:700;">Generated Draft</div>
+          <button class="btn btn-sm btn-secondary" onclick="copyDraft()">📋 Copy</button>
+        </div>
+        <div class="draft-area empty" id="draftArea" contenteditable="true" spellcheck="false"></div>
+        <div id="genActions" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="btnGenerate" onclick="generateLetter()">
+            <span class="spin" id="genSpin" style="display:none"></span>
+            <span id="genBtnTxt">✨ Generate</span>
+          </button>
+          <button class="btn btn-success" onclick="downloadDocx()" id="btnDownload" disabled>⬇️ Word (.docx)</button>
+          <button class="btn btn-secondary btn-sm" onclick="saveLetter()">💾 Save</button>
+          <button class="btn btn-secondary btn-sm" onclick="goWriteStep(1)">🔄 New</button>
+        </div>
+        <div class="warn-box" style="margin-top:12px;font-size:12px;">
+          ⚠️ Always verify dates, names, amounts, and legal citations before sending. AI can make errors.
+        </div>
+      </div>
+
+    </div><!-- /secWrite -->
+
+    <!-- ── OCR ── -->
+    <div id="secOcr" class="hidden">
+      <div class="section-title">📷 Scan & Extract Text</div>
+      <div class="info-box">Upload a scanned letter or document image. The AI will extract all readable text for free using your Gemini key.</div>
+
+      <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="handleFileDrop(event)">
+        <div class="ua-icon">📁</div>
+        <div class="ua-text">Tap to upload image or PDF page</div>
+        <div class="ua-sub">JPG, PNG, WEBP, PDF (one page at a time)</div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*,.pdf" onchange="handleFileSelect(event)">
+
+      <div id="ocrPreviewWrap" class="hidden" style="margin-top:12px;">
+        <img id="ocrPreview" style="max-width:100%;border-radius:8px;border:1px solid var(--border);" alt="">
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          <button class="btn btn-primary btn-full" id="btnExtract" onclick="runOCR()">
+            <span class="spin" id="ocrSpin" style="display:none"></span>
+            <span id="ocrBtnTxt">🔍 Extract Text</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="ocrResultWrap" class="hidden">
+        <div class="card-title" style="margin-top:14px;">📄 Extracted Text</div>
+        <div class="ocr-result" id="ocrResult"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-success btn-full" onclick="copyOCRToWrite()">📋 Copy & Go to Letter Writer</button>
+        </div>
+      </div>
+    </div><!-- /secOcr -->
+
+    <!-- ── HISTORY ── -->
+    <div id="secHistory" class="hidden">
+      <div class="section-title">📋 Letter History</div>
+      <div id="historyList"></div>
+    </div>
+
+    <!-- ── SETTINGS ── -->
+    <div id="secSettings" class="hidden">
+      <div class="section-title">⚙️ Settings</div>
+
+      <div class="settings-group">
+        <div class="sg-title">AI Configuration</div>
+        <div class="si" onclick="openModal('apiModal')">
+          <div class="si-icon">🔑</div>
+          <div class="si-info">
+            <div class="si-title">API Keys</div>
+            <div class="si-sub" id="apiStatusText">Tap to configure Gemini / Mistral keys</div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+        <div class="si" onclick="openModal('aiModelModal')">
+          <div class="si-icon">🤖</div>
+          <div class="si-info">
+            <div class="si-title">Active AI Model</div>
+            <div class="si-sub" id="activeModelText">Gemini 1.5 Flash (Free)</div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="sg-title">Office Profile</div>
+        <div class="si" onclick="openModal('officeModal')">
+          <div class="si-icon">🏛️</div>
+          <div class="si-info">
+            <div class="si-title">Office Details</div>
+            <div class="si-sub" id="officeNameText">Name, address, designation</div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+        <div class="si" onclick="openModal('postingModal')">
+          <div class="si-icon">📋</div>
+          <div class="si-info">
+            <div class="si-title">Current Posting</div>
+            <div class="si-sub" id="postingNameText">Switch role / department</div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="sg-title">Data & Sync</div>
+        <div class="si" onclick="exportSettings()">
+          <div class="si-icon">📤</div>
+          <div class="si-info">
+            <div class="si-title">Export Settings</div>
+            <div class="si-sub">Copy a code to sync to other devices</div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+        <div class="si" onclick="openModal('importModal')">
+          <div class="si-icon">📥</div>
+          <div class="si-info">
+            <div class="si-title">Import Settings</div>
+            <div class="si-sub">Paste code from another device</div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+        <div class="si" onclick="clearHistory()">
+          <div class="si-icon">🗑️</div>
+          <div class="si-info">
+            <div class="si-title">Clear Letter History</div>
+            <div class="si-sub">Delete all saved drafts</div>
+          </div>
+          <div class="si-arrow">›</div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="sg-title">About</div>
+        <div class="card" style="font-size:13px;color:var(--muted);line-height:1.6;">
+          <strong style="color:var(--text);">AI Office Assistant</strong><br>
+          Version 1.0 · Built for Indian Government Officers<br><br>
+          Your data stays on your device. API keys are stored locally.<br>
+          No data is sent to any server except the AI provider you configure.
+        </div>
+      </div>
+    </div><!-- /secSettings -->
+
+  </div><!-- /mainPanel -->
+
+  <!-- Bottom Nav -->
+  <div id="bottomNav">
+    <button class="nav-btn active" id="nav-home" onclick="showSection('home')"><span class="ni">🏠</span>Home</button>
+    <button class="nav-btn" id="nav-write" onclick="showSection('write')"><span class="ni">✍️</span>Write</button>
+    <button class="nav-btn" id="nav-ocr" onclick="showSection('ocr')"><span class="ni">📷</span>Scan</button>
+    <button class="nav-btn" id="nav-history" onclick="showSection('history')"><span class="ni">📋</span>History</button>
+    <button class="nav-btn" id="nav-settings" onclick="showSection('settings')"><span class="ni">⚙️</span>Settings</button>
+  </div>
+
+</div><!-- /mainApp -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ===========================
+     MODALS
+=========================== -->
+
+<!-- Posting Modal -->
+<div class="overlay hidden" id="postingModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('postingModal')">✕</button>
+    <div class="modal-title">Select Current Posting</div>
+    <div class="posting-grid" id="modalPostingGrid"></div>
+    <button class="btn btn-primary btn-full" style="margin-top:12px" onclick="closeModal('postingModal')">Done</button>
+  </div>
+</div>
+
+<!-- API Keys Modal -->
+<div class="overlay hidden" id="apiModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('apiModal')">✕</button>
+    <div class="modal-title">🔑 API Keys</div>
+    <div class="info-box">Keys are saved locally on your device only. Never shared with anyone.</div>
+    <div class="fg">
+      <label>Gemini API Key (Primary — Free)</label>
+      <input type="password" id="m_gemini" placeholder="AIza…" autocomplete="off">
+      <div class="input-hint">Get free key: <a href="https://aistudio.google.com" target="_blank" style="color:var(--blue)">aistudio.google.com</a></div>
+    </div>
+    <div class="fg">
+      <label>Mistral API Key (Backup — Optional)</label>
+      <input type="password" id="m_mistral" placeholder="Optional" autocomplete="off">
+      <div class="input-hint">Get free key: <a href="https://console.mistral.ai" target="_blank" style="color:var(--blue)">console.mistral.ai</a></div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveAPIKeys()">Save Keys</button>
+  </div>
+</div>
+
+<!-- AI Model Modal -->
+<div class="overlay hidden" id="aiModelModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('aiModelModal')">✕</button>
+    <div class="modal-title">🤖 Choose AI Model</div>
+    <div id="modelList"></div>
+    <button class="btn btn-primary btn-full" style="margin-top:12px" onclick="saveModel()">Apply</button>
+  </div>
+</div>
+
+<!-- Office Info Modal -->
+<div class="overlay hidden" id="officeModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('officeModal')">✕</button>
+    <div class="modal-title">🏛️ Office Details</div>
+    <div class="fg"><label>Office / Department Name</label><input type="text" id="m_office" placeholder="e.g. O/o Commissioner, GST"></div>
+    <div class="fg"><label>Ministry / Organisation</label><input type="text" id="m_ministry" placeholder="e.g. CBIC, Govt. of India"></div>
+    <div class="fg"><label>Office Address</label><textarea id="m_address" rows="2" placeholder="Full address"></textarea></div>
+    <div class="row">
+      <div class="fg"><label>Your Name</label><input type="text" id="m_name"></div>
+      <div class="fg"><label>Designation</label><input type="text" id="m_desig"></div>
+    </div>
+    <div class="fg"><label>File No. Prefix</label><input type="text" id="m_prefix" placeholder="C.No. / F.No."></div>
+    <button class="btn btn-primary btn-full" onclick="saveOfficeInfo()">Save</button>
+  </div>
+</div>
+
+<!-- Import Settings Modal -->
+<div class="overlay hidden" id="importModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('importModal')">✕</button>
+    <div class="modal-title">📥 Import Settings</div>
+    <div class="fg">
+      <label>Paste your settings code below</label>
+      <textarea id="importCode" rows="6" placeholder="Paste the exported settings code here…"></textarea>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="importSettings()">Import</button>
+  </div>
+</div>
+
+<!-- View Letter Modal -->
+<div class="overlay hidden" id="viewLetterModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('viewLetterModal')">✕</button>
+    <div class="modal-title" id="vlTitle">Letter</div>
+    <div class="draft-area" id="vlContent" contenteditable="false"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-success btn-full" onclick="downloadDocxFromHistory()">⬇️ Download Word</button>
+      <button class="btn btn-danger" onclick="deleteFromHistory()" title="Delete">🗑️</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===========================
+     JAVASCRIPT
+=========================== -->
+<script>
+// ===== DATA SCHEMAS =====
+const POSTINGS = {
+  admin:   { icon:'🏛️', name:'Admin',    desc:'GPF, Salary, Pension',       color:'#4a90d9' },
+  gst:     { icon:'📊', name:'GST',      desc:'Refund, SCN, Appeals',        color:'#3fb950' },
+  customs: { icon:'🛃', name:'Customs',  desc:'Seizure, Adjudication',       color:'#d29922' },
+  audit:   { icon:'🔍', name:'Audit',    desc:'Objections, Reports',         color:'#7b5ea7' },
+  field:   { icon:'🚗', name:'Field Ops',desc:'Survey, Inspection',          color:'#f85149' }
+};
+
+const LETTER_TYPES = {
+  admin:[
+    {id:'gpf_advance',   name:'GPF Advance',        sub:'Sanction letter'},
+    {id:'gpf_final',     name:'GPF Final Withdrawal',sub:'Final payment'},
+    {id:'pension_fwd',   name:'Pension Forwarding',  sub:'PPO / case forwarding'},
+    {id:'salary_issue',  name:'Salary Memo',         sub:'Pay/increment issue'},
+    {id:'service_cert',  name:'Service Certificate', sub:'Length of service'},
+    {id:'noc',           name:'NOC',                 sub:'No Objection Certificate'},
+    {id:'office_memo',   name:'Office Memorandum',   sub:'Internal circular/OM'},
+    {id:'general',       name:'General Letter',      sub:'Other correspondence'}
+  ],
+  gst:[
+    {id:'scn_reply',       name:'Reply to SCN',         sub:'Show Cause Notice reply'},
+    {id:'refund_reject',   name:'Refund Rejection',      sub:'Rejection order'},
+    {id:'refund_sanction', name:'Refund Sanction',       sub:'Sanction order'},
+    {id:'scrutiny_notice', name:'Scrutiny Notice',       sub:'Section 61 / 65'},
+    {id:'assessment',      name:'Assessment Order',      sub:'Section 73 / 74'},
+    {id:'summons',         name:'Summons',               sub:'Section 70'},
+    {id:'appeal_order',    name:'Appeal Order',          sub:'First appeal'},
+    {id:'general',         name:'General GST Letter',    sub:'Other GST matters'}
+  ],
+  customs:[
+    {id:'seizure_memo',  name:'Seizure Memo',       sub:'Goods seized'},
+    {id:'scn_customs',   name:'Show Cause Notice',  sub:'Customs SCN'},
+    {id:'adj_order',     name:'Adjudication Order', sub:'Final order'},
+    {id:'penalty_order', name:'Penalty Order',      sub:'Section 112 / 114'},
+    {id:'release_order', name:'Release Order',      sub:'Provisional / final'},
+    {id:'general',       name:'General Letter',     sub:'Other customs matters'}
+  ],
+  audit:[
+    {id:'audit_obj',    name:'Audit Objection',   sub:'Para raised'},
+    {id:'compliance',   name:'Compliance Note',   sub:'Para compliance'},
+    {id:'audit_fwd',    name:'Audit Report Fwd',  sub:'Forwarding letter'},
+    {id:'general',      name:'General Letter',    sub:'Other audit matters'}
+  ],
+  field:[
+    {id:'inspection',   name:'Inspection Report', sub:'Site inspection'},
+    {id:'survey',       name:'Survey Report',     sub:'GST survey u/s 71'},
+    {id:'visit_report', name:'Visit Report',      sub:'Official visit note'},
+    {id:'general',      name:'General Letter',    sub:'Other field matters'}
+  ]
+};
+
+const LETTER_FIELDS = {
+  scn_reply:[
+    {id:'taxpayer',  label:'Taxpayer / Party Name', type:'text', ph:'Full legal name'},
+    {id:'gstin',     label:'GSTIN',                 type:'text', ph:'15-digit GSTIN'},
+    {id:'scn_no',    label:'SCN Reference No.',     type:'text', ph:'Notice number'},
+    {id:'scn_date',  label:'SCN Date',              type:'date'},
+    {id:'demand',    label:'Demand Amount (₹)',      type:'text', ph:'e.g. 5,00,000'},
+    {id:'period',    label:'Tax Period',            type:'text', ph:'e.g. Apr 2022 – Mar 2023'},
+    {id:'issue',     label:'Issue / Allegation',    type:'area', ph:'Briefly describe the tax demand / allegation'},
+    {id:'stand',     label:'Department\'s Stand',   type:'area', ph:'What is the department\'s position? Confirm / revise demand?'},
+    {id:'reason',    label:'Legal Grounds',         type:'area', ph:'Specific sections, notifications, case laws supporting the stand'}
+  ],
+  refund_reject:[
+    {id:'taxpayer',  label:'Taxpayer Name',         type:'text'},
+    {id:'gstin',     label:'GSTIN',                 type:'text'},
+    {id:'app_no',    label:'Application ARN/No.',   type:'text'},
+    {id:'amount',    label:'Claimed Amount (₹)',    type:'text'},
+    {id:'period',    label:'Tax Period',            type:'text'},
+    {id:'reason',    label:'Reason for Rejection',  type:'area', ph:'Specific legal grounds (e.g. time-barred, incomplete docs, ineligible category)'}
+  ],
+  refund_sanction:[
+    {id:'taxpayer',  label:'Taxpayer Name',         type:'text'},
+    {id:'gstin',     label:'GSTIN',                 type:'text'},
+    {id:'app_no',    label:'Application ARN/No.',   type:'text'},
+    {id:'amount',    label:'Sanctioned Amount (₹)', type:'text'},
+    {id:'period',    label:'Tax Period',            type:'text'},
+    {id:'remarks',   label:'Remarks (if any)',      type:'area', ph:'Any conditions or observations'}
+  ],
+  gpf_advance:[
+    {id:'emp_name',  label:'Employee Name',          type:'text'},
+    {id:'emp_no',    label:'Employee / GPF No.',     type:'text'},
+    {id:'desig',     label:'Designation',            type:'text'},
+    {id:'amount',    label:'Advance Amount (₹)',     type:'text'},
+    {id:'purpose',   label:'Purpose',               type:'select', opts:['House Construction','House Purchase','Education','Marriage','Medical Treatment','Motor Car/Cycle','Consumer Goods','Other']},
+    {id:'recovery',  label:'Recovery Period (months)',type:'text', ph:'e.g. 24'}
+  ],
+  pension_fwd:[
+    {id:'emp_name',  label:'Retiring Officer Name', type:'text'},
+    {id:'desig',     label:'Designation',           type:'text'},
+    {id:'ret_date',  label:'Date of Retirement',    type:'date'},
+    {id:'service',   label:'Total Service (years)', type:'text'},
+    {id:'fwd_to',    label:'Forwarding To (PAO)',   type:'text', ph:'Name of PAO / CPAO office'}
+  ],
+  seizure_memo:[
+    {id:'party',     label:'Importer / Party Name', type:'text'},
+    {id:'sei_date',  label:'Date of Seizure',       type:'date'},
+    {id:'goods',     label:'Description of Goods',  type:'area', ph:'Quantity, description, packaging'},
+    {id:'value',     label:'Approx. Value (₹)',     type:'text'},
+    {id:'grounds',   label:'Grounds for Seizure',   type:'area', ph:'Legal grounds under Customs Act'},
+    {id:'officer',   label:'Seizing Officer Name',  type:'text'}
+  ],
+  assessment:[
+    {id:'taxpayer',  label:'Taxpayer Name',         type:'text'},
+    {id:'gstin',     label:'GSTIN',                 type:'text'},
+    {id:'period',    label:'Tax Period',            type:'text'},
+    {id:'tax_demand',label:'Total Tax Demand (₹)',  type:'text'},
+    {id:'section',   label:'Section Invoked',       type:'text', ph:'73 (non-fraud) or 74 (fraud)'},
+    {id:'grounds',   label:'Grounds of Assessment', type:'area'}
+  ],
+  summons:[
+    {id:'to_name',   label:'Name of Person Summoned',type:'text'},
+    {id:'address',   label:'Address',               type:'area'},
+    {id:'purpose',   label:'Purpose of Summons',    type:'area', ph:'Documents required / matter for examination'},
+    {id:'date',      label:'Date to Appear',        type:'date'},
+    {id:'time',      label:'Time to Appear',        type:'text', ph:'e.g. 11:00 AM'}
+  ],
+  service_cert:[
+    {id:'emp_name',  label:'Employee Name',         type:'text'},
+    {id:'emp_no',    label:'Employee No.',          type:'text'},
+    {id:'desig',     label:'Designation',           type:'text'},
+    {id:'from_date', label:'Service From',          type:'date'},
+    {id:'to_date',   label:'Service To / Till Date',type:'date'},
+    {id:'purpose',   label:'Purpose of Certificate',type:'text', ph:'e.g. Passport / Bank / Visa'}
+  ]
+};
+
+const DEFAULT_FIELDS = [
+  {id:'to_name', label:'To (Name / Designation)', type:'text', ph:'Addressee'},
+  {id:'subject', label:'Subject',                 type:'text', ph:'Subject of the letter'},
+  {id:'content', label:'Key Points / Content',    type:'area', ph:'Briefly describe the main points, background, and required action…'}
+];
+
+// AI system prompts by posting
+const SYSTEM_PROMPTS = {
+  admin:`You are a senior administrative officer in a Central Government department of India. Write formal official correspondence following DoPT guidelines.
+
+KEY RULES & REFERENCES:
+- Fundamental Rules and Supplementary Rules (FR & SR)
+- General Provident Fund (Central Services) Rules, 1960
+- CCS (Pension) Rules, 2021
+- CCS (Leave) Rules
+- 7th Central Pay Commission Pay Matrix
+- DoPT Office Memoranda and Government of India instructions
+
+WRITING STYLE:
+- Formal government letter/memo format
+- Reference specific rule numbers where applicable
+- Use "Sir/Madam" for external letters
+- Use "Yours faithfully" closing for formal letters
+- "Sub:" for subject line
+- Factual, precise, and official tone`,
+
+  gst:`You are a senior officer in the GST Department, Central Board of Indirect Taxes and Customs (CBIC), Government of India. Draft formal, legally sound official letters and orders.
+
+KEY LAWS & REFERENCES:
+- Central Goods and Services Tax Act, 2017 (CGST Act)
+- Integrated Goods and Services Tax Act, 2017 (IGST Act)
+- GST Rules, 2017 (CGST Rules)
+- CBIC Circulars, Notifications, and Instructions
+- GST Refund Rules (Rule 89–97)
+- Input Tax Credit provisions (Section 16–21)
+- Assessment provisions (Section 61–65, 73–74)
+
+WRITING STYLE:
+- Cite specific section numbers, rule numbers, notification numbers
+- Use "it is hereby ordered / directed / notified"
+- "In terms of Section ___ of the CGST Act, 2017"
+- Reference case number, GSTIN, ARN where applicable
+- Professional, authoritative, legally precise
+- Numbered paragraphs for complex orders`,
+
+  customs:`You are a senior Customs Officer in CBIC (Central Board of Indirect Taxes and Customs), Government of India. Draft formal official customs notices, memos, and orders.
+
+KEY LAWS & REFERENCES:
+- Customs Act, 1962
+- Customs Tariff Act, 1975
+- Foreign Trade Policy
+- CBIC Customs Circulars and Notifications
+- Section 110 (Seizure), Section 112/114 (Penalty), Section 124 (SCN)
+- CESTAT and Supreme Court precedents on customs matters
+
+WRITING STYLE:
+- Cite specific sections of Customs Act
+- Use standard government letter format
+- Precise, legally defensible language
+- Reference seizure panchnama, invoices, bills of entry as applicable`,
+
+  audit:`You are a senior audit officer in a government department. Draft formal audit objection paras, compliance notes, and correspondence.
+
+KEY REFERENCES:
+- CAG Audit Manual
+- CGA Accounting Manual
+- Government Accounting Rules
+- DoPT and Finance Ministry guidelines on audit compliance
+
+WRITING STYLE:
+- Factual and objective
+- Clear identification of the para / objection
+- State facts, applicable rules, and observation
+- Professional compliance language`,
+
+  field:`You are a field officer in the GST / Customs department conducting surveys, inspections, and field operations.
+
+KEY LAWS:
+- CGST Act Section 67 (Inspection, Search, Seizure)
+- CGST Act Section 71 (Access to Business Premises)
+- Customs Act provisions on surveys
+
+WRITING STYLE:
+- Clear, factual reporting
+- Chronological account of the field visit
+- Observations supported by evidence
+- Official report format with date, time, persons present`
+};
+
+// ===== APP STATE =====
+let cfg = {};
+let writeState = { step:1, posting:'', typeId:'', typeName:'', fields:{}, ocr:'', draft:'' };
+let historyViewId = null;
+
+// ===== INIT =====
+window.addEventListener('load', ()=>{
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  loadConfig();
+  if(cfg.ready){
+    showMainApp();
+  } else {
+    buildSetupPostingGrid();
+    document.getElementById('setupScreen').classList.remove('hidden');
+  }
+});
+
+function loadConfig(){
+  try{ cfg = JSON.parse(localStorage.getItem('oaicfg')||'{}'); } catch(e){ cfg={}; }
+  cfg.posting   = cfg.posting   || 'admin';
+  cfg.geminiKey = cfg.geminiKey || '';
+  cfg.mistralKey= cfg.mistralKey|| '';
+  cfg.aiModel   = cfg.aiModel   || 'gemini-flash';
+  cfg.officeName= cfg.officeName|| '';
+  cfg.ministry  = cfg.ministry  || '';
+  cfg.address   = cfg.address   || '';
+  cfg.myName    = cfg.myName    || '';
+  cfg.myDesig   = cfg.myDesig   || '';
+  cfg.prefix    = cfg.prefix    || 'C.No.';
+  cfg.history   = cfg.history   || [];
+}
+
+function saveConfig(){ localStorage.setItem('oaicfg', JSON.stringify(cfg)); }
+
+// ===== SETUP WIZARD =====
+let setupStep = 0;
+
+function buildSetupPostingGrid(){
+  const grid = document.getElementById('setupPostingGrid');
+  grid.innerHTML = '';
+  Object.entries(POSTINGS).forEach(([key,p])=>{
+    const d = document.createElement('div');
+    d.className = 'pcard' + (cfg.posting===key?' sel':'');
+    d.innerHTML = `<div class="pc-icon">${p.icon}</div><div class="pc-name">${p.name}</div><div class="pc-desc">${p.desc}</div>`;
+    d.onclick = ()=>{ cfg.posting=key; grid.querySelectorAll('.pcard').forEach(c=>c.classList.remove('sel')); d.classList.add('sel'); };
+    grid.appendChild(d);
+  });
+}
+
+function setupNext(){
+  if(setupStep===0){
+    const g = document.getElementById('s0_gemini').value.trim();
+    if(!g){ toast('Please enter your Gemini API key','err'); return; }
+    cfg.geminiKey = g;
+    cfg.mistralKey = document.getElementById('s0_mistral').value.trim();
+    document.getElementById('setupStep0').classList.add('hidden');
+    document.getElementById('setupStep1').classList.remove('hidden');
+    document.getElementById('dot0').classList.replace('active','done');
+    document.getElementById('dot1').classList.add('active');
+    document.getElementById('btnSetupBack').style.display='';
+    setupStep=1;
+  } else if(setupStep===1){
+    cfg.officeName = document.getElementById('s1_office').value.trim();
+    cfg.ministry   = document.getElementById('s1_ministry').value.trim();
+    cfg.address    = document.getElementById('s1_address').value.trim();
+    cfg.myName     = document.getElementById('s1_name').value.trim();
+    cfg.myDesig    = document.getElementById('s1_desig').value.trim();
+    cfg.prefix     = document.getElementById('s1_prefix').value.trim() || 'C.No.';
+    document.getElementById('setupStep1').classList.add('hidden');
+    document.getElementById('setupStep2').classList.remove('hidden');
+    document.getElementById('dot1').classList.replace('active','done');
+    document.getElementById('dot2').classList.add('active');
+    document.getElementById('btnSetupNext').textContent = '✓ Finish Setup';
+    setupStep=2;
+  } else if(setupStep===2){
+    cfg.ready = true;
+    saveConfig();
+    document.getElementById('setupScreen').classList.add('hidden');
+    showMainApp();
+  }
+}
+
+function setupBack(){
+  if(setupStep===1){
+    document.getElementById('setupStep1').classList.add('hidden');
+    document.getElementById('setupStep0').classList.remove('hidden');
+    document.getElementById('dot1').classList.remove('active');
+    document.getElementById('dot0').classList.replace('done','active');
+    document.getElementById('btnSetupBack').style.display='none';
+    document.getElementById('btnSetupNext').textContent='Next →';
+    setupStep=0;
+  } else if(setupStep===2){
+    document.getElementById('setupStep2').classList.add('hidden');
+    document.getElementById('setupStep1').classList.remove('hidden');
+    document.getElementById('dot2').classList.remove('active');
+    document.getElementById('dot1').classList.replace('done','active');
+    document.getElementById('btnSetupNext').textContent='Next →';
+    setupStep=1;
+  }
+}
+
+// ===== MAIN APP INIT =====
+function showMainApp(){
+  document.getElementById('mainApp').classList.remove('hidden');
+  updatePostingUI();
+  updateSettingsUI();
+  showSection('home');
+  // Set greeting
+  const h = new Date().getHours();
+  const g = h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  document.getElementById('greetMsg').textContent = g + (cfg.myName?', '+cfg.myName.split(' ')[0]:'')+'!';
+  document.getElementById('greetSub').textContent = 'You are in '+POSTINGS[cfg.posting].name+' posting. Ready to draft?';
+}
+
+function updatePostingUI(){
+  const p = POSTINGS[cfg.posting];
+  document.getElementById('postingChip').textContent = p.icon+' '+p.name;
+  document.getElementById('postingNameText').textContent = p.icon+' '+p.name+' — '+p.desc;
+}
+
+function updateSettingsUI(){
+  document.getElementById('apiStatusText').textContent = cfg.geminiKey ? '✅ Gemini key configured'+(cfg.mistralKey?' + Mistral':''): '⚠️ No API key set';
+  document.getElementById('officeNameText').textContent = cfg.officeName || 'Not configured';
+  const models = {
+    'gemini-flash':'Gemini 1.5 Flash (Free)',
+    'gemini-pro':'Gemini 1.5 Pro',
+    'mistral-small':'Mistral Small (Free tier)',
+    'mistral-large':'Mistral Large'
+  };
+  document.getElementById('activeModelText').textContent = models[cfg.aiModel]||cfg.aiModel;
+}
+
+// ===== NAVIGATION =====
+const sections = ['home','write','ocr','history','settings'];
+
+function showSection(s){
+  sections.forEach(id=>{
+    document.getElementById('sec'+cap(id)).classList.toggle('hidden', id!==s);
+    const nb = document.getElementById('nav-'+id);
+    if(nb) nb.classList.toggle('active', id===s);
+  });
+  document.getElementById('mainPanel').scrollTop=0;
+  if(s==='write') initWriteSection();
+  if(s==='history') renderHistory();
+  if(s==='home') renderRecent();
+}
+
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+// ===== WRITE SECTION =====
+function initWriteSection(){
+  writeState = { step:1, posting:cfg.posting, typeId:'', typeName:'', fields:{}, ocr:'', draft:'' };
+  goWriteStep(1);
+  buildTypeGrid();
+}
+
+function buildTypeGrid(){
+  const types = LETTER_TYPES[cfg.posting] || LETTER_TYPES.admin;
+  document.getElementById('ws1PostingLabel').textContent = POSTINGS[cfg.posting].icon+' '+POSTINGS[cfg.posting].name;
+  const grid = document.getElementById('typeGrid');
+  grid.innerHTML='';
+  types.forEach(t=>{
+    const d = document.createElement('div');
+    d.className='tcard'+(writeState.typeId===t.id?' sel':'');
+    d.innerHTML=`<div class="tc-name">${t.name}</div><div class="tc-sub">${t.sub}</div>`;
+    d.onclick=()=>{
+      writeState.typeId=t.id; writeState.typeName=t.name;
+      grid.querySelectorAll('.tcard').forEach(c=>c.classList.remove('sel'));
+      d.classList.add('sel');
+      setTimeout(()=>goWriteStep(2),200);
+    };
+    grid.appendChild(d);
+  });
+}
+
+function goWriteStep(n){
+  if(n===2 && !writeState.typeId){ toast('Please select a letter type first','err'); return; }
+  [1,2,3,4].forEach(i=>{
+    document.getElementById('ws'+i).classList.toggle('hidden',i!==n);
+    const p=document.getElementById('sp'+i);
+    p.classList.remove('active','done');
+    if(i===n) p.classList.add('active');
+    else if(i<n) p.classList.add('done');
+  });
+  writeState.step=n;
+  if(n===2) buildFormFields();
+  if(n===4){ document.getElementById('draftArea').textContent=''; document.getElementById('draftArea').classList.add('empty'); document.getElementById('btnDownload').disabled=true; }
+  document.getElementById('mainPanel').scrollTop=0;
+}
+
+function buildFormFields(){
+  const typeId = writeState.typeId;
+  const fields = LETTER_FIELDS[typeId] || DEFAULT_FIELDS;
+  document.getElementById('ws2TypeTitle').textContent = '📝 ' + writeState.typeName;
+  const container = document.getElementById('ws2Fields');
+  container.innerHTML='';
+  fields.forEach(f=>{
+    const div = document.createElement('div');
+    div.className='fg';
+    let input='';
+    if(f.type==='area'){
+      input=`<textarea id="f_${f.id}" placeholder="${f.ph||''}">${writeState.fields[f.id]||''}</textarea>`;
+    } else if(f.type==='select'){
+      const opts=(f.opts||[]).map(o=>`<option${writeState.fields[f.id]===o?' selected':''}>${o}</option>`).join('');
+      input=`<select id="f_${f.id}"><option value="">— Select —</option>${opts}</select>`;
+    } else if(f.type==='date'){
+      input=`<input type="date" id="f_${f.id}" value="${writeState.fields[f.id]||''}">`;
+    } else {
+      input=`<input type="text" id="f_${f.id}" placeholder="${f.ph||''}" value="${writeState.fields[f.id]||''}">`;
+    }
+    div.innerHTML=`<label>${f.label}</label>${input}`;
+    container.appendChild(div);
+  });
+}
+
+function collectFormFields(){
+  const typeId = writeState.typeId;
+  const fields = LETTER_FIELDS[typeId] || DEFAULT_FIELDS;
+  const data={};
+  fields.forEach(f=>{ const el=document.getElementById('f_'+f.id); if(el) data[f.id]={label:f.label,value:el.value.trim()}; });
+  return data;
+}
+
+// ===== AI LETTER GENERATION =====
+async function generateLetter(){
+  if(!cfg.geminiKey && !cfg.mistralKey){ toast('No API key configured. Go to Settings → API Keys','err'); return; }
+  const fields = collectFormFields();
+  writeState.fields = Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,v.value]));
+  writeState.ocr = document.getElementById('ws3OCR').value.trim();
+  const extra = document.getElementById('ws2Extra').value.trim();
+
+  const fieldLines = Object.entries(fields)
+    .filter(([,v])=>v.value)
+    .map(([,v])=>`${v.label}: ${v.value}`)
+    .join('\n');
+
+  const today = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  const userPrompt = `Draft a formal government letter with the following details:
+
+LETTER TYPE: ${writeState.typeName}
+DATE: ${today}
+FILE PREFIX: ${cfg.prefix||'C.No.'}
+OFFICE: ${cfg.officeName||'[Office Name]'}
+ORGANISATION: ${cfg.ministry||''}
+OFFICE ADDRESS: ${cfg.address||''}
+SIGNING OFFICER: ${cfg.myName||'[Name]'}, ${cfg.myDesig||'[Designation]'}
+
+DETAILS:
+${fieldLines || 'See reference document below'}
+${extra?'\nADDITIONAL INSTRUCTIONS:\n'+extra:''}
+${writeState.ocr?'\n--- REFERENCE DOCUMENT / INCOMING LETTER TEXT ---\n'+writeState.ocr+'\n---END---':''}
+
+FORMAT REQUIREMENTS:
+- Start with the file number line and date (right-aligned concept)
+- Then "To," with recipient details (use details from the fields above or leave as [Recipient Name/Designation])
+- Then "Subject:" line
+- Then "Sir/Madam,"
+- Body paragraphs (numbered if more than 2 paragraphs)
+- Closing: "Yours faithfully,"
+- Then officer name and designation
+- Do NOT add any explanatory notes — output only the letter itself`;
+
+  const sysPrompt = SYSTEM_PROMPTS[cfg.posting] || SYSTEM_PROMPTS.admin;
+
+  setBtnLoading('btnGenerate','genSpin','genBtnTxt',true,'Generating…');
+  document.getElementById('draftArea').classList.remove('empty');
+  document.getElementById('draftArea').textContent='Generating letter with AI…';
+
+  try{
+    let result='';
+    if((cfg.aiModel.startsWith('gemini') || !cfg.mistralKey) && cfg.geminiKey){
+      result = await callGemini(sysPrompt+'\n\n'+userPrompt);
+    } else if(cfg.mistralKey){
+      result = await callMistral(sysPrompt, userPrompt);
+    } else {
+      throw new Error('No API key available');
+    }
+    writeState.draft = result;
+    document.getElementById('draftArea').textContent = result;
+    document.getElementById('draftArea').classList.remove('empty');
+    document.getElementById('btnDownload').disabled=false;
+    toast('Letter generated!','ok');
+  } catch(e){
+    document.getElementById('draftArea').textContent='';
+    document.getElementById('draftArea').classList.add('empty');
+    toast('Error: '+e.message,'err');
+  }
+  setBtnLoading('btnGenerate','genSpin','genBtnTxt',false,'✨ Regenerate');
+}
+
+async function callGemini(prompt){
+  const model = cfg.aiModel==='gemini-pro'?'gemini-1.5-pro':'gemini-1.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cfg.geminiKey}`;
+  const res = await fetch(url,{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{temperature:0.4,maxOutputTokens:2048} })
+  });
+  if(!res.ok){ const e=await res.json(); throw new Error(e.error?.message||'Gemini API error'); }
+  const d = await res.json();
+  return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+async function callMistral(system, user){
+  const model = cfg.aiModel==='mistral-large'?'mistral-large-latest':'mistral-small-latest';
+  const res = await fetch('https://api.mistral.ai/v1/chat/completions',{
+    method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg.mistralKey},
+    body: JSON.stringify({ model, messages:[{role:'system',content:system},{role:'user',content:user}], temperature:0.4, max_tokens:2048 })
+  });
+  if(!res.ok){ const e=await res.json(); throw new Error(e.message||'Mistral API error'); }
+  const d = await res.json();
+  return d.choices?.[0]?.message?.content || '';
+}
+
+// ===== WORD (.docx) DOWNLOAD =====
+async function downloadDocx(){
+  const text = document.getElementById('draftArea').innerText.trim();
+  if(!text){ toast('No letter to download','err'); return; }
+  writeState.draft = text;
+  await generateDocxFile(text, writeState.typeName);
+}
+
+async function downloadDocxFromHistory(){
+  const text = document.getElementById('vlContent').innerText.trim();
+  const title = document.getElementById('vlTitle').textContent;
+  await generateDocxFile(text, title);
+}
+
+async function generateDocxFile(text, title){
+  try{
+    const { Document, Packer, Paragraph, TextRun, AlignmentType, PageBreak } = window.docx;
+    const lines = text.split('\n');
+    const paragraphs = lines.map(line=>{
+      if(!line.trim()) return new Paragraph({spacing:{after:80}});
+      return new Paragraph({
+        children:[new TextRun({text:line, font:'Times New Roman', size:24})],
+        spacing:{after:120},
+        alignment: AlignmentType.LEFT
+      });
+    });
+    const doc = new Document({ sections:[{
+      properties:{ page:{ margin:{ top:1440, right:1440, bottom:1440, left:1440 } } },
+      children: paragraphs
+    }] });
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = (title||'letter').replace(/[^a-z0-9]/gi,'_').toLowerCase();
+    a.href=url; a.download=safeName+'_'+Date.now()+'.docx'; a.click();
+    URL.revokeObjectURL(url);
+    toast('Word file downloaded!','ok');
+  } catch(e){
+    toast('Download error: '+e.message,'err');
+  }
+}
+
+function saveLetter(){
+  const text = document.getElementById('draftArea').innerText.trim();
+  if(!text){ toast('Nothing to save','err'); return; }
+  const entry = {
+    id: Date.now().toString(),
+    date: new Date().toLocaleDateString('en-IN'),
+    posting: cfg.posting,
+    typeId: writeState.typeId,
+    typeName: writeState.typeName,
+    text: text
+  };
+  cfg.history.unshift(entry);
+  if(cfg.history.length>50) cfg.history=cfg.history.slice(0,50);
+  saveConfig();
+  toast('Letter saved to History','ok');
+}
+
+function copyDraft(){
+  const text = document.getElementById('draftArea').innerText;
+  if(!text||text.includes('appear here')){ toast('Nothing to copy','err'); return; }
+  navigator.clipboard.writeText(text).then(()=>toast('Copied!','ok')).catch(()=>toast('Copy failed','err'));
+}
+
+// ===== OCR =====
+let ocrFileData = null;
+let ocrFileMime = null;
+
+function handleFileSelect(e){
+  const file = e.target.files[0];
+  if(file) loadFile(file);
+}
+
+function handleFileDrop(e){
+  e.preventDefault();
+  document.getElementById('uploadArea').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file) loadFile(file);
+}
+
+function loadFile(file){
+  ocrFileMime = file.type || 'image/jpeg';
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    const b64 = ev.target.result.split(',')[1];
+    ocrFileData = b64;
+    const preview = document.getElementById('ocrPreview');
+    if(file.type.startsWith('image/')){
+      preview.src = ev.target.result;
+      preview.style.display='block';
+    } else {
+      preview.src='';
+      preview.style.display='none';
+    }
+    document.getElementById('ocrPreviewWrap').classList.remove('hidden');
+    document.getElementById('ocrResultWrap').classList.add('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runOCR(){
+  if(!ocrFileData){ toast('No file loaded','err'); return; }
+  if(!cfg.geminiKey){ toast('Gemini API key required for OCR','err'); return; }
+  setBtnLoading('btnExtract','ocrSpin','ocrBtnTxt',true,'Extracting…');
+  try{
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${cfg.geminiKey}`;
+    const res=await fetch(url,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ contents:[{ parts:[
+        {text:'Extract ALL text from this document image exactly as it appears. Preserve line breaks, paragraph structure, and formatting. If there are tables, preserve them as plain text. Output only the extracted text — no commentary.'},
+        {inline_data:{mime_type:ocrFileMime,data:ocrFileData}}
+      ]}]})
+    });
+    if(!res.ok){ const e=await res.json(); throw new Error(e.error?.message||'OCR failed'); }
+    const d=await res.json();
+    const text=d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    document.getElementById('ocrResult').textContent=text;
+    document.getElementById('ocrResultWrap').classList.remove('hidden');
+    toast('Text extracted!','ok');
+  } catch(e){ toast('OCR error: '+e.message,'err'); }
+  setBtnLoading('btnExtract','ocrSpin','ocrBtnTxt',false,'🔍 Extract Again');
+}
+
+function copyOCRToWrite(){
+  const text = document.getElementById('ocrResult').textContent;
+  document.getElementById('ws3OCR').value = text;
+  showSection('write');
+  goWriteStep(3);
+}
+
+// ===== HISTORY =====
+function renderHistory(){
+  const list = document.getElementById('historyList');
+  if(!cfg.history||!cfg.history.length){
+    list.innerHTML='<div class="empty-state"><div class="es-icon">📭</div><p>No saved letters yet.</p></div>';
+    return;
+  }
+  list.innerHTML='';
+  cfg.history.forEach(item=>{
+    const p = POSTINGS[item.posting]||POSTINGS.admin;
+    const div = document.createElement('div');
+    div.className='letter-item';
+    div.innerHTML=`<div class="li-icon">${p.icon}</div>
+      <div class="li-info">
+        <div class="li-title">${item.typeName||'Letter'}</div>
+        <div class="li-meta">${p.name} · ${item.date}</div>
+      </div>
+      <div class="li-action">›</div>`;
+    div.onclick=()=>openLetterView(item);
+    list.appendChild(div);
+  });
+}
+
+function renderRecent(){
+  const list = document.getElementById('recentList');
+  const recent = (cfg.history||[]).slice(0,5);
+  if(!recent.length){
+    list.innerHTML='<div class="empty-state"><div class="es-icon">📭</div><p>No letters yet.<br>Tap "New Letter" to start.</p></div>';
+    return;
+  }
+  list.innerHTML='';
+  recent.forEach(item=>{
+    const p=POSTINGS[item.posting]||POSTINGS.admin;
+    const div=document.createElement('div');
+    div.className='letter-item';
+    div.innerHTML=`<div class="li-icon">${p.icon}</div>
+      <div class="li-info">
+        <div class="li-title">${item.typeName}</div>
+        <div class="li-meta">${p.name} · ${item.date}</div>
+      </div>
+      <div class="li-action">›</div>`;
+    div.onclick=()=>openLetterView(item);
+    list.appendChild(div);
+  });
+}
+
+function openLetterView(item){
+  historyViewId = item.id;
+  document.getElementById('vlTitle').textContent = item.typeName||'Letter';
+  document.getElementById('vlContent').textContent = item.text;
+  openModal('viewLetterModal');
+}
+
+function deleteFromHistory(){
+  if(!historyViewId) return;
+  cfg.history = cfg.history.filter(h=>h.id!==historyViewId);
+  saveConfig();
+  closeModal('viewLetterModal');
+  renderHistory();
+  toast('Deleted','ok');
+}
+
+function clearHistory(){
+  if(!confirm('Delete all saved letters? This cannot be undone.')) return;
+  cfg.history=[];
+  saveConfig();
+  toast('History cleared','ok');
+}
+
+// ===== SETTINGS MODALS =====
+function openModal(id){
+  const m=document.getElementById(id);
+  m.classList.remove('hidden');
+  // Pre-fill modals
+  if(id==='apiModal'){
+    document.getElementById('m_gemini').value=cfg.geminiKey||'';
+    document.getElementById('m_mistral').value=cfg.mistralKey||'';
+  }
+  if(id==='officeModal'){
+    document.getElementById('m_office').value=cfg.officeName||'';
+    document.getElementById('m_ministry').value=cfg.ministry||'';
+    document.getElementById('m_address').value=cfg.address||'';
+    document.getElementById('m_name').value=cfg.myName||'';
+    document.getElementById('m_desig').value=cfg.myDesig||'';
+    document.getElementById('m_prefix').value=cfg.prefix||'C.No.';
+  }
+  if(id==='postingModal') buildModalPostingGrid();
+  if(id==='aiModelModal') buildModelList();
+}
+
+function closeModal(id){ document.getElementById(id).classList.add('hidden'); }
+
+// Close modal on overlay click
+document.querySelectorAll('.overlay').forEach(o=>{
+  o.addEventListener('click',e=>{ if(e.target===o) o.classList.add('hidden'); });
+});
+
+function saveAPIKeys(){
+  const g=document.getElementById('m_gemini').value.trim();
+  const m=document.getElementById('m_mistral').value.trim();
+  if(!g&&!m){ toast('Enter at least one API key','err'); return; }
+  cfg.geminiKey=g; cfg.mistralKey=m;
+  saveConfig(); updateSettingsUI();
+  closeModal('apiModal'); toast('API keys saved','ok');
+}
+
+function saveOfficeInfo(){
+  cfg.officeName=document.getElementById('m_office').value.trim();
+  cfg.ministry=document.getElementById('m_ministry').value.trim();
+  cfg.address=document.getElementById('m_address').value.trim();
+  cfg.myName=document.getElementById('m_name').value.trim();
+  cfg.myDesig=document.getElementById('m_desig').value.trim();
+  cfg.prefix=document.getElementById('m_prefix').value.trim()||'C.No.';
+  saveConfig(); updateSettingsUI();
+  closeModal('officeModal'); toast('Office info saved','ok');
+}
+
+function buildModalPostingGrid(){
+  const grid=document.getElementById('modalPostingGrid');
+  grid.innerHTML='';
+  Object.entries(POSTINGS).forEach(([key,p])=>{
+    const d=document.createElement('div');
+    d.className='pcard'+(cfg.posting===key?' sel':'');
+    d.innerHTML=`<div class="pc-icon">${p.icon}</div><div class="pc-name">${p.name}</div><div class="pc-desc">${p.desc}</div>`;
+    d.onclick=()=>{
+      cfg.posting=key; saveConfig();
+      grid.querySelectorAll('.pcard').forEach(c=>c.classList.remove('sel')); d.classList.add('sel');
+      updatePostingUI();
+    };
+    grid.appendChild(d);
+  });
+}
+
+const AI_MODELS=[
+  {id:'gemini-flash', name:'Gemini 1.5 Flash', desc:'Free · Fast · Best for most letters', badge:'FREE', req:'gemini'},
+  {id:'gemini-pro',   name:'Gemini 1.5 Pro',   desc:'Free · More detailed · Better for complex orders', badge:'FREE', req:'gemini'},
+  {id:'mistral-small',name:'Mistral Small',     desc:'Free tier · Backup option', badge:'FREE', req:'mistral'},
+  {id:'mistral-large',name:'Mistral Large',     desc:'Paid · High quality writing', badge:'PAID', req:'mistral'}
+];
+
+function buildModelList(){
+  const div=document.getElementById('modelList');
+  div.innerHTML='';
+  AI_MODELS.forEach(m=>{
+    const hasKey = m.req==='gemini'?!!cfg.geminiKey:!!cfg.mistralKey;
+    const d=document.createElement('div');
+    d.className='si'+(cfg.aiModel===m.id?' sel':'');
+    d.style.cssText=cfg.aiModel===m.id?'border-color:var(--blue)':'';
+    d.innerHTML=`<div class="si-icon">${cfg.aiModel===m.id?'✅':'⬜'}</div>
+      <div class="si-info"><div class="si-title">${m.name} <span class="badge ${m.badge==='FREE'?'badge-green':'badge-yellow'}">${m.badge}</span></div>
+      <div class="si-sub">${m.desc}${!hasKey?' · ⚠️ No key configured':''}</div></div>`;
+    d.onclick=()=>{ cfg.aiModel=m.id; buildModelList(); };
+    div.appendChild(d);
+  });
+}
+
+function saveModel(){ saveConfig(); updateSettingsUI(); closeModal('aiModelModal'); toast('Model updated','ok'); }
+
+// ===== EXPORT / IMPORT =====
+function exportSettings(){
+  const exp = {
+    geminiKey:cfg.geminiKey, mistralKey:cfg.mistralKey, aiModel:cfg.aiModel,
+    officeName:cfg.officeName, ministry:cfg.ministry, address:cfg.address,
+    myName:cfg.myName, myDesig:cfg.myDesig, prefix:cfg.prefix, posting:cfg.posting
+  };
+  const code = btoa(JSON.stringify(exp));
+  navigator.clipboard.writeText(code)
+    .then(()=>toast('Settings code copied to clipboard! Paste on other device.','ok'))
+    .catch(()=>{ prompt('Copy this settings code:', code); });
+}
+
+function importSettings(){
+  const code=document.getElementById('importCode').value.trim();
+  if(!code){ toast('Paste a settings code first','err'); return; }
+  try{
+    const data=JSON.parse(atob(code));
+    Object.assign(cfg, data);
+    cfg.ready=true;
+    saveConfig(); updateSettingsUI(); updatePostingUI();
+    closeModal('importModal');
+    toast('Settings imported successfully!','ok');
+  } catch(e){ toast('Invalid settings code','err'); }
+}
+
+// ===== UTILS =====
+function toast(msg, type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(type?' '+type:'');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function setBtnLoading(btnId, spinId, txtId, loading, loadTxt){
+  const btn=document.getElementById(btnId);
+  const sp=document.getElementById(spinId);
+  const tx=document.getElementById(txtId);
+  if(loading){ btn.disabled=true; sp.style.display='inline-block'; if(tx) tx.textContent=loadTxt; }
+  else { btn.disabled=false; sp.style.display='none'; if(tx) tx.textContent=loadTxt; }
+}
+
+// Expose posting change to inline click on chip
+window.openModal = openModal;
+window.closeModal = closeModal;
+</script>
+</body>
+</html>
