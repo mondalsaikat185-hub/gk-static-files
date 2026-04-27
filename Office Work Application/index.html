@@ -2600,13 +2600,20 @@ async function sendTelegramOtp(otp, label) {
 
 function openForgotAppPassword() {
   if(!State.tgBotToken || !State.tgChatId) {
-    if(confirm('Telegram bot is not configured.\n\nWould you like to remove the app password and enter the app directly?\n\n(Your Google account is already verified)')) {
-      State.appPasswordHash = '';
-      saveUserData();
-      document.getElementById('passLockScreen').classList.add('hidden');
-      enterApp();
-      toast('Password removed. Set a new one in Settings.', 'success');
-    }
+    // No Telegram — show in-app recovery options directly on lock screen
+    const lockCard = document.querySelector('.lock-card');
+    if(!lockCard) return;
+    // Hide the password input section
+    const existingRecovery = document.getElementById('recoverySection');
+    if(existingRecovery) { existingRecovery.remove(); return; }
+    const div = document.createElement('div');
+    div.id = 'recoverySection';
+    div.style.cssText = 'margin-top:18px;padding:16px;background:rgba(255,255,255,.06);border:1px solid rgba(212,164,76,.3);border-radius:12px;text-align:center;';
+    div.innerHTML = '<div style="font-size:14px;font-weight:700;color:#e8b860;margin-bottom:10px;">Password Recovery</div>'
+      + '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px;line-height:1.6;">Telegram is not configured. Since your Google account is already verified, you can remove the password and enter the app.</div>'
+      + '<button onclick="emergencyUnlock()" style="width:100%;padding:12px;background:linear-gradient(135deg,#4caf50,#66bb6a);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">Remove Password & Enter App</button>'
+      + '<button onclick="document.getElementById(\'recoverySection\').remove()" style="width:100%;padding:8px;background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:12px;cursor:pointer;">Cancel</button>';
+    lockCard.appendChild(div);
     return;
   }
   showModal('Forgot App Password', `
@@ -2626,6 +2633,15 @@ function openForgotAppPassword() {
     </div>
   `, `<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>`);
 }
+async function emergencyUnlock() {
+  // Emergency: remove password when Telegram not configured
+  State.appPasswordHash = '';
+  await saveUserData();
+  document.getElementById('passLockScreen').classList.add('hidden');
+  enterApp();
+  toast('Password removed successfully. Set a new one in Settings > App Password Lock.', 'success');
+}
+
 async function requestForgotOtp(btn) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner spinner-sm"></span> Sending...';
@@ -2735,36 +2751,39 @@ if(window.innerWidth >= 900) {
   document.head.appendChild(style);
 }
 
-// === Service Worker Registration with aggressive auto-update ===
+// === Service Worker Registration with forced update ===
 if('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').then(reg => {
-    // Check for updates immediately on load, then every 30 seconds
+  // Force browser to check for new SW every time (cache-bust)
+  navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).then(reg => {
+    // Check immediately
     reg.update().catch(()=>{});
-    setInterval(() => reg.update().catch(()=>{}), 30000);
+    // Then every 20 seconds
+    setInterval(() => reg.update().catch(()=>{}), 20000);
     reg.addEventListener('updatefound', () => {
       const nw = reg.installing;
       if(!nw) return;
       nw.addEventListener('statechange', () => {
         if(nw.state === 'installed') {
-          if(navigator.serviceWorker.controller) {
-            // Force activate immediately — don't wait for user
-            nw.postMessage({type:'SKIP_WAITING'});
-          } else {
-            // First install — just reload to activate
-            location.reload();
-          }
+          // Force activate — skip waiting
+          nw.postMessage({type:'SKIP_WAITING'});
         }
       });
     });
   }).catch(()=>{});
   navigator.serviceWorker.addEventListener('message', e => {
     if(e.data?.type === 'SW_UPDATED') {
-      location.reload();
+      // New SW activated — reload to get fresh content
+      if(!window._swReloading) {
+        window._swReloading = true;
+        location.reload();
+      }
     }
   });
-  // Also listen for controllerchange — new SW took over
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    location.reload();
+    if(!window._swReloading) {
+      window._swReloading = true;
+      location.reload();
+    }
   });
 }
 function showUpdateBanner() {
