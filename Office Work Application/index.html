@@ -436,6 +436,7 @@ select option{background:var(--card);color:var(--text);}
       <div class="setup-nav">
         <button class="btn btn-primary btn-full" onclick="setupNext(1)">Continue →</button>
       </div>
+      <button class="btn btn-ghost btn-full mt-2" onclick="skipSetup()" style="font-size:12px;color:var(--muted);">Skip for now — I'll set up later in Settings</button>
     </div>
     <div id="setupStep2" class="hidden">
       <div class="setup-card">
@@ -821,7 +822,7 @@ async function bootApp() {
     const lt = document.querySelector('.load-text');
     if(lt) lt.innerHTML = '<span class="spinner"></span> &nbsp; Restoring your data from cloud…';
     await loadUserData();
-    if(!State.profile || !State.workspaces.length || !State.apiKeys.length) {
+    if(!State.profile || !State.workspaces.length) {
       // Truly new user OR data not yet synced. Show setup with clear explanation.
       $('setupScreen').classList.remove('hidden');
       showLoad(false);
@@ -934,7 +935,7 @@ async function restoreFromCloud() {
   toast('Fetching from cloud…');
   try {
     await loadUserData();
-    if(State.profile && State.workspaces.length && State.apiKeys.length) {
+    if(State.profile && State.workspaces.length) {
       // Restore complete — go to app
       State.activeWorkspaceId = State.workspaces[0]?.id;
       const ws = currentWorkspace();
@@ -977,6 +978,35 @@ function setupNext(step) {
       gotoStep3();
     }
   }
+}
+function skipSetup() {
+  // Allow user to enter app without completing setup — they can configure in Settings
+  if(!State.workspaces.length) {
+    // Create a minimal default workspace so app doesn't crash
+    State.workspaces = [{
+      id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36),
+      name: 'My Office',
+      officeEn: '', officeHi: '', address: '', phone: '', email: '',
+      logoBase64: '',
+      directories: [],
+      signatures: [{
+        id: Date.now().toString(36) + 'sig',
+        name: State.user.displayName || 'Officer',
+        designation: 'Officer',
+        section: '',
+        active: true,
+      }],
+    }];
+    State.activeWorkspaceId = State.workspaces[0].id;
+    State.activeSignatureId = State.workspaces[0].signatures[0].id;
+  }
+  if(!State.profile || !State.profile.name) {
+    State.profile = { name: State.user.displayName || 'Officer' };
+  }
+  document.getElementById('setupScreen').classList.add('hidden');
+  saveUserData();
+  enterApp();
+  toast('Setup skipped — configure API key in Settings → API Keys', 'warn');
 }
 function gotoStep3() {
   $('setupStep2').classList.add('hidden');
@@ -2655,24 +2685,36 @@ renderSettings = function() {
   if(document.getElementById('tgChatId')) document.getElementById('tgChatId').value = State.tgChatId || '';
 };
 
-// === Service Worker Registration with auto-update ===
+// === Service Worker Registration with aggressive auto-update ===
 if('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').then(reg => {
-    setInterval(() => reg.update().catch(()=>{}), 60000);
+    // Check for updates immediately on load, then every 30 seconds
+    reg.update().catch(()=>{});
+    setInterval(() => reg.update().catch(()=>{}), 30000);
     reg.addEventListener('updatefound', () => {
       const nw = reg.installing;
       if(!nw) return;
       nw.addEventListener('statechange', () => {
-        if(nw.state === 'installed' && navigator.serviceWorker.controller) {
-          showUpdateBanner();
+        if(nw.state === 'installed') {
+          if(navigator.serviceWorker.controller) {
+            // Force activate immediately — don't wait for user
+            nw.postMessage({type:'SKIP_WAITING'});
+          } else {
+            // First install — just reload to activate
+            location.reload();
+          }
         }
       });
     });
   }).catch(()=>{});
   navigator.serviceWorker.addEventListener('message', e => {
     if(e.data?.type === 'SW_UPDATED') {
-      if(!State.letterPendingSave) location.reload();
+      location.reload();
     }
+  });
+  // Also listen for controllerchange — new SW took over
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    location.reload();
   });
 }
 function showUpdateBanner() {
