@@ -2601,39 +2601,40 @@ async function sendTelegramOtp(otp, label) {
 }
 
 function openForgotAppPassword() {
+  const lockCard = document.querySelector('.lock-card');
+  if(!lockCard) return;
+  // Toggle — if recovery section already showing, remove it
+  const existingRecovery = document.getElementById('recoverySection');
+  if(existingRecovery) { existingRecovery.remove(); return; }
+  const div = document.createElement('div');
+  div.id = 'recoverySection';
+  div.style.cssText = 'margin-top:18px;padding:16px;background:rgba(255,255,255,.06);border:1px solid rgba(212,164,76,.3);border-radius:12px;text-align:center;';
+
   if(!State.tgBotToken || !State.tgChatId) {
-    // No Telegram — show in-app recovery options directly on lock screen
-    const lockCard = document.querySelector('.lock-card');
-    if(!lockCard) return;
-    // Hide the password input section
-    const existingRecovery = document.getElementById('recoverySection');
-    if(existingRecovery) { existingRecovery.remove(); return; }
-    const div = document.createElement('div');
-    div.id = 'recoverySection';
-    div.style.cssText = 'margin-top:18px;padding:16px;background:rgba(255,255,255,.06);border:1px solid rgba(212,164,76,.3);border-radius:12px;text-align:center;';
+    // No Telegram — show emergency unlock
     div.innerHTML = '<div style="font-size:14px;font-weight:700;color:#e8b860;margin-bottom:10px;">Password Recovery</div>'
       + '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px;line-height:1.6;">Telegram is not configured. Since your Google account is already verified, you can remove the password and enter the app.</div>'
       + '<button onclick="emergencyUnlock()" style="width:100%;padding:12px;background:linear-gradient(135deg,#4caf50,#66bb6a);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">Remove Password & Enter App</button>'
       + '<button onclick="document.getElementById(\'recoverySection\').remove()" style="width:100%;padding:8px;background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:12px;cursor:pointer;">Cancel</button>';
-    lockCard.appendChild(div);
-    return;
+  } else {
+    // Telegram configured — show OTP flow INSIDE lock card (not in modal)
+    div.innerHTML = '<div style="font-size:14px;font-weight:700;color:#e8b860;margin-bottom:10px;">Password Recovery via Telegram</div>'
+      + '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:12px;line-height:1.6;">An OTP will be sent to your Telegram. Enter it below to set a new password.</div>'
+      + '<button onclick="requestForgotOtp(this)" style="width:100%;padding:12px;background:linear-gradient(135deg,#5b8ff9,#3d6dd8);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px;">📤 Send OTP to Telegram</button>'
+      + '<div id="forgotOtpSection" class="hidden">'
+      + '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:8px;">📱 OTP Sent! Check your Telegram.</div>'
+      + '<input type="text" id="forgotOtp" maxlength="6" placeholder="Enter 6-digit OTP" style="width:100%;padding:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;text-align:center;font-size:18px;letter-spacing:6px;margin-bottom:8px;" oninput="this.value=this.value.replace(/\\D/g,\'\')">'
+      + '<input type="password" id="forgotNew" placeholder="New Password (min 6 chars)" style="width:100%;padding:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;margin-bottom:8px;">'
+      + '<input type="password" id="forgotCnf" placeholder="Confirm Password" style="width:100%;padding:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;margin-bottom:8px;">'
+      + '<div id="forgotMsg" style="font-size:12px;color:#ff6b6b;min-height:16px;margin-bottom:8px;"></div>'
+      + '<button onclick="resetAppPasswordWithOtp()" style="width:100%;padding:12px;background:linear-gradient(135deg,#4caf50,#66bb6a);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;">Reset Password</button>'
+      + '</div>'
+      + '<div style="margin-top:12px;border-top:1px solid rgba(255,255,255,.1);padding-top:12px;">'
+      + '<button onclick="emergencyUnlock()" style="width:100%;padding:10px;background:rgba(255,165,0,.15);color:#ffa500;border:1px solid rgba(255,165,0,.3);border-radius:8px;font-size:12px;cursor:pointer;margin-bottom:8px;">\u26a0\ufe0f Remove Password & Enter App</button>'
+      + '</div>'
+      + '<button onclick="document.getElementById(\'recoverySection\').remove()" style="width:100%;padding:8px;background:transparent;color:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.15);border-radius:8px;font-size:12px;cursor:pointer;">Cancel</button>';
   }
-  showModal('Forgot App Password', `
-    <div class="info-box">An OTP will be sent to your Telegram. Enter it below to set a new password.</div>
-    <button class="btn btn-primary btn-full" onclick="requestForgotOtp(this)">📤 Send OTP to Telegram</button>
-    <div id="forgotOtpSection" class="hidden mt-3">
-      <div class="tg-waiting">
-        <div class="tg-icon">📱</div>
-        <div class="tg-title">OTP Sent</div>
-        <div class="tg-sub">Check your Telegram and enter the 6-digit OTP below.</div>
-      </div>
-      <div class="fg"><label>OTP</label><input type="text" id="forgotOtp" class="otp-input" maxlength="6" placeholder="------" oninput="this.value=this.value.replace(/\\D/g,'')"></div>
-      <div class="fg"><label>New Password</label><input type="password" id="forgotNew" placeholder="Min 6 characters"></div>
-      <div class="fg"><label>Confirm Password</label><input type="password" id="forgotCnf" placeholder="Re-enter"></div>
-      <div id="forgotMsg" style="font-size:12px;color:var(--red);min-height:16px;"></div>
-      <button class="btn btn-success btn-full mt-2" onclick="resetAppPasswordWithOtp()">Reset Password</button>
-    </div>
-  `, `<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>`);
+  lockCard.appendChild(div);
 }
 async function emergencyUnlock() {
   // Emergency: remove password when Telegram not configured
