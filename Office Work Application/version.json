@@ -1,7 +1,7 @@
 {
-  "version": 4,
-  "uploaded_at": "2026-04-27T15:15:09",
-  "timestamp": 1777302909,
+  "version": 5,
+  "uploaded_at": "2026-04-27T15:53:40",
+  "timestamp": 1777305220,
   "folder": "Office Work Application",
-  "changes": "Layout fixes, skip-setup, aggressive cache update"
+  "changes": "Desktop UI polish, PWA install prompt, sidebar account"
 }
