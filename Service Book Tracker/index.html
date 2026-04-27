@@ -425,6 +425,25 @@ mark{background:#fff3a3;color:inherit;border-radius:2px;padding:0 1px}
   </div>
 </div>
 
+<!-- INSTALL APP MODAL -->
+<div class="modal-ov" id="installPromptModal" style="z-index: 10000;">
+  <div class="modal-card" style="width: 400px; max-width: 92%; text-align: center; padding-bottom: 20px;">
+    <div class="modal-hdr" style="justify-content: center; border-bottom: none; padding-top: 30px;">
+      <div class="login-emblem" style="margin-bottom: 0; box-shadow: 0 0 20px rgba(200,168,75,.4);">📚</div>
+    </div>
+    <div class="modal-body" style="padding: 10px 26px 20px;">
+      <h3 style="color: var(--navy); font-weight: 800; font-size: 1.3rem; margin-bottom: 8px;">Install App</h3>
+      <p style="color: var(--muted); font-size: 0.88rem; line-height: 1.5; margin-bottom: 24px;">
+        Install the Service Book Tracker on your device for a faster, offline-capable experience without needing to re-download anything.
+      </p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button class="btn-cancel" onclick="document.getElementById('installPromptModal').classList.remove('show')" style="flex: 1;">Not Now</button>
+        <button class="btn-save" id="btnInstallApp" style="flex: 1;">Install</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
@@ -440,6 +459,37 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+
+/* ── PWA INSTALL PROMPT ── */
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent the mini-infobar from appearing on mobile
+  e.preventDefault();
+  // Stash the event so it can be triggered later.
+  deferredPrompt = e;
+  // Wait a few seconds before showing the prompt to not interrupt the startup loader
+  setTimeout(() => {
+    document.getElementById('installPromptModal').classList.add('show');
+  }, 2500);
+});
+
+document.getElementById('btnInstallApp').addEventListener('click', async () => {
+  // Hide the custom install prompt
+  document.getElementById('installPromptModal').classList.remove('show');
+  if (deferredPrompt) {
+    // Show the install prompt
+    deferredPrompt.prompt();
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to the install prompt: ${outcome}`);
+    // We've used the prompt, and can't use it again, throw it away
+    deferredPrompt = null;
+  }
+});
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  document.getElementById('installPromptModal').classList.remove('show');
+});
 
 /* ── APP INITIALIZATION LOGIC WITH BEAUTIFUL LOADER ── */
 window.addEventListener('load', () => {
