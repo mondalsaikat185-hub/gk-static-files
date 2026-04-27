@@ -182,6 +182,7 @@ select option{background:var(--card);color:var(--text);}
 .tb-btn:hover{background:var(--card2);color:var(--text);}
 #chipsBar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
 #chipsBar::-webkit-scrollbar{display:none;}
+@media(min-width:900px){#chipsBar{flex-wrap:wrap;overflow-x:visible;overflow-y:visible;padding:10px 16px;gap:8px;min-height:auto;border-bottom:none;}}
 .chip{display:inline-flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);padding:6px 11px;border-radius:14px;font-size:11.5px;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;color:var(--text2);}
 .chip:hover{border-color:var(--primary);color:var(--text);}
 .chip-icon{font-size:12px;}
