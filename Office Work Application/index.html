@@ -55,8 +55,8 @@ body{
 /* DESKTOP LAYOUT — wide-screen optimized */
 @media(min-width:900px){
   #app{max-width:100%;margin:0;display:grid;grid-template-columns:240px 1fr;grid-template-rows:auto auto 1fr;grid-template-areas:"sidebar topbar" "sidebar chips" "sidebar content";min-height:100vh;height:100vh;}
-  #topBar{grid-area:topbar;border-left:1px solid var(--border);}
-  #chipsBar{grid-area:chips;border-left:1px solid var(--border);}
+  #topBar{grid-area:topbar;border-left:1px solid var(--border);padding:10px 20px;}
+  #chipsBar{grid-area:chips;border-left:1px solid var(--border);flex-wrap:wrap;overflow-x:visible;padding:10px 16px;gap:8px;}
   #content{grid-area:content;border-left:1px solid var(--border);padding-bottom:30px;overflow-y:auto;}
   #bottomNav{grid-area:sidebar;position:sticky;top:0;left:auto;transform:none;width:240px;max-width:240px;height:100vh;flex-direction:column;align-items:stretch;padding:18px 12px;border-top:none;border-right:1px solid var(--border);gap:6px;}
   .nav-btn{flex-direction:row;justify-content:flex-start;padding:12px 14px;font-size:14px;gap:12px;border-radius:10px;}
@@ -78,12 +78,17 @@ body{
   /* Wider modals */
   .modal{max-width:680px;}
   /* Sidebar nav: add app name at top */
-  #bottomNav::before{content:"";display:block;height:48px;background:url('icon.jpeg') center/40px no-repeat,linear-gradient(135deg,rgba(91,143,249,.1),transparent);border-radius:10px;margin-bottom:8px;}
+  #bottomNav::before{content:"Office AI";display:flex;align-items:center;justify-content:center;height:52px;background:linear-gradient(135deg,rgba(91,143,249,.12),rgba(156,108,216,.08));border:1px solid rgba(91,143,249,.2);border-radius:12px;margin-bottom:12px;font-weight:700;font-size:15px;color:var(--primary);letter-spacing:.5px;}
+  #sidebarAccount{display:block;margin-top:auto;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;font-size:11px;color:var(--muted);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 }
 @media(min-width:1280px){
   #app{grid-template-columns:280px 1fr;}
   #bottomNav{width:280px;max-width:280px;}
   .panel{padding:32px 48px;max-width:1240px;}
+  .greet-name{font-size:22px;}
+  .stat-n{font-size:22px;}
+  .qa-icon{font-size:28px;}
+  .qa-title{font-size:15px;}
 }
 .hidden{display:none!important;}
 .flex{display:flex;}.flex-col{display:flex;flex-direction:column;}.flex-1{flex:1;}
@@ -223,6 +228,7 @@ select option{background:var(--card);color:var(--text);}
 .qa-sub{font-size:11px;color:var(--muted);margin-top:2px;}
 #bottomNav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;background:var(--bg2);border-top:1px solid var(--border);display:flex;padding:6px 4px calc(6px + var(--safe-bot));z-index:40;backdrop-filter:blur(20px);box-sizing:border-box;}
 @media(min-width:900px){#bottomNav{position:static;left:auto;transform:none;}}
+#sidebarAccount{display:none!important;}@media(min-width:900px){#sidebarAccount{display:block!important;}}
 .nav-btn{flex:1;background:transparent;border:none;padding:8px 4px;color:var(--muted);cursor:pointer;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit;font-size:10px;font-weight:500;border-radius:10px;}
 .nav-btn:hover{color:var(--text2);}
 .nav-btn.active{color:var(--primary);}
@@ -710,6 +716,7 @@ select option{background:var(--card);color:var(--text);}
     <button class="nav-btn" data-tab="files" onclick="switchTab('files')"><span class="nav-icon">📂</span><span>Files</span></button>
     <button class="nav-btn" data-tab="inbox" onclick="switchTab('inbox')"><span class="nav-icon">📥</span><span>Inbox</span></button>
     <button class="nav-btn" data-tab="settings" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span><span>Setup</span></button>
+    <div id="sidebarAccount" style="display:none;"></div>
   </nav>
 
   <button id="fab" onclick="switchTab('write')" title="Write New">+</button>
@@ -866,6 +873,9 @@ async function enterApp() {
   renderSettings();
   $('tbUserSub').textContent = State.user.email;
   $('accountEmail').textContent = State.user.email;
+  // Desktop sidebar account display
+  const sideAcc = $('sidebarAccount');
+  if(sideAcc) sideAcc.innerHTML = '<span style="color:var(--green);font-size:8px;">●</span> ' + (State.user.displayName || State.user.email);
   setMode('ai');
 }
 
@@ -2684,6 +2694,46 @@ renderSettings = function() {
   if(document.getElementById('tgBotToken')) document.getElementById('tgBotToken').value = State.tgBotToken || '';
   if(document.getElementById('tgChatId')) document.getElementById('tgChatId').value = State.tgChatId || '';
 };
+
+// === PWA Install Prompt ===
+let _deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+  showInstallBanner();
+});
+
+function showInstallBanner() {
+  if(document.getElementById('installBanner')) return;
+  const div = document.createElement('div');
+  div.id = 'installBanner';
+  div.style.cssText = 'position:fixed;bottom:calc(var(--nav-h) + var(--safe-bot) + 20px);left:50%;transform:translateX(-50%);background:linear-gradient(135deg,rgba(91,143,249,.95),rgba(156,108,216,.95));color:#fff;padding:14px 20px;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:80;display:flex;gap:12px;align-items:center;font-size:13px;font-weight:500;max-width:calc(100% - 30px);backdrop-filter:blur(10px);';
+  div.innerHTML = '<span style="font-size:22px;">📲</span><div style="flex:1;"><div style="font-weight:700;margin-bottom:2px;">Install Office AI</div><div style="font-size:11px;opacity:.85;">Desktop/mobile app — works offline too</div></div><button onclick="doInstall()" style="background:#fff;color:#5b8ff9;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;">Install</button><button onclick="this.parentElement.remove()" style="background:transparent;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;padding:4px;">✕</button>';
+  document.body.appendChild(div);
+}
+async function doInstall() {
+  if(!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  const result = await _deferredInstallPrompt.userChoice;
+  if(result.outcome === 'accepted') {
+    toast('App installing...', 'success');
+    const banner = document.getElementById('installBanner');
+    if(banner) banner.remove();
+  }
+  _deferredInstallPrompt = null;
+}
+window.addEventListener('appinstalled', () => {
+  toast('Office AI installed! Check your desktop/home screen.', 'success');
+  const banner = document.getElementById('installBanner');
+  if(banner) banner.remove();
+});
+
+// On desktop (>900px), adjust install banner position
+if(window.innerWidth >= 900) {
+  const style = document.createElement('style');
+  style.textContent = '#installBanner{bottom:20px!important;left:auto!important;right:20px!important;transform:none!important;max-width:380px!important;}';
+  document.head.appendChild(style);
+}
 
 // === Service Worker Registration with aggressive auto-update ===
 if('serviceWorker' in navigator) {
