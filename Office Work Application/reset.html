@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Office AI - Cache Reset</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0e1a;color:#e8eef7;font-family:system-ui,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
+.card{background:#141927;border:1px solid #2a3142;border-radius:16px;padding:40px;max-width:500px;width:100%;text-align:center}
+h1{font-size:24px;margin-bottom:12px;color:#5b8ff9}
+p{margin:12px 0;line-height:1.6;color:#a0aec0}
+.status{margin:20px 0;padding:16px;border-radius:12px;font-size:14px;line-height:1.8}
+.success{background:rgba(72,199,142,.15);border:1px solid rgba(72,199,142,.3);color:#48c78e}
+.error{background:rgba(255,99,71,.15);border:1px solid rgba(255,99,71,.3);color:#ff6347}
+.working{background:rgba(91,143,249,.15);border:1px solid rgba(91,143,249,.3);color:#5b8ff9}
+button{margin-top:20px;padding:14px 32px;background:#5b8ff9;color:#fff;border:none;border-radius:10px;font-size:16px;cursor:pointer;font-weight:600}
+button:hover{background:#4a7de8}
+.step{text-align:left;padding:4px 0}
+.step::before{content:"✓ ";color:#48c78e}
+</style>
+</head><body>
+<div class="card">
+<h1>Office AI Cache Reset</h1>
+<p>This page will remove ALL old cached data and service workers.</p>
+<div id="status" class="status working">Starting reset...</div>
+<button onclick="location.href='index.html'" id="goBtn" style="display:none">Open Office AI →</button>
+</div>
+<script>
+async function reset() {
+  const el = document.getElementById('status');
+  const btn = document.getElementById('goBtn');
+  let steps = [];
+  
+  try {
+    // Step 1: Unregister ALL service workers
+    if('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for(const reg of regs) {
+        await reg.unregister();
+        steps.push('Service Worker unregistered: ' + (reg.scope || 'unknown'));
+      }
+      if(regs.length === 0) steps.push('No service workers found (already clean)');
+    } else {
+      steps.push('Service Worker not supported in this browser');
+    }
+    
+    // Step 2: Delete ALL caches
+    if('caches' in window) {
+      const keys = await caches.keys();
+      for(const key of keys) {
+        await caches.delete(key);
+        steps.push('Cache deleted: ' + key);
+      }
+      if(keys.length === 0) steps.push('No caches found (already clean)');
+    }
+    
+    // Step 3: Clear sessionStorage and localStorage for this origin
+    try {
+      sessionStorage.clear();
+      steps.push('Session storage cleared');
+    } catch(e) {}
+    
+    // Don't clear localStorage as it may have user data we want to keep
+    steps.push('LocalStorage preserved (user data safe)');
+    
+    // Done!
+    el.className = 'status success';
+    el.innerHTML = '<strong>Reset complete!</strong><br><br>' + 
+      steps.map(s => '<div class="step">' + s + '</div>').join('') +
+      '<br>Click the button below to open Office AI with fresh code.';
+    btn.style.display = 'inline-block';
+    
+  } catch(err) {
+    el.className = 'status error';
+    el.innerHTML = 'Error: ' + err.message + '<br><br>' + steps.join('<br>');
+    btn.style.display = 'inline-block';
+    btn.textContent = 'Try opening Office AI anyway →';
+  }
+}
+
+reset();
+</script>
+</body></html>
