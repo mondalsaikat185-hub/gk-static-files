@@ -2792,4 +2792,29 @@ function showUpdateBanner() {
   div.style.cssText = 'position:fixed;top:calc(20px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);background:var(--gradient);color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 8px 24px var(--primary-glow);z-index:300;display:flex;gap:10px;align-items:center;font-size:13px;font-weight:600;cursor:pointer;';
   div.innerHTML = '✨ New version ready &nbsp;·&nbsp; <span style="text-decoration:underline;">Tap to update</span>';
   div.onclick = () => {
-    navigator.serviceWorker.getRegistration().then(r => r?.waiting?.postMessage({typ
+    navigator.serviceWorker.getRegistration().then(r => r?.waiting?.postMessage({type:'SKIP_WAITING'}));
+    setTimeout(() => location.reload(), 300);
+  };
+  document.body.appendChild(div);
+}
+async function clearAppCacheAndReload() {
+  if(!confirm('Clear app cache and reload? Your data is safe in cloud \u2014 only the app code refreshes.')) return;
+  try {
+    if('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    toast('Cache cleared. Reloading\u2026', 'success');
+    setTimeout(() => location.reload(true), 800);
+  } catch(e) {
+    toast('Clear failed: ' + e.message, 'error');
+  }
+}
+document.addEventListener('DOMContentLoaded', loadTheme);
+</script>
+</body>
+</html>
