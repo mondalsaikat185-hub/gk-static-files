@@ -21,40 +21,4 @@ self.addEventListener('message', e => {
 });
 
 self.addEventListener('fetch', e => {
-  if(e.request.method !== 'GET') return;
-  const url = new URL(e.request.url);
-  // Skip API calls — always live
-  if(url.hostname.includes('googleapis.com') ||
-     url.hostname.includes('mistral.ai') ||
-     url.hostname.includes('anthropic.com') ||
-     url.hostname.includes('firebaseio.com') ||
-     url.hostname.includes('firestore.googleapis.com') ||
-     url.hostname.includes('gstatic.com')) return;
-  if(url.origin !== self.location.origin) return;
-
-  // Network-first for HTML — so latest version always loads when online
-  const isHtml = e.request.mode === 'navigate' || e.request.destination === 'document' || url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname === '';
-  if(isHtml) {
-    e.respondWith(
-      fetch(e.request).then(res => {
-        if(res.status === 200) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => caches.match(e.request).then(c => c || new Response('Offline', {status: 503})))
-    );
-    return;
-  }
-
-  // Cache-first for static assets
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
-      if(res.status === 200) {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-      }
-      return res;
-    }).catch(() => cached))
-  );
-});
+  if(e.r
