@@ -1,7 +1,7 @@
-// AI Office Assistant — Service Worker v7
+// AI Office Assistant — Service Worker v8
 // STRATEGY: Network-first ALWAYS for HTML. Never serve stale HTML.
 // Cache only static assets (images, manifest) as fallback for offline.
-const CACHE = 'office-ai-v7';
+const CACHE = 'office-ai-v8';
 const STATIC_ASSETS = ['./icon.jpeg', './icon-192.png', './icon-512.png', './office_logo.png', './manifest.json'];
 
 self.addEventListener('install', e => {
