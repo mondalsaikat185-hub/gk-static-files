@@ -1,0 +1,31 @@
+{
+  "name": "AI Office Assistant",
+  "short_name": "OfficeAI",
+  "description": "AI-powered office letter & note sheet drafting for government officers",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0e1a",
+  "theme_color": "#1a2a5e",
+  "icons": [
+    {
+      "src": "icon.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": [
+    "productivity",
+    "utilities",
+    "business"
+  ],
+  "lang": "en-IN"
+}
