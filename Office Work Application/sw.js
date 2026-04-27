@@ -1,24 +1,25 @@
-// AI Office Assistant — Service Worker (Phase 1.1)
-// Network-first for HTML (so updates always reach user), cache-first for assets.
-const CACHE = 'office-ai-v5';
-const ASSETS = ['./manifest.json', './icon.jpeg', './office_logo.png'];
+// AI Office Assistant — Service Worker v6
+// STRATEGY: Network-first ALWAYS for HTML. Never serve stale HTML.
+// Cache only static assets (images, manifest) as fallback for offline.
+const CACHE = 'office-ai-v6';
+const STATIC_ASSETS = ['./icon.jpeg', './office_logo.png', './manifest.json'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {})));
+  // IMMEDIATELY activate — don't wait for old tabs to close
   self.skipWaiting();
-});
-
-self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-      .then(() => self.clients.matchAll().then(cs => cs.forEach(c => c.postMessage({type:'SW_UPDATED'}))))
+    caches.open(CACHE)
+      .then(c => c.addAll(STATIC_ASSETS).catch(() => {}))
   );
 });
 
-self.addEventListener('message', e => {
-  if(e.data?.type === 'SKIP_WAITING') self.skipWaiting();
-});
-
-self.addEventListener('fetch', e => {
-  if(e.r
+self.addEventListener('activate', e => {
+  // Delete ALL old caches — nuclear cleanup
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => {
+        console.log('[SW] Deleting old cache:', k);
+        return caches.delete(k);
+      }))
+    )
+    .then(() => self.clients.
