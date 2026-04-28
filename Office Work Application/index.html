@@ -1641,6 +1641,92 @@ async function callMistral(prompt, opts={}) {
   if(json.error) throw new Error(json.error.message);
   return json.choices[0].message.content;
 }
+// === RAG: Semantic Chunking & Retrieval ===
+const RAG = {
+  // Semantic chunker — splits text at meaning boundaries, not fixed sizes
+  chunk(text, maxChunkSize=500) {
+    if(!text || text.length <= maxChunkSize) return text ? [{text, index:0}] : [];
+    const chunks = [];
+    const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim());
+    let currentChunk = '';
+    let chunkIndex = 0;
+    for(const para of paragraphs) {
+      if(para.length > maxChunkSize) {
+        if(currentChunk.trim()) { chunks.push({text:currentChunk.trim(), index:chunkIndex++}); currentChunk = ''; }
+        const sentences = para.match(/[^.!?\u0964]+[.!?\u0964]+\s*/g) || [para];
+        let sentChunk = '';
+        for(const sent of sentences) {
+          if((sentChunk + sent).length > maxChunkSize && sentChunk.trim()) {
+            chunks.push({text:sentChunk.trim(), index:chunkIndex++});
+            sentChunk = sent;
+          } else {
+            sentChunk += sent;
+          }
+        }
+        if(sentChunk.trim()) { currentChunk = sentChunk; }
+        continue;
+      }
+      if((currentChunk + '\n\n' + para).length > maxChunkSize && currentChunk.trim()) {
+        chunks.push({text:currentChunk.trim(), index:chunkIndex++});
+        currentChunk = para;
+      } else {
+        currentChunk = currentChunk ? currentChunk + '\n\n' + para : para;
+      }
+    }
+    if(currentChunk.trim()) chunks.push({text:currentChunk.trim(), index:chunkIndex++});
+    return chunks;
+  },
+  _tokenize(text) {
+    return (text||'').toLowerCase().replace(/[^\w\s\u0980-\u09FF\u0900-\u097F]/g,' ').split(/\s+/).filter(w => w.length > 2);
+  },
+  _termFreq(tokens) {
+    const tf = {};
+    for(const t of tokens) tf[t] = (tf[t]||0) + 1;
+    return tf;
+  },
+  similarity(text1, text2) {
+    const t1 = this._tokenize(text1), t2 = this._tokenize(text2);
+    if(!t1.length || !t2.length) return 0;
+    const tf1 = this._termFreq(t1), tf2 = this._termFreq(t2);
+    const allTerms = new Set([...Object.keys(tf1), ...Object.keys(tf2)]);
+    let dot=0, mag1=0, mag2=0;
+    for(const t of allTerms) {
+      const a = tf1[t]||0, b = tf2[t]||0;
+      dot += a*b; mag1 += a*a; mag2 += b*b;
+    }
+    return mag1 && mag2 ? dot / (Math.sqrt(mag1) * Math.sqrt(mag2)) : 0;
+  },
+  retrieve(query, opts={}) {
+    const maxResults = opts.maxResults || 3;
+    const minScore = opts.minScore || 0.08;
+    const ws = currentWorkspace();
+    if(!ws || !State.letters.length) return [];
+    const wsLetters = State.letters.filter(l => l.workspaceId === ws.id);
+    if(!wsLetters.length) return [];
+    const scored = [];
+    for(const letter of wsLetters.slice(0, 50)) {
+      const fullText = 'Subject: ' + (letter.subject||'') + '\n' + (letter.body||'');
+      const chunks = this.chunk(fullText);
+      for(const chunk of chunks) {
+        const score = this.similarity(query, chunk.text);
+        if(score >= minScore) {
+          scored.push({ text: chunk.text, score, source: letter.subject || 'Untitled', date: letter.createdAt, mode: letter.mode });
+        }
+      }
+    }
+    scored.sort((a,b) => b.score - a.score);
+    return scored.slice(0, maxResults);
+  },
+  buildContext(query) {
+    const chunks = this.retrieve(query);
+    if(!chunks.length) return '';
+    let ctx = '\n\nREFERENCE FROM PREVIOUS CORRESPONDENCE (use for style, tone, and context \u2014 do NOT copy verbatim):\n';
+    chunks.forEach((c, i) => {
+      ctx += '--- Ref ' + (i+1) + ' [' + (c.mode||'letter') + ', ' + c.source + '] ---\n' + c.text.substring(0,400) + '\n';
+    });
+    return ctx;
+  }
+};
 
 function setMode(mode) {
   State.currentMode = mode;
@@ -1818,6 +1904,11 @@ OUTPUT FORMAT (plain text — no markdown):
 - DO NOT include letterhead, signature block, file number, date — added separately
 - DO NOT use markdown formatting`;
     }
+
+    // RAG: add relevant context from previous letters
+    const ragQuery = subject + ' ' + details;
+    const ragContext = RAG.buildContext(ragQuery);
+    if(ragContext) prompt += ragContext;
 
     const result = await callGemini(prompt, {temp:0.35, maxOut:3000});
     renderLetterPreview(result.trim(), {subject, mode});
