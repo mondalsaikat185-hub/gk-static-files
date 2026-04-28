@@ -1888,6 +1888,14 @@ const WORKFLOW_TEMPLATES = [
    fields:[{key:'topic',label:'Meeting Topic'},{key:'chair',label:'Chairperson'},{key:'date',label:'Date'},{key:'time',label:'Time'},{key:'venue',label:'Venue'},{key:'agenda',label:'Agenda Items'}]}
 ];
 
+
+// Hook voice buttons into populateWriteForm
+const __origPopulateWriteForm = populateWriteForm;
+populateWriteForm = function() {
+  __origPopulateWriteForm();
+  setTimeout(addVoiceButtons, 100);
+};
+
 function openWorkflowPicker() {
   let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
   WORKFLOW_TEMPLATES.forEach(w => {
