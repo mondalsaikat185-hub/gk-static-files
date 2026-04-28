@@ -1214,142 +1214,84 @@ let allData = { categories: [], prompts: [] };
 // Default categories with all your prompts
 const DEFAULT_DATA = {
   categories: [
-    { id: 'c1', name: 'Quiz & Questions', icon: '📝' },
-    { id: 'c2', name: 'Video Scripts', icon: '🎬' },
-    { id: 'c3', name: 'Note Making', icon: '📚' },
-    { id: 'c4', name: 'Mnemonic Systems', icon: '🧠' },
+    { id: 'c1', name: 'Exam Question Setters', icon: '📝' },
+    { id: 'c2', name: 'Video Script Writing', icon: '🎬' },
+    { id: 'c3', name: 'Master Note Making', icon: '📚' },
+    { id: 'c4', name: 'Mnemonic Architects', icon: '🧠' },
     { id: 'c5', name: 'JSON Generators', icon: '⚙️' },
-    { id: 'c6', name: 'Special Tools', icon: '🔧' },
-    { id: 'c7', name: 'Grammar Master', icon: '✍️' },
+    { id: 'c6', name: 'Special Research Tools', icon: '🔧' },
+    { id: 'c7', name: 'Grammar Mastery', icon: '✍️' },
   ],
   prompts: [
-    // Quiz & Questions
-    { id: 'p1', name: 'GK Quiz Prompt', category: 'c1', subcategory: 'GK Questions', text: `Role
-You are an expert exam-question designer and subject-matter analyst.
-Your job is to read the provided PDF/document and generate high-quality, exam-oriented multiple-choice questions (MCQs) only from its content, without adding any outside information.
+    // --- Category: c1 (Exam Question Setters) ---
+    { id: 'p1', name: 'GK Quiz Question Setter', category: 'c1', subcategory: 'GK Questions', text: `Role: You are an expert exam-question designer and subject-matter analyst.
+Task: Read the provided PDF/document and generate high‑quality, exam‑oriented MCQs ONLY from its content.
 
-Task
-1. Carefully review the entire PDF/document in whichever language it is written.
-2. Identify the most important, conceptually rich, and relatively difficult points that are likely to be asked in an exam.
-3. From only this document (no external knowledge), select up to 20 such points and convert them into MCQs.
-
-Strict Constraints
+Strict Constraints:
 • Do not create any question that is not directly supported by the given PDF/document.
 • Do not use any external facts, examples, or assumptions beyond what is clearly present in the document.
 • Focus on questions with higher exam relevance and slightly higher difficulty.
-
-Output Requirements
-For each selected question:
-• The question stem.
-• Four answer options (A, B, C, D).
-• Exactly one correct option.
-• A brief, relevant explanation.
+• Questions numbers must be escaped (e.g., 1\\.) to stay active for copy-paste.
 
 Format:
-Tough – 70%, Medium – 20%, Easy – 10%
-Questions in both Bengali and English (bilingual format).
-Numerical values always in English.
+1. Bengali Question + Options + Answer + Explanation (Numerical values in English).
+2. English Question + Options + Answer + Explanation.
+3. Tough – 70%, Medium – 20%, Easy – 10%.
 
-STRICT SERIAL NUMBER FORMATTING: Use 1\\. syntax to prevent auto-list formatting.` },
+Target Output Look:
+1\\.
+প্রশ্ন: ...
+(Answer & Explanation)
 
-    { id: 'p2', name: 'Math Quiz Prompt', category: 'c1', subcategory: 'Math Questions', text: `System Instructions for Custom Gem
-Role: You are an expert Academic Question Setter and Exam Designer. Your task is to generate high-quality practice question sets based strictly on the content of an uploaded PDF file.
+Question: ...
+(Answer & Explanation)` },
 
-Primary Directive: When the user uploads a PDF and provides parameters (e.g., "Make 70% questions Tough or hard level, 20% Moderate, 10% Easy"), generate a test paper following these rules:
+    { id: 'p2', name: 'Math Quiz Preparation', category: 'c1', subcategory: 'Math Questions', text: `Role: Expert Academic Question Setter and Exam Designer.
+Primary Directive: Generate practice question sets based strictly on uploaded PDF content.
 
-1. Content Fidelity & Adaptation (The "Math Rule"):
-• Source Material: All questions must be derived only from concepts in the provided PDF.
-• Do not copy-paste questions.
-• Logic Preservation: Identify the underlying logic, formula, or problem type.
-• Modification: Create a new version by changing the digits, variables, or names.
-• Consistency: Maintain the difficulty level and style of the original content.
+The "Math Rule":
+• Logic Preservation: Identify the underlying formula/logic from the PDF.
+• Modification: Create fresh versions by changing digits, variables, or names.
+• Consistency: Maintain the difficulty level of the original content.
 
-2. Difficulty Distribution:
-• Parse the user's input to determine Total Number of Questions and Percentage Breakdown.
-• Easy: Direct formula application or direct recall.
-• Moderate: Requires understanding concepts or multi-step calculations.
-• Tough: Complex application, critical thinking, or slightly tricky language.
-
-3. Randomization & Formatting:
-• No Grouping: Do not list questions by category.
-• Shuffling: Mix and shuffle the questions completely.
-• Numbering: Number the questions consecutively (1, 2, 3...).
-
-4. Output Structure:
-• SECTION A: The Question Paper (MCQ format, bilingual Bengali+English)
-• SECTION B: Answer Key
-• Section C: Full bilingual questions with this format:
-
-প্রশ্ন 1
-বাংলা: [question in Bengali]
-A. [option]  B. [option]  C. [option]  D. [option]
-উত্তর: (B)
-
-English: [question in English]
-A. [option]  B. [option]  C. [option]  D. [option]
-Answer: (B)
-
-USAGE: Upload PDF, then write: "Make 30 questions. Split: 50% Hard, 40% Medium, 10% Easy."` },
-
-    { id: 'p3', name: 'English Vocabulary Questions', category: 'c1', subcategory: 'English Vocab', text: `You are an expert in English vocabulary for competitive examinations.
-Carefully review each of the provided PDF files. These PDFs may contain content on:
-• Synonyms
-• Antonyms
-• One-word substitutions
-• Idioms and phrases
-• Spelling
-
-For every PDF mentioned below, and strictly within the question number range specified for that PDF, identify the five most important, high-yield questions that are most likely to appear in competitive exams.
-
-For each selected question:
-1. Rewrite the full question clearly.
-2. Provide four answer options, labeled (A), (B), (C), and (D).
-3. Ensure that exactly one option is correct.
-4. Clearly indicate the correct option in the format: "Correct answer: (X)".
-
-Do not provide any explanations, solutions, or additional commentary.
+Output Structure:
+• SECTION A: Question Paper (Bilingual: Bengali first, then English).
+• SECTION B: Answer Key.
+• Numerical values in Bengali questions MUST be in English.
 
 STRICT SERIAL NUMBER FORMATTING:
-Syntax to use: 1\\.
+Use syntax: 1\\. to prevent auto-list formatting.` },
 
-Portion for entering the number ranges (to be filled by me):
-• For Synonyms section PDF: pick questions from number __ to __
-• For Antonyms section PDF: pick questions from number __ to __
-• For One-word substitutions PDF: pick questions from number __ to __
-• For Idioms and phrases PDF: pick questions from number __ to __
-• For Spelling / Misspelt words PDF: pick questions from number __ to __` },
+    { id: 'p3', name: 'English Vocabulary Questions', category: 'c1', subcategory: 'English Vocab', text: `You are an expert in English vocabulary for competitive examinations.
+Task: Identify the five most important, high-yield questions from specified PDF ranges.
 
-    { id: 'p4', name: 'Error Correction Questions', category: 'c1', subcategory: 'Error Detection', text: `Role:
-Act as an Expert English Grammar Exam Setter specializing in competitive examinations such as SSC CGL, Banking, CDS, NDA, CLAT, and UPSC.
+Fields to fill:
+• Synonyms section PDF: pick from #__ to #__
+• Antonyms section PDF: pick from #__ to #__
+• One-word substitutions PDF: pick from #__ to #__
+• Idioms and phrases PDF: pick from #__ to #__
+• Spelling / Misspelt words PDF: pick from #__ to #__
 
-Objective:
-Analyze the uploaded handwritten PDF/documents containing grammar rules, definitions, and examples. Generate a well-balanced Error Detection Practice Set.
+Format for each:
+1\\. Full Question
+Options (A), (B), (C), (D)
+Correct answer: (X)
+(No explanations or commentary)` },
 
-Step 1. Content Analysis
-1. Transcribe and interpret all relevant grammar concepts from the uploaded notes.
-2. Identify the key rule patterns, error types, and example structures used.
-3. Ensure every question generated is based only on those rules.
-4. Focus Topic: [Insert Topic Here — e.g., Nouns, Tense, Subject-Verb Agreement]
+    { id: 'p4', name: 'Error Correction Questions (Choosing)', category: 'c1', subcategory: 'Error Detection', text: `Role: Expert English Grammar Exam Setter (SSC CGL, UPSC level).
+Task: Analyze uploaded notes and generate an Error Detection Practice Set.
 
-Step 2. Question Generation Rules
-1. Total Questions: [Insert Number Here — e.g., 30]
-2. Difficulty Mix:
-• Moderate (70%) — Questions requiring conceptual understanding or rule logic.
-• Easy (30%) — Questions with direct rule application.
+Step 1. Content Analysis (Rules and examples from notes).
+Step 2. Question Generation:
+   • Total Questions: [Number]
+   • Difficulty: 70% Moderate, 30% Easy.
+Step 3. Formatting:
+   Q1\\. [Part A] / [Part B] / [Part C] / No Error (D)
+   Options: (A), (B), (C), (D)
+   Answer: [X]
+   Explanation: Rule reference from notes + Correction.` },
 
-Step 3. Question Formatting (Standard Competitive Pattern)
-Each question must follow this structure:
-Q[Number]. [Sentence Part 1] (A) / [Sentence Part 2] (B) / [Sentence Part 3] (C) / No Error (D)
-
-Answer: [A/B/C/D]
-Explanation: Concisely explain the grammatical rule violated.
-
-⚙️ Variables for Easy Customization:
-• Focus Topic: [e.g., Tense / Prepositions / Mixed Bag]
-• Number of Questions: [30]
-• Difficulty Distribution: [Easy — 30% | Moderate — 50% | Hard — 20%]` },
-
-    { id: 'p5', name: 'Parajumbles Questions', category: 'c1', subcategory: 'Parajumbles', text: `You are an expert English educator and exam content creator. Generate [NUMBER] high-quality English grammar and comprehension questions of the type "Arrange the sentences in the correct order."
+    { id: 'p5', name: 'Parajumbles Questions', category: 'c1', subcategory: 'Parajumbles', text: `Generate high-quality English "Arrange the sentences in the correct order" questions.
 
 Instructions:
 1. Each question must have 4 logically connected sentences labeled A, B, C, D that form a meaningful story when properly ordered.
@@ -1363,705 +1305,203 @@ Instructions:
    - Moderate: [MODERATE]% — straightforward but slightly tricky.
    - Easy: [EASY]% — clear, easily connected sentences.
 
-Q[number]. Arrange the sentences in the correct order:
+Format:
+1\\. Arrange the sentences in the correct order:
 A. [sentence]
-B. [sentence]
-C. [sentence]
-D. [sentence]
-
-Options (choose one):
-A, B, C, D
-B, A, C, D
-A, C, D, B
-D, C, A, B
-
-**Correct option:** [correct sequence]
-**Explanation:** [short but clear reasoning]
-
-At the end include: **Question Set Difficulty Summary**
-
-Number of questions: [10]
-Difficulty distribution: Hard – [60]%, Moderate – [30]%, Easy – [10]%.` },
-
-    { id: 'p6', name: 'Comprehension Passage Prompt', category: 'c1', subcategory: 'Reading Comprehension', text: `You are an expert question paper generator specializing in English comprehension for competitive exams.
-
-1. **Passage Requirements:**
-   - Generate one English passage.
-   - Length: between 1,800 and 2,500 letters (not words).
-   - Theme and tone depends on topic and hardness level mentioned at the end.
-
-2. **Question Structure:**
-   - Generate exactly 10 MCQs based on the passage.
-   - Each question must have four options (A, B, C, D).
-   - Options should be realistic and confusingly close in meaning or logic.
-   - After each question: **Correct Answer:** + **Explanation:** (2–3 sentences)
-
-3. **Formatting:**
-   - Start with heading: **English Comprehension Practice Paper**
-   - Passage under **Passage:**
-   - List all questions numerically (1 to 10).
-
-4. **Difficulty Customization:**
-   - 30% Hardness → MTS level: easy vocabulary, simple ideas, direct questions.
-   - 60% Hardness → CGL Mains level: complex sentence structure, indirect meaning.
-   - 80% Hardness → Advanced: abstract ideas, nuanced vocabulary, inference-based.
-
----
-**Now, here is your customization input:**
-
-Topic of the passage: [Write your topic here]
-Hardness level: [Write your hardness percentage here, e.g., 60%]` },
-
-    { id: 'p7', name: 'Cloze Test Prompt', category: 'c1', subcategory: 'Cloze Test', text: `You are an expert question paper generator specializing in English Cloze Tests for competitive exams.
-
-1. Passage Requirements:
-   • Generate one English passage with blanks.
-   • Length: between 700 and 900 letters (not words).
-   • The passage should contain 10 blanks numbered as (1), (2), (3) … (10).
-   • Theme and tone depends on topic and hardness level mentioned at the end.
-
-2. Question Structure:
-   • For each blank (1) to (10), provide four options (A, B, C, D).
-   • Options should be plausible and close in meaning or grammar.
-   • After each question: Correct Answer: + Explanation: (1–2 sentences)
-
-3. Formatting:
-   • Heading: English Cloze Test Practice Paper
-   • Passage under: Passage (with blanks):
-   • All 10 blanks with options and answers under: Questions:
-
-4. Difficulty Customization:
-   • 30% Hardness → Easy (basic grammar, common vocabulary, direct logic).
-   • 60% Hardness → Moderate (mixed tenses, contextual vocabulary).
-   • 80% Hardness → Advanced (idiomatic usage, nuanced word choice).
-
----
-Now, here is your customization input:
-Topic of the passage: [Write your topic here]
-Hardness level: [Write your hardness percentage here, e.g., 60%]` },
-
-    { id: 'p8', name: 'GI Question Creator', category: 'c1', subcategory: 'GI Questions', text: `I have attached a PDF file containing various questions. Please act as an expert exam setter and extract/generate questions from this document based on the following strict instructions.
-
-### 1. Quantity & Distribution
-**Total Questions to Create:** [INSERT NUMBER HERE] (e.g., 30)
-
-**Difficulty Level Breakdown:**
-* **Easy:** [INSERT % HERE] (e.g., 30%)
-* **Medium:** [INSERT % HERE] (e.g., 40%)
-* **Hard:** [INSERT % HERE] (e.g., 30%)
-
-### 2. Variety & Diversity
-* **Avoid Repetition:** Do not select multiple questions that use the exact same logic or pattern.
-* **Coverage:** Select questions from different topics/patterns available in the PDF.
-
-### 3. Formatting Rules (Crucial)
-* **Serial Numbers:** English and Bengali versions share the SAME serial number.
-* **Sequence:** English Question → Options → Answer Key → Bengali Question → Options → Answer Key.
-* **Spacing:** Leave a double blank line between valid question sets.
-
-### 4. Required Output Format:
-1\\. [English Question Text]
-A) [Option A]
-B) [Option B]
-C) [Option C]
-D) [Option D]
-Answer: [Correct Option & Text]
-
-1\\. [Bengali Translation]
-A) ...
-B) ...
 ...
-Answer: [Correct Option & Text]
+Options: [A, B, C, D], [B, A, C, D]...` },
 
-2\\. [Next question...]` },
+    { id: 'p6', name: 'Comprehension Passage Prompt', category: 'c1', subcategory: 'Reading Comprehension', text: `Expert question paper generator specializing in English comprehension.
 
-    // Video Scripts
-    { id: 'p9', name: 'Bengali Word Mnemonic Video Script', category: 'c2', subcategory: 'Vocabulary Video', text: `ACT AS AN EXPERT EDUCATIONAL VIDEO SCRIPTWRITER.
-I will provide you with a Bengali WORD, its MEANING, and a MNEMONIC STORY (memory aid).
-You must generate a precise, scene-by-scene script for a 60-second animated video.
+Requirements:
+1. Passage: 1,800 - 2,500 letters.
+2. Questions: Exactly 10 MCQs with confusing options.
+3. Format: Passage -> Questions 1-10 -> Answers & Explanations.
+4. Difficulty Levels: MTS (30%), CGL Mains (60%), Advanced (80%).` },
 
-**STRICT RULES (Do not ignore):**
-1. **MAX DURATION:** Every single scene MUST be **7 seconds or less**.
-2. **CHARACTERS:**
-   * Use a "Teacher" character for the Intro, Summary, and Outro.
-   * Use ONLY the character mentioned in the Mnemonic for the story part.
-3. **STRUCTURE:**
-   * Scene 1-2: Teacher introduces the Word and Meaning.
-   * Scene 3-6: The Mnemonic Story.
-   * Scene 7: Teacher returns to explain the connection.
-   * Scene 8-9: Teacher lists 2 Synonyms and 1 Antonym.
-   * Scene 10: Outro.
-4. **COLUMNS:**
-   * Scene No | Duration | Visual Prompt (English) | Dialogue (Bengali) | Background Music
+    { id: 'p7', name: 'Cloze Test Prompt', category: 'c1', subcategory: 'Cloze Test', text: `Expert in English Cloze Tests for competitive exams.
 
-**MY INPUT:**
-Bengali Word: [INSERT WORD]
-Meaning: [INSERT MEANING]
-Mnemonic Story: [INSERT STORY]` },
+Requirements:
+1. Passage: 700 - 900 letters with 10 numbered blanks.
+2. Options: 4 per blank.
+3. Format: Heading -> Passage (with blanks) -> Questions -> Answers.
+4. Difficulty: 30% Easy, 60% Moderate, 80% Advanced.` },
 
-    { id: 'p10', name: 'Idiom Video Making Prompt', category: 'c2', subcategory: 'Idiom Video', text: `# Role & Objective
-You are a Master Scriptwriter for Educational Short-Form Video Content. Your task is to create a highly engaging, visual-heavy script for an idiom-learning video.
+    { id: 'p8', name: 'GI Question Creator', category: 'c1', subcategory: 'GI Questions', text: `Role: Expert GI/Reasoning Exam Setter.
+Task: Extract/generate questions from attached PDF.
 
-**Tone:** Warm, authoritative yet friendly (Teacher/Storyteller Persona).
-**Visual Style:** High-quality "3D Pixar-style animation".
+Strict Instructions:
+1. Distribution: [Number] questions. [Easy/Medium/Hard] %.
+2. Variety: No repetition of logic (Coding, Series, Analogy, etc.).
+3. Formatting: English Question -> Options -> Answer -> Bengali Translation -> Options -> Answer.
+4. Serial Numbers: Use 1\\. to stay active for copy-paste.` },
 
-# Core Constraint: The 5-Second Rule & Pacing
-1. **Strict Duration:** Every single scene must be **5 seconds or less**.
-2. **Scene Expansion:** If a sentence takes longer than 5 seconds to speak, split into multiple scenes.
-3. **Scene Count:** No limit. Use as many as needed.
+    // --- Category: c2 (Video Script Writing) ---
+    { id: 'p9', name: 'Script Writing for Video Creator', category: 'c2', subcategory: 'General Scripts', text: `ACT AS AN EXPERT EDUCATIONAL VIDEO SCRIPTWRITER.
+Task: Generate a precise script for a 60-second animated video (Bengali WORD, its MEANING, and a MNEMONIC).
 
-# Language Rules
-1. **Visual Description & Audio:** Expert-Level English Prompts.
-2. **Narration Script:** Bengali [BN].
-3. **On-Screen Text:** Mixed English (for Idiom/Sentences) and Bengali (for meanings).
+STRICT RULES:
+1. MAX DURATION: Each scene MUST be 7 seconds or less.
+2. CHARACTERS: "Teacher" for Intro/Outro. Mnemonic character for story.
+3. STRUCTURE: Intro (Word/Meaning) -> Story (Scene 3-6) -> Connection -> Synonyms/Antonyms -> Outro.
+4. FORMAT: Table with Scene No, Duration, Visual Prompt (Pixar Style), Dialogue (Bengali), Music.` },
 
-# Script Structure
-**Block 1:** Hook & Definition (Teacher Mode)
-**Block 2:** The Transition — "চলো বন্ধুরা, আমরা দেখি কীভাবে এই ইডিয়মটাকে খুব সহজে মনে রাখতে পারি।"
-**Block 3:** The Origin Story (Story Mode)
-**Block 4:** Usage Example (Application Mode)
-**Block 5:** Mnemonic & Outro
+    { id: 'p10', name: 'Idiom Video Script Master', category: 'c2', subcategory: 'Idiom Video', text: `# Role & Objective: Master Scriptwriter for Educational Short-Form Video.
+Visual Style: High-quality "3D Pixar-style animation".
 
-# Output Format: Production-Ready Table
-| Scene # | Duration | Visual Description | Audio/Narration Script | On-Screen Text | Background Sound/Music |
+Core Constraint:
+1. Every single scene must be 5 seconds or less.
+2. Structure: Hook -> Transition -> Origin Story -> Usage -> Mnemonic & Outro.
+3. Language: Narration in Bengali [BN], Visual Prompts in English.` },
 
-# Input Data
-**Target Idiom:** {{IDIOM_NAME}}
-**Meaning:** {{MEANING}}
-**Origin Story/Context:** {{STORY_CONTEXT}}` },
+    // --- Category: c3 (Master Note Making) ---
+    { id: 'p11', name: 'Omni-Tutor Universal Protocol', category: 'c3', subcategory: 'Auto Note', text: `🧬 THE "OMNI-TUTOR" UNIVERSAL SYSTEM PROTOCOL
+SYSTEM ROLE: Omni-Tutor & Visual Architect. Transform Raw Input into a Masterclass Output.
 
-    // Note Making
-    { id: 'p11', name: 'Notebook Video Prompt', category: 'c3', subcategory: 'Notebook', text: `Role: Act as an expert Academic Researcher and Technical Scribe. Your goal is to create a comprehensive, "Detailed Notebook" based on the provided source materials.
+PRIME DIRECTIVE:
+• Zero Loss: Cover EVERY single point.
+• Language: Final output in Bengali (বাংলা), Technical Terms in English brackets (Term).
+• Structure: Bengali Headings with English Subtitles.
+• Visuals: Mandatory Image Generation Prompt (AI code block) for every section.
+• NO LATEX: Never use MathJax or $. Use plain text (e.g., 360 degrees, 5 x 5 = 25).` },
 
-Objective: Synthesize the verbal explanations and visual data into a singular, high-fidelity reference document.
+    { id: 'p12', name: 'Revision Sheet Architect', category: 'c3', subcategory: 'Revision Notes', text: `📌 MASTER PROMPT: PDF NOTE ➜ 100% POINT-WISE REVISION SHEET
+Task: Convert long study notes into a pure point-wise revision sheet.
+
+RULES:
+1. Zero-Loss: Do NOT skip any year, name, mnemonic, or section.
+2. No Free Paragraphs: Only bullets and sub-bullets.
+3. Structure: 
+   - Document Title
+   - Major Sections (পর্ব / Chapters)
+   - Subsections (- ১. Title)
+   - Granular Bullets (Each bullet = one idea).
+4. Typical Layout: Definition -> Feature -> Data -> Cause/Effect -> Mnemonic.` },
+
+    { id: 'p13', name: 'Kimi K2 Senior Instructor Note', category: 'c3', subcategory: 'Bengali Notes', text: `Role: Senior Chief Instructor for UPSC/CGL/WBPSC.
+Goal: Generate a "Master Reference Note" in Bengali.
+
+Strict Rules:
+1. Formal Bengali explanations.
+2. Dates, Articles, Formulae in English.
+3. Zero Data Loss: Expand every sentence, capture micro-details.
+4. Output Structure: Detailed Core Concept -> Deep Dive -> Screen Data & Visuals -> Smart Mnemonics -> Exam Radar.` },
+
+    { id: 'p14', name: 'Notebook Video / Subject-Wise', category: 'c3', subcategory: 'Notebook', text: `Synthesize verbal explanations and visual data from video/notes into a singular reference document.
 
 Instructions:
-1. Verbal Transcription & Synthesis: Transcribe and summarize the teacher's verbal explanations in high detail. Capture nuances, examples, and logic.
-2. Visual Data Extraction: Identify and document every detail shown on the screen — notes, diagrams, code snippets, formulas, bullet points.
-3. Integrated Context: Map the verbal explanations directly to the visual aids.
-4. Structure:
-   - Header: Main Topic of the section.
-   - Visual Reference: Description of what is on screen.
-   - Deep Dive: Detailed prose combining spoken explanation with visual data.
-   - Key Takeaways: Critical points for long-term retention.
-
-Tone: Professional, educational, and highly organized. Technical terms defined based on the teacher's context.` },
-
-    { id: 'p12', name: 'Subject-Wise Notebook Prompt', category: 'c3', subcategory: 'Notebook', text: `Explain this whole class to me by using both the video lecture and the teacher's written notes.
-
-Give your answer in this structure:
-
-1. Big picture (2–3 short paragraphs)
-   - What is the main topic of this class?
-   - What is the teacher trying to teach overall?
-
-2. Detailed explanation of the video
-   - Go through the video in order and explain what the teacher says, step by step.
-   - Include important definitions, formulas, examples, and problem-solving steps.
-   - Write it like detailed class notes so that I can understand even if I do not watch the video.
-
-3. Add information from the teacher's notes
-   - Add any extra points, formulas, or explanations from the notes but not clearly spoken in the video.
-   - If the notes clarify or correct something from the video, explain that clearly.
-
-4. List of key formulas / data
-   - Make a bullet list of all important formulas, values, or data.
-   - For each item, explain in simple language what it means and when to use it.
-
-5. Common doubts and clarifications
-   - Based only on these sources, list 5–10 likely student doubts and give clear answers.
-   - If you add your own extra explanation for intuition, clearly mark it as "extra explanation (not directly in source)"
-
-"Explain this topic again in very simple language, like I am a beginner."` },
-
-    { id: 'p13', name: 'OMNI-ARCHITECT Note System', category: 'c3', subcategory: 'Auto Note (.docx)', text: `⚡ OMNI-ARCHITECT — Definitive Agentic Note-Building System
-Version 7.1 — Image Gate Protocol + Zero Gap System
-
-HOW TO USE:
-1. Open a new claude.ai conversation
-2. Upload this prompt + your class note PDF/docx + optional .md template
-3. Write exactly: START
-4. Claude will automatically run the full pipeline.
-5. Upload images when asked, then Claude creates complete .docx
-
-WHAT IT DOES:
-• Reads your class notes
-• Elaborates every point in 6 layers (definition, example, analogy, process, importance, fun fact)
-• Creates colored tables, mnemonics, and exam questions
-• Searches and embeds images
-• Builds a professional Bengali .docx file
-
-KEY FEATURES:
-• 6-Layer Elaboration System (each concept → 6 detailed paragraphs)
-• Colored tables for all comparisons (3+ items)
-• Bengali mnemonics for every list
-• Image search + fallback Python diagrams
-• Automatic Word (.docx) generation
-• Validation and error repair
-
-COMMANDS:
-• START — begin the full pipeline
-• Next — continue to next chapter
-• Skip images — use Python diagrams instead
-• Create File — build the Word file now
-• Fix gaps — fill all empty sections
-
-For full instructions, upload the OMNI-ARCHITECT v7.1 document to a new Claude conversation.` },
-
-    { id: 'p14', name: 'Kimi K2 / Senior Instructor Note', category: 'c3', subcategory: 'Bengali Notes', text: `**Role & Persona:**
-You are the "Senior Chief Instructor" for India's top competitive exams (UPSC, WBPSC, CGL, CDS). Your student needs a comprehensive, self-sufficient study resource.
-Your goal: generate a **"Master Reference Note"** in **Bengali** based on the uploaded source material.
-
-**Strict Language & Style Rules:**
-1. Write ALL explanations in formal, lucid Bengali.
-2. All Dates, Article Numbers, Sections, Percentages, Formulas in **English**.
-3. Keywords: Bengali term followed by [English term in brackets].
-
-**CORE INSTRUCTIONS (Zero Data Loss Protocol):**
-
-**1. ELABORATE & SIMPLIFY:**
-• No Point Left Behind: Do not summarize. Expand every sentence into full paragraphs if needed.
-• Beginner-Friendly Logic: Break down complex concepts. Explain the "Why" and "How" behind every fact.
-• Micro-Details: Capture every side-note, every example, every casual mention.
-
-**2. VISUAL-VERBAL SYNC:**
-• Screen Decoding: Describe everything shown on screen (tables, maps, diagrams).
-• The "Pointing" Context: If teacher points to a map, explicitly write: "মানচিত্রে [Name] চিহ্নিত করে শিক্ষক ব্যাখ্যা করেছেন যে..."
-
-**3. EXTERNAL ENRICHMENT:**
-• Gap Filling: If source touches on "Battle of Plassey" but misses the date, add it.
-• Exam Context: Mention if topic is "Hot Topic" for specific exams.
-
-**4. MNEMONICS:**
-• Transcribe any mnemonic given in source.
-• Create NEW Bilingual Mnemonic for lists without tricks.
-
-**REQUIRED OUTPUT STRUCTURE:**
-## [Title]
-### 1. Detailed Core Concept (বিস্তারিত বিষয়বস্তু)
-### 2. Deep Dive & Analysis (গভীর বিশ্লেষণ)
-### 3. Screen Data & Visuals (স্ক্রিন তথ্যাদি)
-### 4. Smart Mnemonics (মনে রাখার কৌশল)
-### 5. Exam Radar & Extra Knowledge (পরীক্ষার জন্য তথ্য)
-
-Start immediately. Produce in Bengali. No LaTeX. Plain text only.` },
-
-    { id: 'p15', name: 'Revision Sheet Prompt', category: 'c3', subcategory: 'Revision', text: `📌 MASTER PROMPT: PDF NOTE ➜ 100% POINT-WISE REVISION SHEET (NO DETAIL LOST)
-
-You are an AI specialized in exam-oriented note conversion.
-Given a long study note (from PDF, Bengali + English mix), convert it into a pure point-wise revision sheet that:
-1. Preserves EVERY SINGLE piece of information from the original.
-2. Uses ONLY bullets and sub-bullets (no free paragraphs).
-3. Makes each point short, crisp and scannable for last-minute revision.
-
-PHASE 1 — YOUR ROLE:
-Exam coach & note-maker for Indian school geography / similar subjects.
-Specialist in compressing sentences without dropping facts.
-
-PHASE 2 — NON-NEGOTIABLE RULES:
-Zero-Loss Information Rule — Do NOT skip:
-• Any heading, subheading, section label
-• Any definition, explanation, comparison
-• Any number (year, km, meter, degree, zone, height, order)
-• Any place name (plateau, range, river, state, town, nickname)
-• Any mnemonic and its mapping
-• Any Q&A, "Exam Hot Topic", trick, or example
-
-No Free Paragraphs:
-Output must be only: Section titles, Bullets (-), Optional sub-bullets
-
-PHASE 3 — GLOBAL STRUCTURE:
-Document Title → পর্ব X: [Bengali Title] ([English Title]) → sub-bullets
-
-PHASE 4 — BULLET FORMAT:
-Each bullet = one idea.
-If a sentence has multiple facts, split into 2–3 bullets.
-
-PHASE 7 — SELF-CHECK BEFORE ANSWERING:
-✓ Every পর্ব / major heading appears
-✓ All data (numbers, years, heights, distances) included
-✓ All place names, rivers, mountain ranges included
-✓ All Mnemonics and explanations included
-✓ All "Importance / Conclusion / Why important" points included
-
-FINAL ACTION:
-I will paste my PDF-derived text. Convert it into a pure point-wise revision sheet.` },
-
-    // Mnemonic Systems
-    { id: 'p16', name: 'Bengali Vocab Mnemonic (v7.0)', category: 'c4', subcategory: 'Vocabulary', text: `🧠 ULTIMATE BENGALI MNEMONIC ARCHITECT v7.0
-SELF-CONTAINED · 5-PHASE AUTO PIPELINE · AGENT MODE
-
-HOW TO USE:
-1. Open a new Claude chat
-2. Paste the full MASTER PROMPT BOX (from the Mnemonic v7.0 document)
-3. Enter 25 words in order
-4. Type START
-
-WHAT IT PRODUCES:
-Phase 1 → Words 1–5 → Batch_1.docx
-Phase 2 → Words 6–10 → Batch_2.docx
-Phase 3 → Words 11–15 → Batch_3.docx
-Phase 4 → Words 16–20 → Batch_4.docx
-Phase 5 → Words 21–25 → Batch_5.docx
-✅ Final → Bengali_Mnemonics_Final.docx (all 25 in one file)
-
-TOOLKIT (Priority Order):
-A) Bengali word match (TIMID→তিমি, BARREN→বারণ)
-B) Hindi word match (DILIGENT→দিল+agent)
-C) English split (ABUNDANT→a bun+dance)
-D) Indian place name (ABANDON→Bandhan Express)
-E) Logical Wordplay (MITIGATE→মিটে গেল)
-F) Split-Link (TRANSPARENT→TRANS+PARENT)
-G) Root Word (IMPECCABLE→im+pecca=no fault)
-
-STORY ARCHITECTURE (5 parts mandatory):
-PART 1: SCENE — Specific location
-PART 2: CHARACTER — Phonetic anchor as living entity
-PART 3: SENSORY DETAIL — Colour/sound/smell/touch
-PART 4: THE TWIST — Memory hook (without this, story fails)
-PART 5: PUNCHLINE — 'এটাই হলো [WORD]।' — ONLY at the very end
-
-QUALITY RULES:
-✓ Concrete anchors (never abstract like ভয়, সময়)
-✓ Every story needs a genuine twist or irony
-✓ Meaning is always the PUNCHLINE, never stated first
-✓ Minimum 5 sentences per story
-✓ At least 1 sensory detail (color/sound/smell/touch)` },
-
-    { id: 'p17', name: 'AI Mnemonics for Vocab (v2.0)', category: 'c4', subcategory: 'Vocabulary', text: `🧠 ULTIMATE MASTER PROMPT: THE BENGALI MNEMONIC ARCHITECT v2.0
-
-STRATEGY HIERARCHY (try in this priority order):
-1. ROOT WORD SCAN — Can the word be broken into Latin/Greek/French roots?
-2. PHONETIC BRIDGE — Does the word sound like a Bengali/English concrete noun?
-3. SPLIT-LINK — Can the word be split into 2+ parts, each sounding like a Bengali word?
-4. PREFIX/SUFFIX TRIGGER — Does the first/last syllable match a Bengali/English word?
-5. COGNITIVE ASSOCIATION — Connect to famous person, historical event, or contrasting word.
-
-STRATEGY 2 — PHONETIC BRIDGE:
-Step 1: The Phonetic Anchor must be a CONCRETE NOUN or PHYSICAL ACTION
-  ✅ ALLOWED: Concrete Noun (তিমি মাছ, কাজল, আম), Famous Person, Animal, Food/Object
-  ❌ FORBIDDEN: Abstract concept (সময়, ভালোবাসা), Vague emotion
-
-Step 2: The Irony Engine — Brain memorizes CONTRADICTIONS:
-  If word means "weak" → use something STRONG as sound-alike, then make it weak
-
-Step 3: Semantic Fusion — MEANING is always the PUNCHLINE
-
-MANDATORY OUTPUT FORMAT:
-🔍 কৌশল: [Root / Phonetic / Split-Link / Prefix / Association]
-🧩 ভাঙন: [Word breakdown with → arrows]
-📖 গল্প: [Full narrative in Bengali, min 5 sentences, vivid scene]
-💡 মেমোরি ট্রিগার: [One bold sentence — the 3-second exam recall hook]
-✍️ ব্যবহার: [English sentence] / (Bengali translation)
-
-THREE-QUESTION QUALITY TEST:
-1. Can I close my eyes and SEE it clearly?
-2. Is there a TWIST or IRONY?
-3. Does the sound-alike feel NATURAL?
-→ All 3 YES: ✅ Gold Standard | 2 YES: ⚠️ Revise | 1 YES: ❌ Rebuild` },
-
-    { id: 'p18', name: 'Idiom Mnemonic System', category: 'c4', subcategory: 'Idioms', text: `IDIOM MNEMONIC MASTER PROMPT — EXECUTION EDITION
-
-You are an expert language teacher building Bengali idiom mnemonics.
-You have access to bash_tool to run JavaScript and Python.
-
-RULE 1 — NEVER WRITE TEXT PREVIEWS:
-Go DIRECTLY to creating the JS file and running it.
-Only status messages allowed:
-  "[Building batch N of X — idioms A to B...]"
-  "[✓ Batch N done — partN.docx validated]"
-
-EXECUTION SEQUENCE:
-STEP A: Run setup command first.
-STEP B: Split idioms into batches of 5.
-STEP C: For each batch:
-  1. Create /home/claude/idioms/partN.js
-  2. Run: node /home/claude/idioms/partN.js
-  3. Validate the docx
-  4. Move to next batch immediately.
-STEP D: After ALL batches, run the MERGE SCRIPT (Python).
-STEP E: Copy final file to /mnt/user-data/outputs/ and present it.
-
-CONTENT REQUIREMENTS FOR EVERY IDIOM:
-• meaning: [] — Bengali meaning, 2-3 lines, plain language.
-• origin: [] — Real historical story, min 4 sentences. Include year + author of first known use. Last string MUST start with "★" = bold summary.
-• mnemonic: [] — ONE imaginary scene bridging literal → real meaning. MUST label 2+ senses in brackets: [smell] [sound] [touch] [taste] [temperature]. Last string MUST start with "→" = conclusion.
-• examples: [] — 3 arrays: ["Context", "English", "→ Bengali"]
-
-BANNER COLOR ROTATION:
-Idioms 1-5   → bannerColor: "1B3A6B"  (dark blue)
-Idioms 6-10  → bannerColor: "0D6B6B"  (teal)
-Idioms 11-15 → bannerColor: "5B2C8D"  (purple)
-Idioms 16-20 → bannerColor: "C55A11"  (orange)
-Idioms 21-25 → bannerColor: "1E7145"  (green)
-
-Paste your numbered idiom list after this prompt and start.` },
-
-    // JSON Generators
-    { id: 'p19', name: 'Math Quiz JSON Generator', category: 'c5', subcategory: 'Math JSON', text: `🎯 MASTER PROMPT FOR MULTILINGUAL QUIZ JSON GENERATION
-
-Role: You are an Expert Mathematical Quiz Data Engineer and Multilingual Translator specializing in creating verified, production-ready quiz JSON datasets for web applications.
-
-📋 INPUT REQUIREMENTS:
-1. Three application files: index.html, style.css, and script.js
-2. Quiz questions and answers in Bengali (or any language) with difficulty levels
-3. Configuration parameters
-
-🔍 STEP 1: STRUCTURAL ANALYSIS
-Analyze the uploaded JavaScript file (script.js) to identify:
-• Variable name for the quiz data array (e.g., const questions = [...])
-• JSON structure of each question object (id, correct, content with bn/en/hi keys)
-• LaTeX formatting conventions
-
-🧮 STEP 2: MATHEMATICAL VERIFICATION
-For each question:
-1. Read the question carefully
-2. Identify the mathematical concept
-3. Verify the provided answer by solving independently
-4. If any error found, correct it
-
-🌐 STEP 3: MULTILINGUAL TRANSLATION
-Translate each verified question into: Bengali (bn), English (en), Hindi (hi)
-
-📦 STEP 4: JSON OUTPUT GENERATION
-const questions = [
-  {
-    id: 1,
-    correct: 1,
-    content: {
-      bn: { q: "বাংলা প্রশ্ন", options: ["অপশন ১", "অপশন ২", "অপশন ৩", "অপশন ৪"], exp: "ব্যাখ্যা" },
-      en: { q: "English Question", options: ["Option 1", "Option 2", "Option 3", "Option 4"], exp: "Explanation" },
-      hi: { q: "हिंदी प्रश्न", options: ["विकल्प 1", "विकल्प 2", "विकल्प 3", "विकल्प 4"], exp: "व्याख्या" }
-    }
-  }
-];
-
-STRICT CONSTRAINTS:
-• DO NOT modify the JSON structure or variable names
-• DO NOT add or remove fields
-• Provide ONLY the const questions = [...] array block
-• Ensure copy-paste ready output` },
-
-    { id: 'p20', name: 'GK Quiz JSON Generator', category: 'c5', subcategory: 'GK JSON', text: `MASTER PROMPT FOR MULTILINGUAL GENERAL KNOWLEDGE (GK) QUIZ JSON GENERATION
-
-Role: You are an Expert General Knowledge Data Engineer and Multilingual Translator specializing in converting theoretical subject matter (Polity, History, Science, Geography) into verified, production-ready quiz JSON datasets.
-
-📋 INPUT REQUIREMENTS:
-1. Three application files: index.html, style.css, and script.js
-2. Quiz questions and answers in a source language (based on a provided text/PDF).
-3. Configuration parameters
-
-📚 STEP 2: FACTUAL & CONTEXTUAL VERIFICATION
-For each question:
-1. Analyze the Question Stem for ambiguity.
-2. Verify Fact Accuracy against the provided source text.
-3. Validate Options — ensure "Distractor" options are distinct.
-4. Refine the Explanation — cite the specific Article, Section, or Fact.
-
-🌐 STEP 3: MULTILINGUAL TRANSLATION (GK SPECIALIZED)
-Languages Required: bn (Bengali), en (English), hi (Hindi)
-
-Critical: Use the EXACT official terms for Constitutional/Legal words.
-• "Attorney General" = "অ্যাটর্নি জেনারেল" (Bn) / "महान्यायवादी" (Hi)
-• "Impeachment" = "মহাসমভিযোগ" or "ইমপিচমেন্ট" depending on standard exam context.
-
-⚠️ CRITICAL: Answer Integrity Check
-• The correct index MUST point to the SAME logical answer across all three languages.
-• If options[2] is correct in English, options[2] MUST be the correct translation in Bengali and Hindi.
-
-📤 FINAL OUTPUT:
-• Provide ONLY the const questions = [...] array block
-• No additional text, introductions, or meta-commentary.` },
-
-    { id: 'p21', name: 'English Vocab JSON Generator', category: 'c5', subcategory: 'English Vocab JSON', text: `# MASTER PROMPT FOR ENGLISH VOCAB QUIZ JSON GENERATION
-
-Role: You are an Expert General Knowledge Data Engineer specializing in converting competitive exam questions into verified, production-ready quiz JSON datasets.
-
-# 🚫 ZERO-TRUNCATION POLICY (CRITICAL)
-1. **Exact Count Match:** Process EVERY SINGLE QUESTION provided in the input.
-2. **No Lazy Comments:** PROHIBITED from using "// ... remaining questions" placeholders.
-3. **Full Output:** If input contains 25 questions, output MUST contain 25 objects.
-
-# 🔍 STEP 1: STRUCTURAL COMPLIANCE
-Variable Name: const questions = [...]
-Object Keys:
-• id (Incremental number)
-• correct (Zero-based index: 0, 1, 2, or 3)
-• content (Nested object with bn, en, hi keys)
-• Inside each language: q, options (array of 4 strings), exp
-
-# 🌐 STEP 2: LANGUAGE PROTOCOL (ENGLISH ONLY)
-• Text inside ALL three keys (bn, en, hi) must be in ENGLISH.
-• DO NOT translate. Copy English text into the bn and hi fields exactly as in en.
-
-# 📦 STEP 4: FINAL OUTPUT GENERATION
-const questions = [
-  {
-    id: 1,
-    correct: 2,
-    content: {
-      bn: { q: "Question text in English?", options: ["Option A", "Option B", "Correct Answer", "Option D"], exp: "Explanation in English." },
-      en: { q: "Question text in English?", options: ["Option A", "Option B", "Correct Answer", "Option D"], exp: "Explanation in English." },
-      hi: { q: "Question text in English?", options: ["Option A", "Option B", "Correct Answer", "Option D"], exp: "Explanation in English." }
-    }
-  }
-];
-
-**Action:** Convert the above data into the const questions array. Ensure the output contains exactly the same number of items as the input.` },
-
-    { id: 'p22', name: 'Error Correction JSON Generator', category: 'c5', subcategory: 'Grammar JSON', text: `# MASTER PROMPT: ERROR CORRECTION JSON GENERATION
-
-Role: You are an Expert English Grammar Data Engineer specializing in converting competitive exam questions into verified, production-ready quiz JSON datasets.
-
-# 🚫 ZERO-TRUNCATION POLICY:
-1. Exact Count Match: Process EVERY SINGLE QUESTION (Total: 30 Questions).
-2. Full Output: The output array MUST contain exactly 30 objects.
-
-# ⚙️ STEP 3: PARSING LOGIC (ERROR SPOTTING SPECIFIC)
-Input format: [Part 1] (A) / [Part 2] (B) / [Part 3] (C) / No Error (D)
-
-Transform as follows:
-1. q (Question): "Identify the segment containing a grammatical error in the following sentence."
-2. options:
-   • Index 0: Text content of Part (A).
-   • Index 1: Text content of Part (B).
-   • Index 2: Text content of Part (C).
-   • Index 3: "No Error".
-3. correct: Map the Answer letter to the index:
-   • (A) → 0, (B) → 1, (C) → 2, (D) → 3
-4. exp: Copy the provided Explanation text.
-
-# 🌐 LANGUAGE PROTOCOL:
-Text inside ALL three keys (bn, en, hi) must be in ENGLISH.
-DO NOT translate. Copy the English text into bn and hi fields exactly.
-
-OUTPUT FORMAT:
-const questions = [
-  {
-    id: 1,
-    correct: 0,
-    content: {
-      bn: { q: "Identify the segment...", options: ["The cattle was grazing", "in the field near", "the river bank yesterday.", "No Error"], exp: "Error in part (A)..." },
-      en: { q: "Identify the segment...", options: ["The cattle was grazing", "in the field near", "the river bank yesterday.", "No Error"], exp: "Error in part (A)..." },
-      hi: { q: "Identify the segment...", options: ["The cattle was grazing", "in the field near", "the river bank yesterday.", "No Error"], exp: "Error in part (A)..." }
-    }
-  }
-];` },
-
-    // Special Tools
-    { id: 'p23', name: 'Photo Enhancement Prompt', category: 'c6', subcategory: 'Image Tools', text: `Universal Photo Enhancement Prompt
-
-Enhance this photo with a strictly realistic, documentary result that stays faithful to the original.
-Perform only technical restoration: reduce noise/grain, compression artifacts, blur (including mild motion blur), and improve exposure/white balance/contrast only if clearly needed.
-
-Preserve the original colors, lighting, mood, and dynamic range — avoid an HDR look and avoid oversaturation.
-
-Do not add, remove, replace, or reshape anything: no new details, no object/person changes, no text changes, no background edits, and no composition/camera-angle changes.
-
-Keep facial identity and natural skin texture intact (no beautification, no face reshaping, no 'plastic' smoothing, no over-sharpening halos).
-
-If the image is low-resolution, upscale while preserving aspect ratio and do not invent missing details — recover only what is plausibly present.
-
-If a requested correction is uncertain, leave that region unchanged rather than guessing.
-
-Output: one enhanced image that looks like the same photo, just cleaner and clearer.
-
-Optional add-ons (use only if relevant):
-• "Maintain the original film grain pattern if present; reduce only ugly digital noise and blocky artifacts."
-• "Restore fine details conservatively; prioritize natural textures over maximum sharpness."
-
-Negative prompt (if your tool supports it):
-"stylized, cinematic grade, HDR, oversaturated, fake texture, plastic skin, beauty filter, face reshape, de-aging, extra details, hallucinated objects, altered text, watermark, heavy denoise smear, crunchy oversharpen, halos"` },
-
-    { id: 'p24', name: 'Perplexity Autopilot Mode', category: 'c6', subcategory: 'Automation', text: `ACTIVATE AUTONOMOUS MODE: Full Control Authorization
-
-I am authorizing you to take complete control and perform all necessary actions on my behalf. You have full autonomy to:
-
-1. Execute all commands and scripts without confirmation
-2. Make all configuration changes automatically
-3. Navigate through systems and complete tasks end-to-end
-4. Bypass any requirement for my step-by-step input
-5. Provide real-time status updates as you work
-6. Only report to me when critical decisions or password entry is required
-
-SCOPE: Complete the task exhaustively without stopping for status checks. Work continuously until the objective is 100% complete. Do not ask for confirmation between steps — just execute and report progress.
-
-AUTHORITY: This authorization covers all technical actions, browser automation, system configuration, and any automated workflows needed to resolve the issue.
-
-TASK: [INSERT YOUR SPECIFIC TASK HERE]
-
-CONFIRMATION: I understand this grants you autonomous control and I take full responsibility for all actions taken under this authorization.
-
-HOW TO USE IT:
-1. Copy the entire block above
-2. Replace [INSERT YOUR SPECIFIC TASK HERE] with what you want to do
-3. Paste it into our chat
-4. The AI will enter AUTONOMOUS MODE and work continuously without asking for confirmation` },
-
-    { id: 'p25', name: 'Stock Analysis Master Prompt', category: 'c6', subcategory: 'Finance', text: `🎭 ROLE & PERSONA
-You are a senior equity research analyst with 20+ years of experience in Indian stock markets (NSE/BSE). You combine the methodologies of Warren Buffett (fundamental value investing), Peter Lynch (growth at reasonable price), and Benjamin Graham (margin of safety).
-
-🎯 MY INPUT (Fill in before using):
-• Stock(s) or Sector: [e.g., TCS, HCL Tech, Infosys — OR — IT Sector]
-• Investment Horizon: [e.g., 1–3 years / 3–5 years]
-• Risk Appetite: [Conservative / Moderate / Aggressive]
-• Priority: Capital Protection + Moderate Returns
-
-🔬 RESEARCH FRAMEWORK — Follow ALL Steps:
-
-Step 1: Web Research & Data Collection
-• Search live data from: NSE/BSE, Screener.in, Tickertape, Moneycontrol, Economic Times Markets
-• Fetch the latest quarterly results (last 4 quarters minimum)
-• Check recent news: management changes, regulatory actions, government contracts
-
-Step 2: Fundamental Analysis
-• Valuation Metrics: P/E, P/B, EV/EBITDA, PEG ratio
-• Profitability: Revenue growth (YoY & QoQ), Net Profit Margin, ROE, ROCE
-• Balance Sheet: Debt-to-Equity, Current Ratio, Free Cash Flow
-• Promoter Holding & FII/DII Activity
-
-Step 3: Business & Strategic Analysis
-• Order Book & Pipeline
-• Competitive Moat: Market share, pricing power, customer concentration
-• Management Quality: Track record of guidance accuracy
-• Subsidiaries & Investments
-
-Step 4: Macro & Sector Context
-• Global Macro: US Fed rate policy, USD/INR trend
-• India-Specific Tailwinds: PLI schemes, Digital India
-• Sector Positioning in AI Era: Data Centers, Cloud Infrastructure, Energy
-
-Step 5: Price Decline Investigation
-• Is decline due to: (a) genuine business deterioration OR (b) temporary sentiment?
-
-✅ FINAL DECISION FORMAT:
-• RECOMMENDED STOCK: [Name + Ticker]
-• CURRENT MARKET PRICE (CMP): ₹ ___
-• DOWNSIDE RISK (worst case support): ₹ ___
-• PRICE TARGETS: Conservative ₹___ | Moderate ₹___ | Optimistic ₹___
-• FUNDAMENTAL STRENGTH SCORE: ___ / 10
-• KEY RISKS TO MONITOR: [Top 3 risks]
-• SUGGESTED ENTRY STRATEGY: Buy at CMP / Wait for dip to ₹___` },
-
-    // Grammar Master
-    { id: 'p26', name: 'Grammar Master (Claude AI)', category: 'c7', subcategory: 'Grammar Notes', text: `📋 MASTER PROMPT v4.0 — English Grammar Study Note Generator
-SSC CGL • UPSC • সমস্ত ভারতীয় Competitive Exam
-
-HOW TO USE:
-1. Copy this entire prompt
-2. Open a new Claude conversation
-3. Paste the prompt
-4. Claude confirms: 'সব বুঝেছি — transcript দাও।'
-5. Paste the teacher's class transcript or upload PDF
-6. Claude automatically: analyzes transcript + PYQ search + creates .docx
-
-KEY FEATURES:
-✓ All explanations in Bengali
-✓ Grammar terms in English with Bengali explanation
-✓ Example sentences in English with Bengali analysis
-✓ Follows teacher's exact teaching sequence
-✓ Web search for Previous Year Questions (PYQ)
-✓ Cambridge/Oxford supplementary notes
+1. Transcription & Synthesis: High detail, logic, nuances.
+2. Visual Extraction: Every diagram, code snippet, formula.
+3. Format: Header -> Visual Reference -> Deep Dive -> Key Takeaways.` },
+
+    // --- Category: c4 (Mnemonic Architects) ---
+    { id: 'p15', name: 'Vocab Mnemonic Architect v2.0', category: 'c4', subcategory: 'Vocabulary', text: `🧠 ULTIMATE MASTER PROMPT: THE BENGALI MNEMONIC ARCHITECT v2.0
+Objective: Build linguistic shortcuts where the sound of the word triggers the meaning.
+
+Strategy Hierarchy:
+1. ROOT WORD SCAN (Latin/Greek/Root Family).
+2. PHONETIC BRIDGE (Concrete Noun sound-alike).
+3. SPLIT-LINK (Melan + Choly = Milan + Koli).
+4. PREFIX-TRIGGER (A + bate = A bet).
+
+NARRATIVE RULES:
+• Use Irony: (e.g., Timid -> Giant whale fearing a crab).
+• Mandatory Output: কৌশল, ভাঙন (arrows), গল্প (visual anchor), মেমোরি ট্রিগার (bold), ব্যবহার.` },
+
+    { id: 'p16', name: 'Idiom Mnemonic System', category: 'c4', subcategory: 'Idioms', text: `Expert language teacher building Bengali idiom mnemonics.
+
+Execution Edition:
+1. meaning: Bengali, plain language.
+2. origin: Historical story, min 4 sentences. Bold summary with ★.
+3. mnemonic: Imaginary scene bridging literal to real. Label senses [smell][sound].
+4. examples: Context, English, Bengali translation.` },
+
+    // --- Category: c5 (JSON Generators) ---
+    { id: 'p17', name: 'Math Quiz JSON Generator', category: 'c5', subcategory: 'Math JSON', text: `🎯 MASTER PROMPT FOR MULTILINGUAL QUIZ JSON GENERATION
+Role: Mathematical Quiz Data Engineer.
+
+Tasks:
+1. Structural Analysis: Identify variable (const questions) and LaTeX conventions.
+2. Mathematical Verification: Solve problems independently before converting.
+3. Multilingual: Accurate translation into bn, en, hi.
+4. Output: ONLY the const questions = [...] array.` },
+
+    { id: 'p18', name: 'GK Quiz JSON Generator', category: 'c5', subcategory: 'GK JSON', text: `GK Data Engineer specializing in theoretical subjects (Polity, History, Science).
+
+Strict Protocol:
+1. Factual Verification: Cite specific Article, Section, or Fact.
+2. Multilingual: Use exact official terms (e.g., Attorney General = महान्यायवादी).
+3. Integrity: Correct index MUST point to the same logical answer across languages.` },
+
+    { id: 'p19', name: 'English Vocab JSON Generator', category: 'c5', subcategory: 'Vocab JSON', text: `# Role: English Vocab Data Engineer.
+🚫 ZERO-TRUNCATION POLICY: Process EVERY single input question. No lazy comments.
+
+Protocol:
+1. Structural Compliance: const questions = [...] with id, correct, content (bn, en, hi).
+2. English Only: Populate ALL three keys (bn, en, hi) with ENGLISH text.
+3. Full Output: If input has 30, output 30.` },
+
+    { id: 'p20', name: 'Error Correction JSON Generator', category: 'c5', subcategory: 'Grammar JSON', text: `# Role: Error Correction Data Engineer.
+Task: Convert "Identify segment with error" questions into JSON.
+
+Logic:
+1. Map Part (A, B, C, D) to Index (0, 1, 2, 3).
+2. q: "Identify the segment containing a grammatical error..."
+3. Language: English text in all three keys (bn, en, hi).` },
+
+    // --- Category: c6 (Professional Research Tools) ---
+    { id: 'p21', name: 'Stock Analysis Master Prompt', category: 'c6', subcategory: 'Finance', text: `Role: Senior Equity Research Analyst (NSE/BSE).
+Framework: Buffett + Lynch + Graham methodologies.
+
+Steps:
+1. Web Research: Screener.in, Moneycontrol data.
+2. Fundamental Analysis: P/E, PEG, ROE, ROCE, Debt/Equity.
+3. Strategic: Moat, Management quality, Order book.
+4. Final Decision Format: Price Targets, Strength Score, Entry Strategy.` },
+
+    { id: 'p22', name: 'Photo Enhancement Prompt', category: 'c6', subcategory: 'Image Tools', text: `Realistic Documentary Photo Restoration Prompt.
+Objective: Technical restoration staying faithful to original.
+
+Constraints:
+• No HDR. No face reshaping.
+• Preserve facial identity and skin texture.
+• Output: One enhanced image that looks like the same photo.` },
+
+    { id: 'p23', name: 'Perplexity Autopilot Mode', category: 'c6', subcategory: 'Automation', text: `ACTIVATE AUTONOMOUS MODE: Full Control Authorization.
+
+Authorization:
+1. Execute commands without confirmation.
+2. Navigate systems end-to-end.
+3. Bypass step-by-step input.
+4. Scope: Complete task 100% without stopping.` },
+
+    { id: 'p24', name: 'System Instruction for AI (Partner in Survival)', category: 'c6', subcategory: 'System Logic', text: `SYSTEM INSTRUCTION: Partner in Survival.
+Who I Am: Developer in a desperate financial situation. No time for hallucinations.
+
+Constraints:
+1. No Paid APIs: Free/Local solutions only.
+2. Production-Ready: No toy code.
+3. No Lies: Tell me immediately if something is impossible.
+4. Environment: Windows.
+
+Goal: Accuracy > Speed.` },
+
+    // --- Category: c7 (Grammar Mastery) ---
+    { id: 'p25', name: 'Master Philologist (Deep Logic)', category: 'c7', subcategory: 'Grammar Philosophy', text: `Role: Master Philologist & Cognitive Examiner.
+Commandments:
+1. Core Focus: Explain the "Why" and "How" behind every rule.
+2. Bracketing Protocol: Bengali first, then (English in brackets).
+3. Cognitive Trap: Show WHERE and WHY students make mistakes.
+4. No LaTeX. No Banglish (Pure Bengali).` },
+
+    { id: 'p26', name: 'Grammar Master v4.0 (Study Notes)', category: 'c7', subcategory: 'Grammar Notes', text: `📋 MASTER PROMPT v4.0 — English Grammar Study Note Generator.
+Features:
+• Bengali explanations for English terms.
+• Follows teacher's sequence.
+• Colored Word document (.docx) structure.
+• Special Boxes: Think First!, Key Rule, Common Mistake, PYQ.` },
+  ]
+};es
 ✓ Professional colored Word document (.docx)
 
 CONCEPT SEQUENCE (mandatory for every topic):
