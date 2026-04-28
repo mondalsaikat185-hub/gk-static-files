@@ -180,6 +180,13 @@ select option{background:var(--card);color:var(--text);}
 .tb-sub{font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .tb-btn{background:transparent;border:none;padding:6px 8px;color:var(--text2);cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:4px;font-size:14px;transition:all .15s;}
 .tb-btn:hover{background:var(--card2);color:var(--text);}
+
+.voice-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;font-size:18px;cursor:pointer;padding:4px 8px;border-radius:50%;transition:all .2s;color:var(--muted);z-index:2;}
+.voice-btn:hover{background:var(--card2);color:var(--primary);}
+.voice-btn.recording{color:#ff4444;animation:voicePulse 1s infinite;}
+@keyframes voicePulse{0%,100%{opacity:1;transform:translateY(-50%) scale(1);}50%{opacity:.6;transform:translateY(-50%) scale(1.15);}}
+.voice-wrap{position:relative;}
+
 #chipsBar{background:var(--bg2);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;}
 #chipsBar::-webkit-scrollbar{display:none;}
 @media(min-width:900px){#chipsBar{flex-wrap:wrap;overflow-x:visible;overflow-y:visible;padding:10px 16px;gap:8px;min-height:auto;border-bottom:none;}}
@@ -1727,6 +1734,227 @@ const RAG = {
     return ctx;
   }
 };
+
+// === Voice Input (Speech-to-Text) ===
+const Voice = {
+  recognition: null,
+  activeField: null,
+  isRecording: false,
+  
+  init() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SpeechRecognition) return false;
+    this.recognition = new SpeechRecognition();
+    this.recognition.continuous = true;
+    this.recognition.interimResults = true;
+    this.recognition.lang = 'en-IN'; // Default: Indian English
+    
+    this.recognition.onresult = (e) => {
+      if(!this.activeField) return;
+      let interim = '', final = '';
+      for(let i = e.resultIndex; i < e.results.length; i++) {
+        const transcript = e.results[i][0].transcript;
+        if(e.results[i].isFinal) final += transcript + ' ';
+        else interim = transcript;
+      }
+      if(final) {
+        // Append final text at cursor position
+        const field = this.activeField;
+        const start = field.selectionStart || field.value.length;
+        const before = field.value.substring(0, start);
+        const after = field.value.substring(field.selectionEnd || start);
+        field.value = before + final + after;
+        field.selectionStart = field.selectionEnd = start + final.length;
+        field.dispatchEvent(new Event('input'));
+      }
+    };
+    
+    this.recognition.onerror = (e) => {
+      if(e.error !== 'no-speech') toast('Voice error: ' + e.error, 'error');
+      this.stop();
+    };
+    
+    this.recognition.onend = () => {
+      if(this.isRecording) {
+        // Auto-restart if still in recording mode
+        try { this.recognition.start(); } catch(e) {}
+      }
+    };
+    return true;
+  },
+  
+  setLang(lang) {
+    if(!this.recognition) return;
+    const langMap = {en:'en-IN', hi:'hi-IN', bn:'bn-IN'};
+    this.recognition.lang = langMap[lang] || lang;
+  },
+  
+  toggle(fieldId, btn) {
+    if(this.isRecording) {
+      this.stop();
+    } else {
+      this.start(fieldId, btn);
+    }
+  },
+  
+  start(fieldId, btn) {
+    if(!this.recognition && !this.init()) {
+      toast('Voice input not supported in this browser', 'error');
+      return;
+    }
+    this.activeField = document.getElementById(fieldId);
+    if(!this.activeField) return;
+    this.isRecording = true;
+    if(btn) btn.classList.add('recording');
+    // Update all voice buttons
+    document.querySelectorAll('.voice-btn').forEach(b => {
+      if(b.dataset.field === fieldId) b.classList.add('recording');
+    });
+    try { this.recognition.start(); } catch(e) {}
+    toast('Listening... speak now', 'success');
+  },
+  
+  stop() {
+    this.isRecording = false;
+    if(this.recognition) try { this.recognition.stop(); } catch(e) {}
+    document.querySelectorAll('.voice-btn').forEach(b => b.classList.remove('recording'));
+    this.activeField = null;
+  }
+};
+
+// Add voice buttons to textarea fields dynamically
+function addVoiceButtons() {
+  const fields = ['fldDetails', 'fldRef', 'fldExtra'];
+  fields.forEach(id => {
+    const field = document.getElementById(id);
+    if(!field || field.parentElement.classList.contains('voice-wrap')) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'voice-wrap';
+    wrapper.style.cssText = 'position:relative;';
+    field.parentNode.insertBefore(wrapper, field);
+    wrapper.appendChild(field);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'voice-btn';
+    btn.dataset.field = id;
+    btn.title = 'Voice input (click to dictate)';
+    btn.innerHTML = '\ud83c\udf99\ufe0f';
+    btn.onclick = function(e) { e.preventDefault(); Voice.toggle(id, this); };
+    wrapper.appendChild(btn);
+  });
+}
+
+// === Workflow Templates ===
+const WORKFLOW_TEMPLATES = [
+  {id:'transfer', name:'Transfer/Posting Order', icon:'\ud83d\udce8', type:'D.O. Letter',
+   subject:'Transfer and posting of {name} - {designation}',
+   details:'Employee {name}, currently posted as {designation} at {current_office}, is hereby transferred to {new_office} with immediate effect. The officer shall be relieved within {days} days of receipt of this order.',
+   fields:[{key:'name',label:'Officer Name'},{key:'designation',label:'Designation'},{key:'current_office',label:'Current Office'},{key:'new_office',label:'New Office'},{key:'days',label:'Relief Period (days)',default:'30'}]},
+  {id:'leave', name:'Leave Sanction Order', icon:'\ud83c\udfd6\ufe0f', type:'Office Order',
+   subject:'Sanction of {leave_type} to {name}',
+   details:'{leave_type} for a period of {days} days from {from_date} to {to_date} is hereby sanctioned to {name}, {designation}, {office}. During the period of leave, {name} shall not leave headquarters without prior permission.',
+   fields:[{key:'name',label:'Officer Name'},{key:'designation',label:'Designation'},{key:'office',label:'Office'},{key:'leave_type',label:'Leave Type',default:'Earned Leave'},{key:'days',label:'Days'},{key:'from_date',label:'From Date'},{key:'to_date',label:'To Date'}]},
+  {id:'circular', name:'Office Circular', icon:'\ud83d\udce2', type:'Circular',
+   subject:'{topic}',
+   details:'All officers and staff are hereby informed that {content}. This circular is effective from {date}. Non-compliance shall be viewed seriously.',
+   fields:[{key:'topic',label:'Circular Topic'},{key:'content',label:'Main Content'},{key:'date',label:'Effective Date',default:'immediate effect'}]},
+  {id:'showcause', name:'Show Cause Notice', icon:'\u26a0\ufe0f', type:'Office Memorandum',
+   subject:'Show Cause Notice to {name} regarding {matter}',
+   details:'It has been brought to the notice of the undersigned that {name}, {designation}, {charges}. {name} is hereby called upon to show cause within {days} days of receipt of this notice as to why disciplinary action should not be initiated.',
+   fields:[{key:'name',label:'Officer Name'},{key:'designation',label:'Designation'},{key:'matter',label:'Subject Matter'},{key:'charges',label:'Charges/Allegations'},{key:'days',label:'Reply Period (days)',default:'15'}]},
+  {id:'forwarding', name:'Forwarding Letter', icon:'\ud83d\udce4', type:'Letter',
+   subject:'Forwarding of {document} regarding {matter}',
+   details:'The undersigned is directed to forward herewith {document} regarding {matter} for your kind perusal and necessary action. An early response shall be appreciated.',
+   fields:[{key:'document',label:'Document Name'},{key:'matter',label:'Subject Matter'}]},
+  {id:'reminder', name:'Reminder Letter', icon:'\u23f0', type:'D.O. Letter',
+   subject:'Reminder - {original_subject} (Ref: {ref_no})',
+   details:'Kindly refer to this office letter No. {ref_no} dated {ref_date} on the above subject. Despite the lapse of considerable time, no response has been received. You are requested to expedite the matter and furnish a reply within {days} days.',
+   fields:[{key:'original_subject',label:'Original Subject'},{key:'ref_no',label:'Reference Number'},{key:'ref_date',label:'Reference Date'},{key:'days',label:'Days to Reply',default:'7'}]},
+  {id:'noc', name:'No Objection Certificate', icon:'\u2705', type:'Certificate',
+   subject:'No Objection Certificate for {name} - {purpose}',
+   details:'This is to certify that this office has no objection to {name}, {designation}, for {purpose}. The applicant\'s conduct and service record have been found satisfactory.',
+   fields:[{key:'name',label:'Officer Name'},{key:'designation',label:'Designation'},{key:'purpose',label:'Purpose of NOC'}]},
+  {id:'meeting', name:'Meeting Notice', icon:'\ud83d\udcc5', type:'Office Notice',
+   subject:'Notice for meeting on {topic} on {date}',
+   details:'A meeting is scheduled to discuss {topic} under the chairmanship of {chair}. All concerned officers are requested to attend the meeting with relevant files and data.\n\nDate: {date}\nTime: {time}\nVenue: {venue}\nAgenda: {agenda}',
+   fields:[{key:'topic',label:'Meeting Topic'},{key:'chair',label:'Chairperson'},{key:'date',label:'Date'},{key:'time',label:'Time'},{key:'venue',label:'Venue'},{key:'agenda',label:'Agenda Items'}]}
+];
+
+function openWorkflowPicker() {
+  let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+  WORKFLOW_TEMPLATES.forEach(w => {
+    html += '<div class="qa" onclick="applyWorkflow(\'' + w.id + '\')" style="cursor:pointer;padding:12px;"><div style="font-size:22px;margin-bottom:6px;">' + w.icon + '</div><div style="font-size:12px;font-weight:700;">' + w.name + '</div><div style="font-size:10px;color:var(--muted);margin-top:2px;">' + w.type + '</div></div>';
+  });
+  html += '</div>';
+  showModal('Workflow Templates', html, '<button class="btn btn-secondary" onclick="closeModal()">Close</button>');
+}
+
+function applyWorkflow(wfId) {
+  const wf = WORKFLOW_TEMPLATES.find(w => w.id === wfId);
+  if(!wf) return;
+  closeModal();
+  
+  // Build field input form
+  let html = '<div style="font-size:13px;color:var(--muted);margin-bottom:12px;">' + wf.icon + ' ' + wf.name + '</div>';
+  wf.fields.forEach(f => {
+    html += '<div class="fg"><label>' + f.label + '</label>';
+    if(f.key === 'content' || f.key === 'charges' || f.key === 'agenda') {
+      html += '<textarea id="wf_' + f.key + '" rows="3" placeholder="' + f.label + '">' + (f.default||'') + '</textarea>';
+    } else {
+      html += '<input type="text" id="wf_' + f.key + '" placeholder="' + f.label + '" value="' + (f.default||'') + '">';
+    }
+    html += '</div>';
+  });
+  
+  showModal('Fill Details — ' + wf.name, html, 
+    '<button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="executeWorkflow(\'' + wfId + '\')">Generate Letter</button>');
+}
+
+function executeWorkflow(wfId) {
+  const wf = WORKFLOW_TEMPLATES.find(w => w.id === wfId);
+  if(!wf) return;
+  
+  // Collect field values
+  const values = {};
+  let allFilled = true;
+  wf.fields.forEach(f => {
+    const el = document.getElementById('wf_' + f.key);
+    values[f.key] = el ? el.value.trim() : (f.default || '');
+    if(!values[f.key] && !f.default) allFilled = false;
+  });
+  
+  if(!allFilled) { toast('Please fill all fields', 'error'); return; }
+  
+  // Replace placeholders in subject and details
+  let subject = wf.subject;
+  let details = wf.details;
+  for(const [key, val] of Object.entries(values)) {
+    const re = new RegExp('\\{' + key + '\\}', 'g');
+    subject = subject.replace(re, val);
+    details = details.replace(re, val);
+  }
+  
+  closeModal();
+  
+  // Switch to Write tab and fill in
+  switchTab('write');
+  setMode('ai');
+  
+  // Set letter type
+  const typeSelect = document.getElementById('fldType');
+  if(typeSelect) {
+    const typeOpt = Array.from(typeSelect.options).find(o => o.text.includes(wf.type) || o.value.includes(wf.type));
+    if(typeOpt) typeSelect.value = typeOpt.value;
+  }
+  
+  setTimeout(() => {
+    const subField = document.getElementById('fldSubject');
+    const detField = document.getElementById('fldDetails');
+    if(subField) subField.value = subject;
+    if(detField) detField.value = details;
+    toast('Workflow applied! Click Generate to create the letter.', 'success');
+  }, 200);
+}
 
 function setMode(mode) {
   State.currentMode = mode;
