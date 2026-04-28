@@ -356,6 +356,13 @@ select option{background:var(--card);color:var(--text);}
 .tg-waiting .tg-icon{font-size:32px;margin-bottom:6px;}
 .tg-waiting .tg-title{font-weight:700;font-size:14px;color:var(--primary);margin-bottom:4px;}
 .tg-waiting .tg-sub{font-size:12px;color:var(--text2);line-height:1.5;}
+/* Workflow picker */
+.wf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px;}
+.wf-card{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:16px 12px;text-align:center;cursor:pointer;transition:all .2s;}
+.wf-card:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:0 4px 16px var(--primary-glow);}
+.wf-card .wf-icon{font-size:28px;margin-bottom:6px;}
+.wf-card .wf-name{font-size:12px;font-weight:600;color:var(--text1);}
+.wf-card .wf-desc{font-size:10px;color:var(--text2);margin-top:4px;}
 </style>
 </head>
 <body>
@@ -532,6 +539,7 @@ select option{background:var(--card);color:var(--text);}
           <button class="qa" onclick="switchTab('write');setMode('note')"><span class="qa-icon">✍️</span><div class="qa-title">Note Sheet</div><div class="qa-sub">Internal noting</div></button>
           <button class="qa" onclick="switchTab('write');setMode('format')"><span class="qa-icon">📝</span><div class="qa-title">Format Only</div><div class="qa-sub">Polish your draft</div></button>
           <button class="qa" onclick="switchTab('inbox')"><span class="qa-icon">📥</span><div class="qa-title">Quick Capture</div><div class="qa-sub">Photo / note</div></button>
+          <button class="qa" onclick="openWorkflowPicker()" ><span class="qa-icon">📋</span><div class="qa-title">Workflows</div><div class="qa-sub">Ready templates</div></button>
         </div>
       </div>
       <div class="section" id="reminderSection">
