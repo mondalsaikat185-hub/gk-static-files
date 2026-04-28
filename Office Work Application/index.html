@@ -1834,21 +1834,23 @@ const Voice = {
 function addVoiceButtons() {
   const fields = ['fldDetails', 'fldRef', 'fldExtra'];
   fields.forEach(id => {
-    const field = document.getElementById(id);
-    if(!field || field.parentElement.classList.contains('voice-wrap')) return;
-    const wrapper = document.createElement('div');
-    wrapper.className = 'voice-wrap';
-    wrapper.style.cssText = 'position:relative;';
-    field.parentNode.insertBefore(wrapper, field);
-    wrapper.appendChild(field);
+    const el = document.getElementById(id);
+    if(!el) return;
+    const parent = el.parentElement;
+    if(!parent || parent.querySelector('.voice-btn')) return;
+    // Ensure parent is positioned
+    if(!parent.style.position || parent.style.position === 'static') {
+      parent.style.position = 'relative';
+    }
+    // Add right padding to field so text doesn't go behind button
+    el.style.paddingRight = '48px';
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'voice-btn';
-    btn.dataset.field = id;
-    btn.title = 'Voice input (click to dictate)';
-    btn.innerHTML = '\ud83c\udf99\ufe0f';
-    btn.onclick = function(e) { e.preventDefault(); Voice.toggle(id, this); };
-    wrapper.appendChild(btn);
+    btn.title = 'Voice input (click to speak)';
+    btn.innerHTML = '\u{1F3A4}';
+    btn.onclick = function(e) { e.preventDefault(); e.stopPropagation(); Voice.toggle(id, this); };
+    parent.appendChild(btn);
   });
 }
 
@@ -3151,6 +3153,44 @@ async function clearAppCacheAndReload() {
     toast('Clear failed: ' + e.message, 'error');
   }
 }
+
+// ============================================================
+//  SESSION TIMEOUT — Auto-lock after inactivity
+// ============================================================
+(function(){
+  let lastActivity = Date.now();
+  const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+  const resetTimer = () => { lastActivity = Date.now(); };
+  ['click','keydown','touchstart','scroll','mousemove'].forEach(e => 
+    document.addEventListener(e, resetTimer, {passive:true})
+  );
+  setInterval(() => {
+    if(State && State.appPasswordHash && Date.now() - lastActivity > TIMEOUT_MS) {
+      const lockScreen = document.getElementById('passLockScreen');
+      if(lockScreen && lockScreen.style.display === 'none') {
+        lockScreen.style.display = 'flex';
+        toast('Session timed out — please unlock', 'info');
+        lastActivity = Date.now(); // prevent repeated triggers
+      }
+    }
+  }, 30000); // check every 30 seconds
+})();
+
+
+// ============================================================
+//  CODE INTEGRITY CHECK — Detect corruption on load
+// ============================================================
+(function(){
+  const scripts = document.querySelectorAll('script');
+  let hasEndMarker = false;
+  scripts.forEach(s => {
+    if(s.textContent && s.textContent.includes('loadTheme')) hasEndMarker = true;
+  });
+  if(!hasEndMarker) {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0e1a;color:#ef4444;font-family:sans-serif;text-align:center;padding:20px;"><div><h2>App Code Error Detected</h2><p style="color:#8899b0;">The application file may be corrupted.</p><button onclick="location.href=\'reset.html\'" style="margin-top:20px;padding:12px 24px;background:#5b8ff9;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">Reset &amp; Reload</button></div></div>';
+  }
+})();
+
 document.addEventListener('DOMContentLoaded', loadTheme);
 </script>
 </body>
