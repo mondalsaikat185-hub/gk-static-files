@@ -3,13 +3,14 @@
 // Network-first strategy with instant update support
 // ─────────────────────────────────────────────────
 
-const CACHE_NAME = 'prompt-master-v3';
+const CACHE_NAME = 'prompt-master-v4';
 
 // Files to pre-cache on install
 const PRECACHE_URLS = [
   './index.html',
   './manifest.json',
-  './icon.png',
+  './icon-192.png',
+  './icon-512.png',
   'https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap'
 ];
 
@@ -21,7 +22,7 @@ self.addEventListener('install', event => {
         // Don't fail install if external resources (fonts) fail
         console.warn('[SW] Pre-cache partial failure (ok):', err);
         // At minimum cache the core app files
-        return cache.addAll(['./index.html', './manifest.json', './icon.png']);
+        return cache.addAll(['./index.html', './manifest.json', './icon-192.png', './icon-512.png']);
       });
     })
   );

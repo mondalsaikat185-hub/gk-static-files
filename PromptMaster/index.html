@@ -247,6 +247,9 @@ mark{background:rgba(124,106,247,0.3);color:var(--accent-primary);border-radius:
       <span id="totalCountBadge" style="font-size:11px;color:var(--text-muted);font-family:'Space Mono',monospace;"></span>
     </div>
     <div class="sidebar-content" id="sidebarContent"></div>
+    <div style="padding: 16px; border-top: 1px solid var(--border);">
+      <button class="btn-edit" onclick="openAddCategoryModal()" style="width: 100%; justify-content: center; border-style: dashed;">＋ Add New Category</button>
+    </div>
   </nav>
 
   <!-- MAIN CONTENT -->
@@ -335,7 +338,13 @@ mark{background:rgba(124,106,247,0.3);color:var(--accent-primary);border-radius:
         <input class="form-input" id="newPromptSubcategory" placeholder="e.g. Math Questions">
       </div>
       <div class="form-group">
-        <label class="form-label">Prompt Text *</label>
+        <label class="form-label" style="display:flex; justify-content:space-between;">
+          <span>Prompt Text *</span>
+          <label style="color:var(--accent-secondary); cursor:pointer; font-weight:700; text-transform:none;">
+            📎 Upload .docx / .txt
+            <input type="file" id="promptFileInput" accept=".docx,.txt" style="display:none;" onchange="handlePromptFileUpload(event)">
+          </label>
+        </label>
         <textarea class="form-textarea" id="newPromptText" placeholder="Paste your full prompt here..." style="min-height:240px;"></textarea>
       </div>
     </div>
@@ -413,6 +422,9 @@ mark{background:rgba(124,106,247,0.3);color:var(--accent-primary);border-radius:
 <div class="update-banner" id="updateBanner" onclick="applyUpdate()">
   🆕 New version available — Click to update now!
 </div>
+
+<!-- MAMMOTH.JS for .docx parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
 <script>
 // ─────────────────────────────────────────────────
@@ -5473,6 +5485,39 @@ function openSettingsModal() {
   document.getElementById('settingsModal').classList.add('active');
 }
 function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+async function handlePromptFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const textarea = document.getElementById('newPromptText');
+  const oldText = textarea.value;
+  textarea.value = '⏳ Extracting text from file... Please wait.';
+  
+  try {
+    if (file.name.toLowerCase().endsWith('.docx')) {
+      if (typeof mammoth === 'undefined') {
+        throw new Error("Mammoth.js not loaded. Check internet connection.");
+      }
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+      textarea.value = result.value;
+      showToast('✅ Word document extracted perfectly!', 'success');
+    } else if (file.name.toLowerCase().endsWith('.txt')) {
+      const text = await file.text();
+      textarea.value = text;
+      showToast('✅ Text file loaded!', 'success');
+    } else {
+      textarea.value = oldText;
+      showToast('⚠️ Please upload a .docx or .txt file.', 'error');
+    }
+  } catch (e) {
+    console.error(e);
+    textarea.value = oldText;
+    showToast('⚠️ Error extracting file: ' + e.message, 'error');
+  }
+  event.target.value = ''; // Reset input
+}
 
 async function saveNewPrompt() {
   const name = document.getElementById('newPromptName').value.trim();

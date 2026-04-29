@@ -1,6 +1,7 @@
 {
   "name": "Prompt Master",
   "short_name": "Prompt Master",
+  "id": "/PromptMaster/",
   "description": "আপনার সকল AI প্রম্পটের ডিরেক্টরি — Your complete AI Prompt Library",
   "start_url": "./index.html",
   "scope": "./",
@@ -12,19 +13,13 @@
   "categories": ["productivity", "utilities", "education"],
   "icons": [
     {
-      "src": "./icon.png",
-      "sizes": "any",
+      "src": "./icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./icon.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icon.png",
+      "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
