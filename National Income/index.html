@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "তুলা থেকে শার্ট তৈরির প্রক্রিয়ায় দ্বৈত গণনা ত্রুটি (Double Counting Error) এড়াতে, প্রদত্ত নথি অনুযায়ী চূড়ান্ত শার্টটি 800 টাকায় বিক্রি হলে জিডিপিতে সঠিক অবদান কত হবে?",
+    "options_bn": [
+      "1500 টাকা, প্রতিটি স্তরে বিক্রয় মূল্য যোগ করে।",
+      "800 টাকা, যা প্রতিটি স্তরের মূল্য সংযোজনের (Value Added) সমষ্টি।",
+      "700 টাকা, তুলার প্রাথমিক খরচ বাদ দিয়ে।",
+      "400 টাকা, যা শুধুমাত্র চূড়ান্ত স্তরের মূল্য সংযোজন।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে দ্বৈত গণনা এড়াতে প্রতিটি স্তরের মূল্য সংযোজন (GVA) যোগ করা হয়। তুলা থেকে শার্ট তৈরি পর্যন্ত সমস্ত স্তরের মূল্য সংযোজন যোগ করলে সঠিক জিডিপি হয় 800 টাকা, যা চূড়ান্ত পণ্যের মূল্যের সমান।",
+    "question_en": "To avoid the double counting error in the process of making a shirt from cotton, what would be the correct GDP contribution if the final shirt is sold for Rs 800, according to the provided document?",
+    "options_en": [
+      "Rs 1500, by adding the sales value at every stage.",
+      "Rs 800, which is the sum of value added at all stages.",
+      "Rs 700, by subtracting the initial cost of cotton.",
+      "Rs 400, which is the value added only in the final stage."
+    ],
+    "explanation_en": "The document states that to avoid double counting, only the value added at each stage is calculated. The sum of value added at all stages from cotton to shirt equals the correct GDP of Rs 800, which is the final product's value.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "বাজার মূল্যে স্থূল অভ্যন্তরীণ উৎপাদন (GDP at Market Price) থেকে জাতীয় আয় (NNP at Factor Cost) গণনার সঠিক সমীকরণ কোনটি?",
+    "options_bn": [
+      "GDP(MP) - অবচয় (Depreciation) + NFIA + নিট পরোক্ষ কর (Net Indirect Tax)",
+      "GDP(MP) + অবচয় (Depreciation) - NFIA - নিট পরোক্ষ কর (Net Indirect Tax)",
+      "GDP(MP) - অবচয় (Depreciation) + NFIA - নিট পরোক্ষ কর (Net Indirect Tax)",
+      "GDP(MP) + NFIA - নিট পরোক্ষ কর (Net Indirect Tax) + নিট উৎপাদন কর (Net Production Tax)"
+    ],
+    "explanation_bn": "নথির রূপান্তর সূত্র অনুযায়ী: Gross থেকে Net এ যেতে অবচয় বিয়োগ করতে হয়, Domestic থেকে National এ যেতে NFIA যোগ করতে হয়, এবং Market Price থেকে Factor Cost এ যেতে Net Indirect Tax বিয়োগ করতে হয়।",
+    "question_en": "Which is the correct equation for calculating National Income (NNP at Factor Cost) starting from GDP at Market Price?",
+    "options_en": [
+      "GDP(MP) - Depreciation + NFIA + Net Indirect Tax",
+      "GDP(MP) + Depreciation - NFIA - Net Indirect Tax",
+      "GDP(MP) - Depreciation + NFIA - Net Indirect Tax",
+      "GDP(MP) + NFIA - Net Indirect Tax + Net Production Tax"
+    ],
+    "explanation_en": "According to the conversion formulas in the document: to convert Gross to Net, subtract Depreciation; to convert Domestic to National, add NFIA; and to convert Market Price to Factor Cost, subtract Net Indirect Tax.",
+    "correctIndex": 2
+  },
+  {
+    "id": 3,
+    "question_bn": "নথিতে উল্লিখিত অর্থনৈতিক চলকগুলির ভিত্তিতে, স্টক (Stock) এবং ফ্লো (Flow) এর ভুল শ্রেণিবিন্যাস কোনটি?",
+    "options_bn": [
+      "সম্পদ (Wealth) এবং মূলধন (Capital) হলো স্টক চলক।",
+      "মজুত পরিবর্তন (Change in Inventory) এবং অবচয় (Depreciation) হলো ফ্লো চলক।",
+      "ঋণ (Loan) এবং মজুত (Inventory) হলো স্টক চলক।",
+      "আয় (Income) এবং ব্যয় (Expenditure) হলো স্টক চলক।"
+    ],
+    "explanation_bn": "নথি অনুসারে, আয় (Income) এবং ব্যয় (Expenditure) নির্দিষ্ট সময়কালের উপর পরিমাপ করা হয়, তাই এগুলি ফ্লো (Flow) চলক, স্টক নয়।",
+    "question_en": "Based on the economic variables mentioned in the document, which is an incorrect classification of Stock and Flow?",
+    "options_en": [
+      "Wealth and Capital are Stock variables.",
+      "Change in Inventory and Depreciation are Flow variables.",
+      "Loan and Inventory are Stock variables.",
+      "Income and Expenditure are Stock variables."
+    ],
+    "explanation_en": "According to the document, Income and Expenditure are measured over a specific period, making them Flow variables, not Stock.",
+    "correctIndex": 3
+  },
+  {
+    "id": 4,
+    "question_bn": "একজন ব্যক্তি সরকার থেকে নিয়মিত পেনশন পান এবং একটি কোম্পানি তাদের আয়ের একাংশ বণ্টন না করে রেখে দেয়। এই বিষয়গুলি ব্যক্তিগত আয়কে (Personal Income - PI) কীভাবে প্রভাবিত করে?",
+    "options_bn": [
+      "ব্যক্তিগত আয় গণনার জন্য পেনশন এবং অবণ্টিত মুনাফা উভয়ই জাতীয় আয়ের সাথে যোগ করা হয়।",
+      "পেনশন একটি সরকারি হস্তান্তর হিসেবে যোগ করা হয়, কিন্তু অবণ্টিত মুনাফা জাতীয় আয় থেকে বিয়োগ করা হয়।",
+      "পেনশন ব্যক্তিগত আয় থেকে বিয়োগ করা হয়, কিন্তু অবণ্টিত মুনাফা যোগ করা হয়।",
+      "এদের কোনটিই ব্যক্তিগত আয়কে প্রভাবিত করে না।"
+    ],
+    "explanation_bn": "নথিতে প্রদত্ত সূত্র (PI = NI + Transfer Payments - Undistributed Corporate Profit) অনুযায়ী, সরকারি হস্তান্তর যেমন পেনশন যোগ করা হয় এবং অবণ্টিত মুনাফা (Retained Earnings) বিয়োগ করা হয়।",
+    "question_en": "An individual receives a regular pension from the government, and a company retains a portion of its earnings without distributing them. How do these factors affect Personal Income (PI)?",
+    "options_en": [
+      "Both pension and undistributed corporate profit are added to National Income to calculate PI.",
+      "Pension is added as a government transfer, but undistributed corporate profit is subtracted from National Income.",
+      "Pension is subtracted from PI, but undistributed corporate profit is added.",
+      "Neither of them affects Personal Income."
+    ],
+    "explanation_en": "According to the formula provided in the document (PI = NI + Transfer Payments - Undistributed Corporate Profit), government transfers like pensions are added, while undistributed corporate profits are subtracted.",
+    "correctIndex": 1
+  },
+  {
+    "id": 5,
+    "question_bn": "যদি একজন চায়ের দোকানদার দোকানের জন্য চা পাতা কেনেন এবং একই সাথে একজন সাধারণ ব্যক্তি বাড়িতে খাওয়ার জন্য ঠিক একই চা পাতা কেনেন, জিডিপি গণনার ক্ষেত্রে এই দ্রব্যগুলিকে কীভাবে শ্রেণিবদ্ধ করা হবে?",
+    "options_bn": [
+      "উভয়কেই চূড়ান্ত দ্রব্য হিসেবে বিবেচনা করা হবে এবং জিডিপিতে অন্তর্ভুক্ত করা হবে।",
+      "উভয়কেই মধ্যবর্তী দ্রব্য হিসেবে বিবেচনা করা হবে এবং জিডিপি থেকে বাদ দেওয়া হবে।",
+      "চায়ের দোকানের কেনা চা পাতা হলো মধ্যবর্তী দ্রব্য (জিডিপি থেকে বাদ), আর ব্যক্তির কেনা চা পাতা হলো চূড়ান্ত দ্রব্য (জিডিপিতে অন্তর্ভুক্ত)।",
+      "চায়ের দোকানের কেনা চা পাতা হলো চূড়ান্ত দ্রব্য, আর ব্যক্তির কেনা চা পাতা হলো মধ্যবর্তী দ্রব্য।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্ট বলা হয়েছে, একই পণ্য পরিস্থিতি অনুযায়ী চূড়ান্ত বা মধ্যবর্তী হতে পারে। বাড়িতে খাওয়ার চা পাতা সরাসরি ভোগ করা হয় (চূড়ান্ত দ্রব্য), কিন্তু চায়ের দোকানের চা পাতা অন্য পণ্য (চা) তৈরির কাঁচামাল হিসেবে ব্যবহৃত হয় (মধ্যবর্তী দ্রব্য)।",
+    "question_en": "If a tea shop owner buys tea leaves for the shop and simultaneously an individual buys the exact same tea leaves for home consumption, how are these goods classified in the context of GDP calculation?",
+    "options_en": [
+      "Both are considered Final Goods and included in GDP.",
+      "Both are considered Intermediate Goods and excluded from GDP.",
+      "The tea shop's purchase is an Intermediate Good (excluded from GDP), while the individual's purchase is a Final Good (included in GDP).",
+      "The tea shop's purchase is a Final Good, while the individual's purchase is an Intermediate Good."
+    ],
+    "explanation_en": "The document explicitly states that the same product can be final or intermediate depending on the situation. Tea leaves for home are consumed directly (Final Good), but for a tea shop, they are raw materials for making another product (Intermediate Good).",
+    "correctIndex": 2
+  },
+  {
+    "id": 6,
+    "question_bn": "মজুত দ্রব্যের (Inventory Goods) ক্ষেত্রে, যদি কোনো ব্যবসার বিক্রি প্রত্যাশার চেয়ে কম হয় এবং গুদামে মাল জমে যায়, তবে এটি কোন ধরনের মজুত পরিবর্তন নির্দেশ করে?",
+    "options_bn": [
+      "পরিকল্পিত সঞ্চয় (Planned Accumulation)",
+      "অপরিকল্পিত সঞ্চয় (Unplanned Accumulation)",
+      "পরিকল্পিত ক্ষয় (Planned Decumulation)",
+      "অপরিকল্পিত ক্ষয় (Unplanned Decumulation)"
+    ],
+    "explanation_bn": "নথির তালিকা অনুযায়ী, বিক্রি কম হওয়ার কারণে মাল জমে যাওয়াকে অপরিকল্পিত সঞ্চয় (Unplanned Accumulation) বলা হয়।",
+    "question_en": "In the context of Inventory Goods, if a business experiences lower sales than anticipated and goods pile up in the warehouse, what type of inventory change does this represent?",
+    "options_en": [
+      "Planned Accumulation",
+      "Unplanned Accumulation",
+      "Planned Decumulation",
+      "Unplanned Decumulation"
+    ],
+    "explanation_en": "According to the inventory table in the document, goods piling up due to low sales is classified as Unplanned Accumulation.",
+    "correctIndex": 1
+  },
+  {
+    "id": 7,
+    "question_bn": "জাতীয় আয়ের সমষ্টির রূপান্তর সূত্র অনুযায়ী, 'ফ্যাক্টর কস্ট' (Factor Cost) থেকে কীভাবে 'বেসিক প্রাইস' (Basic Price) নির্ণয় করা হয়?",
+    "options_bn": [
+      "Basic Price = Factor Cost - নিট পরোক্ষ কর",
+      "Basic Price = Factor Cost + নিট উৎপাদন কর",
+      "Basic Price = Factor Cost + ভর্তুকি",
+      "Basic Price = Factor Cost - অবচয়"
+    ],
+    "explanation_bn": "নথিতে প্রদত্ত রূপান্তর সূত্র অনুযায়ী, Factor Cost থেকে Basic Price পেতে হলে Net Production Tax যোগ করতে হয় (Basic Price = FC + Net Production Tax)।",
+    "question_en": "According to the conversion formulas for National Income aggregates, how is 'Basic Price' derived from 'Factor Cost'?",
+    "options_en": [
+      "Basic Price = Factor Cost - Net Indirect Tax",
+      "Basic Price = Factor Cost + Net Production Tax",
+      "Basic Price = Factor Cost + Subsidy",
+      "Basic Price = Factor Cost - Depreciation"
+    ],
+    "explanation_en": "According to the conversion formulas provided in the document, to get the Basic Price from Factor Cost, Net Production Tax must be added (Basic Price = FC + Net Production Tax).",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_bn": "আরভিং ফিশারের (Irving Fisher) দেওয়া \"মানি ইল্যুশন\" (Money Illusion) ধারণাটি নিচের কোন অর্থনৈতিক পরিমাপকের সাথে সবচেয়ে বেশি সম্পর্কিত?",
+    "options_bn": [
+      "Green GDP, কারণ এটি পরিবেশগত ক্ষতিকে উপেক্ষা করে।",
+      "Recessionary Gap, কারণ এটি অব্যবহৃত ক্ষমতা দেখায়।",
+      "GDP Deflator, কারণ এটি Nominal GDP-তে মুদ্রাস্ফীতির কারণে আয় বৃদ্ধির বিভ্রমকে তুলে ধরে।",
+      "PPP, কারণ এটি মুদ্রার মান সম্পর্কে বিভ্রম তৈরি করে।"
+    ],
+    "explanation_bn": "নথিতে GDP Deflator অংশে উল্লেখ করা হয়েছে যে, আরভিং ফিশার এই ধারণাটিকে \"মানি ইল্যুশন\" বলেছেন, যেখানে মুদ্রাস্ফীতির কারণে মানুষ মনে করে আয় বেড়েছে (Nominal GDP), কিন্তু প্রকৃত ক্রয় ক্ষমতা (Real GDP) কমে যায় বা স্থির থাকে।",
+    "question_en": "The concept of \"Money Illusion,\" introduced by Irving Fisher, is most closely associated with which of the following economic measures?",
+    "options_en": [
+      "Green GDP, as it ignores environmental damage.",
+      "Recessionary Gap, as it shows unutilized capacity.",
+      "GDP Deflator, as it highlights the illusion of increased income due to inflation in Nominal GDP.",
+      "PPP, as it creates illusions about currency values."
+    ],
+    "explanation_en": "In the GDP Deflator section, the document mentions that Irving Fisher called this concept \"Money Illusion,\" where people think their income has increased due to inflation (Nominal GDP), but actual purchasing power (Real GDP) decreases or remains unchanged.",
+    "correctIndex": 2
+  },
+  {
+    "id": 9,
+    "question_bn": "2015 সাল থেকে ভারত সরকার সেক্টর-ওয়াইজ অর্থনৈতিক অবদান গণনা করার জন্য কোন পদ্ধতিটি ব্যবহার করছে এবং এর ভিত্তি বছর (Base Year) কত?",
+    "options_bn": [
+      "GDP at Factor Cost, Base Year 2004-05",
+      "GVA at Basic Prices, Base Year 2011-12",
+      "GVA at Market Prices, Base Year 2015-16",
+      "NNP at Factor Cost, Base Year 2011-12"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে যে, 2015 সাল থেকে ভারত সরকার \"GVA at Basic Prices\" ব্যবহার করে সেক্টর-ওয়াইজ অবদান গণনা করছে এবং এর Base Year হলো 2011-12।",
+    "question_en": "Since 2015, which method has the Government of India been using to calculate sector-wise economic contribution, and what is its Base Year?",
+    "options_en": [
+      "GDP at Factor Cost, Base Year 2004-05",
+      "GVA at Basic Prices, Base Year 2011-12",
+      "GVA at Market Prices, Base Year 2015-16",
+      "NNP at Factor Cost, Base Year 2011-12"
+    ],
+    "explanation_en": "The document explicitly states that since 2015, the Government of India has been using \"GVA at Basic Prices\" to calculate sector-wise contribution, and its Base Year is 2011-12.",
+    "correctIndex": 1
+  },
+  {
+    "id": 10,
+    "question_bn": "ব্যয় পদ্ধতির (Expenditure Method) মাধ্যমে জিডিপি পরিমাপের ক্ষেত্রে নিচের কোন উপাদানটি অন্তর্ভুক্ত নয়?",
+    "options_bn": [
+      "পরিবারের ব্যক্তিগত ভোগ ব্যয় (C)",
+      "নতুন মূলধন ও স্টক ক্রয় বা বিনিয়োগ (I)",
+      "পরিচালন উদ্বৃত্ত (Operating Surplus)",
+      "নিট রপ্তানি (X - M)"
+    ],
+    "explanation_bn": "নথির তালিকা অনুযায়ী, পরিচালন উদ্বৃত্ত (Operating Surplus) হলো আয় পদ্ধতির (Income Method) একটি অংশ। ব্যয় পদ্ধতির উপাদানগুলি হলো C, I, G, এবং (X - M)।",
+    "question_en": "Which of the following components is NOT included when measuring GDP through the Expenditure Method?",
+    "options_en": [
+      "Personal consumption expenditure by households (C)",
+      "Purchase of new capital and stock or Investment (I)",
+      "Operating Surplus",
+      "Net Exports (X - M)"
+    ],
+    "explanation_en": "According to the document, Operating Surplus is a component of the Income Method. The components of the Expenditure Method are C, I, G, and (X - M).",
+    "correctIndex": 2
+  },
+  {
+    "id": 11,
+    "question_bn": "প্রদত্ত পাঠ্য অনুযায়ী, ভারতে GDP যদি GNP এর চেয়ে বেশি হয়, তবে এটি কী নির্দেশ করে?",
+    "options_bn": [
+      "বিদেশ থেকে নিট ফ্যাক্টর আয় (NFIA) ধনাত্মক।",
+      "ভারতে অবচয়ের (Depreciation) হার অত্যন্ত কম।",
+      "বিদেশী কোম্পানির আয় যা ভারত থেকে বাইরে যায়, তা ভারতীয়দের দ্বারা বিদেশে উপার্জিত আয়ের চেয়ে বেশি।",
+      "সরকারের পরোক্ষ কর ভর্তুকির চেয়ে বেশি।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, ভারতে GDP > GNP — কারণ বিদেশী কোম্পানির আয় ভারত থেকে বাইরে যায় (অর্থাৎ Factor Income to Abroad, Factor Income from Abroad এর চেয়ে বেশি, যার ফলে NFIA ঋণাত্মক হয়)।",
+    "question_en": "According to the provided text, if GDP is greater than GNP in India, what does this indicate?",
+    "options_en": [
+      "Net Factor Income from Abroad (NFIA) is positive.",
+      "The depreciation rate in India is extremely low.",
+      "The income of foreign companies going out of India is greater than the income generated by Indians abroad.",
+      "The government's indirect taxes are higher than subsidies."
+    ],
+    "explanation_en": "The document states that in India GDP > GNP because the income of foreign companies goes out of India (meaning Factor Income to Abroad is greater than Factor Income from Abroad, resulting in a negative NFIA).",
+    "correctIndex": 2
+  },
+  {
+    "id": 12,
+    "question_bn": "ব্যক্তিগত আয় (PI) থেকে কীভাবে ব্যক্তিগত ব্যয়যোগ্য আয় (PDI) গণনা করা হয়?",
+    "options_bn": [
+      "PI থেকে কর্পোরেট কর বিয়োগ করে।",
+      "PI এর সাথে হস্তান্তর প্রদান (Transfer payments) যোগ করে।",
+      "PI থেকে প্রত্যক্ষ কর (যেমন আয়কর) বিয়োগ করে।",
+      "PI থেকে নিট পরোক্ষ কর বিয়োগ করে।"
+    ],
+    "explanation_bn": "নথিতে সূত্র দেওয়া আছে: PDI = Personal Income - Direct Tax (Income Tax)। এটি কর পরিশোধের পর হাতে থাকা অর্থ।",
+    "question_en": "How is Personal Disposable Income (PDI) calculated from Personal Income (PI)?",
+    "options_en": [
+      "By subtracting corporate taxes from PI.",
+      "By adding transfer payments to PI.",
+      "By subtracting direct taxes (like Income Tax) from PI.",
+      "By subtracting net indirect taxes from PI."
+    ],
+    "explanation_en": "The document provides the formula: PDI = Personal Income - Direct Tax (Income Tax). It is the money left in hand after paying taxes.",
+    "correctIndex": 2
+  },
+  {
+    "id": 13,
+    "question_bn": "আয় পদ্ধতির (Income Method) অধীনে, নিচের কোনটি 'পরিচালন উদ্বৃত্ত' (Operating Surplus) গঠন করে?",
+    "options_bn": [
+      "মজুরি, বেতন এবং সামাজিক সুরক্ষা অবদান।",
+      "ভাড়া, সুদ, মুনাফা এবং রয়্যালটি।",
+      "স্ব-নিযুক্ত ব্যক্তিদের আয়, যেমন ডাক্তার এবং ছোট দোকানদার।",
+      "রাস্তা এবং শিক্ষার উপর সরকারি ব্যয়।"
+    ],
+    "explanation_bn": "নথির আয় পদ্ধতির টেবিল অনুযায়ী, 'পরিচালন উদ্বৃত্ত' (Operating Surplus) এর মধ্যে অন্তর্ভুক্ত থাকে ভাড়া, সুদ, মুনাফা এবং রয়্যালটি।",
+    "question_en": "Under the Income Method, which of the following constitutes 'Operating Surplus'?",
+    "options_en": [
+      "Wages, salaries, and social security contributions.",
+      "Rent, interest, profit, and royalties.",
+      "Income of self-employed individuals like doctors and small shopkeepers.",
+      "Government expenditure on roads and education."
+    ],
+    "explanation_en": "According to the Income Method table in the document, 'Operating Surplus' includes rent, interest, profit, and royalties.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "একটি অর্থনীতিতে \"Recessionary Gap\" কীভাবে সংজ্ঞায়িত করা হয়?",
+    "options_bn": [
+      "Nominal GDP এবং Real GDP এর মধ্যে পার্থক্য।",
+      "GDP এবং Green GDP এর মধ্যে পার্থক্য।",
+      "Potential GDP এবং Real GDP এর মধ্যে পার্থক্য।",
+      "Gross National Product এবং Net National Product এর মধ্যে পার্থক্য।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে সূত্র দেওয়া আছে যে, Recessionary Gap = Potential GDP - Real GDP, যা অর্থনীতির অব্যবহৃত ক্ষমতা বোঝায়।",
+    "question_en": "How is the \"Recessionary Gap\" in an economy defined?",
+    "options_en": [
+      "The difference between Nominal GDP and Real GDP.",
+      "The difference between GDP and Green GDP.",
+      "The difference between Potential GDP and Real GDP.",
+      "The difference between Gross National Product and Net National Product."
+    ],
+    "explanation_en": "The document explicitly provides the formula: Recessionary Gap = Potential GDP - Real GDP, which represents the unutilized capacity of the economy.",
+    "correctIndex": 2
+  },
+  {
+    "id": 15,
+    "question_bn": "স্থূল অভ্যন্তরীণ উৎপাদন (GDP) এর ধারণা কে এবং কত সালে প্রবর্তন করেন?",
+    "options_bn": [
+      "আরভিং ফিশার, 1934 সালে",
+      "সাইমন কুজনেটস, 1934 সালে",
+      "সাইমন কুজনেটস, 2015 সালে",
+      "আরভিং ফিশার, 2011 সালে"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে, GDP-এর ধারণা দিয়েছিলেন আমেরিকান অর্থনীতিবিদ Simon Kuznets, 1934 সালে।",
+    "question_en": "Who introduced the concept of Gross Domestic Product (GDP), and in which year?",
+    "options_en": [
+      "Irving Fisher in 1934",
+      "Simon Kuznets in 1934",
+      "Simon Kuznets in 2015",
+      "Irving Fisher in 2011"
+    ],
+    "explanation_en": "The document mentions that the concept of GDP was introduced by the American economist Simon Kuznets in 1934.",
+    "correctIndex": 1
+  },
+  {
+    "id": 16,
+    "question_bn": "নথি অনুসারে, নমিনাল মান (Nominal value) এবং ক্রয় ক্ষমতা সমতার (PPP) ভিত্তিতে ভারতের জিডিপি র‍্যাংকিংয়ের মূল পার্থক্য কী?",
+    "options_bn": [
+      "ভারত নমিনাল জিডিপিতে 3য় এবং PPP তে 5ম।",
+      "ভারত নমিনাল জিডিপিতে 5ম এবং PPP তে 3য়।",
+      "ভারত PPP তে 1ম এবং নমিনাল জিডিপিতে 5ম।",
+      "ভারত নমিনাল জিডিপি এবং PPP উভয় ক্ষেত্রেই 3য়।"
+    ],
+    "explanation_bn": "নথিতে প্রদত্ত র‍্যাংকিং টেবিল অনুযায়ী, ভারত Nominal GDP অনুযায়ী 5ম স্থানে এবং PPP অনুযায়ী 3য় স্থানে রয়েছে।",
+    "question_en": "According to the document, what is the core difference in ranking when evaluating India's GDP by Nominal value versus Purchasing Power Parity (PPP)?",
+    "options_en": [
+      "India is 3rd in Nominal GDP and 5th in PPP.",
+      "India is 5th in Nominal GDP and 3rd in PPP.",
+      "India is 1st in PPP and 5th in Nominal GDP.",
+      "India ranks 3rd in both Nominal GDP and PPP."
+    ],
+    "explanation_en": "According to the ranking table provided in the document, India is in the 5th position based on Nominal GDP and in the 3rd position based on PPP.",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_bn": "জাতীয় আয় গণনার ক্ষেত্রে হস্তান্তর প্রদান (Transfer Payments) যেমন পেনশন, ভর্তুকি এবং বৃত্তিকে কীভাবে বিবেচনা করা হয়?",
+    "options_bn": [
+      "এগুলো জাতীয় আয়ে অন্তর্ভুক্ত হয় কারণ এগুলো দেশের সামগ্রিক সম্পদ বৃদ্ধি করে।",
+      "এগুলো ব্যক্তিগত আয় থেকে বাদ দেওয়া হয় কিন্তু জাতীয় আয়ে যোগ করা হয়।",
+      "এগুলো ব্যক্তিগত আয়ে অন্তর্ভুক্ত হয় কিন্তু জাতীয় আয় গণনা থেকে বাদ দেওয়া হয়।",
+      "আয় পদ্ধতির অধীনে এগুলোকে পরিচালন উদ্বৃত্তের অংশ হিসেবে বিবেচনা করা হয়।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে ব্যক্তিগত আয় (PI) গণনায় সরকারি হস্তান্তর (পেনশন ইত্যাদি) যোগ করা হয়, কিন্তু শেষ অধ্যায়ের প্রশ্নোত্তর অংশে স্পষ্ট বলা হয়েছে যে এগুলো জাতীয় আয়ে যোগ হয় না।",
+    "question_en": "In the calculation of National Income, how are Transfer Payments (like pensions, subsidies, and scholarships) treated?",
+    "options_en": [
+      "They are included in National Income because they increase the country's overall wealth.",
+      "They are excluded from Personal Income but added to National Income.",
+      "They are included in Personal Income but excluded from National Income calculations.",
+      "They are considered part of the Operating Surplus under the Income Method."
+    ],
+    "explanation_en": "The document mentions that government transfers (pensions, etc.) are added in the calculation of Personal Income (PI), but the final chapter's Q&A section explicitly states that they are not added to National Income.",
+    "correctIndex": 2
+  },
+  {
+    "id": 18,
+    "question_bn": "'ভোগ্য দ্রব্য' (Consumer Good) এর বিপরীতে নিচের কোনটিকে 'মূলধনী দ্রব্য' (Capital Good) হিসেবে বিবেচনা করা হয়?",
+    "options_bn": [
+      "বাড়িতে ব্যবহারের জন্য কেনা একটি টেলিভিশন।",
+      "পরিবারের ভোগের জন্য কেনা খাবার।",
+      "একজন ব্যক্তির কেনা পোশাক।",
+      "শিক্ষামূলক উদ্দেশ্যে শিক্ষকের দ্বারা ব্যবহৃত একটি ল্যাপটপ।"
+    ],
+    "explanation_bn": "নথির সংজ্ঞা অনুযায়ী, মূলধনী দ্রব্য অন্য পণ্য বা পরিষেবা উৎপাদনে ব্যবহৃত হয়, যেমন শিক্ষকের ল্যাপটপ বা কারখানার মেশিন। খাবার, পোশাক এবং টেলিভিশন ব্যক্তিগত ভোগের জন্য ব্যবহৃত হয়, তাই এগুলো ভোগ্য দ্রব্য।",
+    "question_en": "Which of the following is considered a 'Capital Good' as opposed to a 'Consumer Good'?",
+    "options_en": [
+      "A television purchased for home use.",
+      "Food bought for household consumption.",
+      "Clothes purchased by an individual.",
+      "A laptop used by a teacher for educational purposes."
+    ],
+    "explanation_en": "According to the definitions in the document, capital goods are used to produce other goods or services, such as a teacher's laptop or a factory machine. Food, clothing, and televisions are used for personal consumption, making them consumer goods.",
+    "correctIndex": 3
+  },
+  {
+    "id": 19,
+    "question_bn": "'Real GDP' এবং 'Nominal GDP' এর ধারণা অনুযায়ী, যদি একটি বিস্কুটের প্যাকেটের দাম 10 টাকা থেকে বেড়ে 20 টাকা হয়, কিন্তু উৎপাদনের পরিমাণ 10 প্যাকেটেই স্থির থাকে, তবে কী ঘটবে?",
+    "options_bn": [
+      "Real GDP এবং Nominal GDP উভয়ই দ্বিগুণ হয়ে 200 টাকা হবে।",
+      "Real GDP বেড়ে 200 টাকা হবে, কিন্তু Nominal GDP 100 টাকাই থাকবে।",
+      "Nominal GDP দ্বিগুণ মান (200 টাকা) দেখাবে, কিন্তু Real GDP ভিত্তি মূল্যে (100 টাকা) একই থাকবে।",
+      "মুদ্রাস্ফীতির কারণে Real GDP কমে যাবে, কিন্তু Nominal GDP বাড়বে।"
+    ],
+    "explanation_bn": "নথিতে Parle-G বিস্কুটের উদাহরণ দিয়ে বোঝানো হয়েছে যে, দাম দ্বিগুণ হলে বর্তমান বাজার মূল্যে Nominal GDP দ্বিগুণ (200 টাকা) দেখাবে, কিন্তু উৎপাদন না বাড়ায় ভিত্তি বছরের স্থির মূল্যে Real GDP একই থাকবে (100 টাকা)।",
+    "question_en": "According to the concept of 'Real GDP' and 'Nominal GDP', what will happen if a biscuit packet's price increases from Rs 10 to Rs 20, but the production quantity remains the same at 10 packets?",
+    "options_en": [
+      "Both Real GDP and Nominal GDP will double to Rs 200.",
+      "Real GDP will increase to Rs 200, but Nominal GDP will remain Rs 100.",
+      "Nominal GDP will show a doubled value (Rs 200), but Real GDP will remain the same at the base price (Rs 100).",
+      "Real GDP will decrease due to inflation, while Nominal GDP will increase."
+    ],
+    "explanation_en": "Using the Parle-G example, the document explains that if the price doubles, the Nominal GDP at current prices will show a doubled value (Rs 200), but since production didn't increase, the Real GDP at the base year's constant price will remain the same (Rs 100).",
+    "correctIndex": 2
+  },
+  {
+    "id": 20,
+    "question_bn": "উৎপাদনের উপাদানগুলির (Factors of Production) সাথে তাদের নিজ নিজ পরিশোধের ধরন (types of payment) মেলানোর ক্ষেত্রে, পাঠ্য অনুযায়ী কোন সংমিশ্রণটি সম্পূর্ণ সঠিক?",
+    "options_bn": [
+      "ভূমি - মজুরি; শ্রম - খাজনা; মূলধন - মুনাফা; উদ্যোক্তা - সুদ",
+      "ভূমি - খাজনা; শ্রম - মজুরি; মূলধন - সুদ; উদ্যোক্তা - মুনাফা",
+      "ভূমি - সুদ; শ্রম - মজুরি; মূলধন - খাজনা; উদ্যোক্তা - মুনাফা",
+      "ভূমি - খাজনা; শ্রম - মুনাফা; মূলধন - সুদ; উদ্যোক্তা - মজুরি"
+    ],
+    "explanation_bn": "নথির 1.3 নম্বর অধ্যায় অনুযায়ী সঠিক পরিশোধগুলি হলো: ভূমি (Land) → খাজনা (Rent), শ্রম (Labour) → মজুরি (Wages), মূলধন (Capital) → সুদ (Interest), এবং উদ্যোক্তা (Entrepreneur) → মুনাফা (Profit)।",
+    "question_en": "When matching the Factors of Production with their respective types of payment, which combination is completely accurate according to the text?",
+    "options_en": [
+      "Land - Wages; Labour - Rent; Capital - Profit; Entrepreneur - Interest",
+      "Land - Rent; Labour - Wages; Capital - Interest; Entrepreneur - Profit",
+      "Land - Interest; Labour - Wages; Capital - Rent; Entrepreneur - Profit",
+      "Land - Rent; Labour - Profit; Capital - Interest; Entrepreneur - Wages"
+    ],
+    "explanation_en": "According to section 1.3 of the document, the correct payments are: Land → Rent, Labour → Wages, Capital → Interest, and Entrepreneur → Profit.",
+    "correctIndex": 1
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
