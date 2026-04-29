@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "অগ্ন্যাশয়ের ল্যাঙ্গারহ্যান্সের দ্বীপপুঞ্জ এবং তাদের কার্যাবলী সম্পর্কে নিচের কোন বিবৃতিটি সঠিক?",
+    "options_bn": [
+      "আলফা কোষ ইনসুলিন তৈরি করে যা গ্লাইকোজেনকে গ্লুকোজে পরিণত করে।",
+      "বেটা কোষ ইনসুলিন তৈরি করে যা গ্লুকোজকে গ্লাইকোজেনে পরিণত করে (Glycogenesis)।",
+      "আলফা কোষ গ্লুকাগন তৈরি করে যা রক্তে গ্লুকোজের মাত্রা কমিয়ে দেয়।",
+      "বেটা কোষ গ্লুকাগন তৈরি করে যা গ্লুকোজকে গ্লাইকোজেনে রূপান্তরিত করে।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ করা হয়েছে যে অগ্ন্যাশয়ের বেটা কোষ (β-Cells) ইনসুলিন তৈরি করে যা গ্লুকোজকে গ্লাইকোজেনে (Glycogenesis) রূপান্তরিত করে রক্তে শর্করার মাত্রা কমায়, এবং আলফা কোষ (α-Cells) গ্লুকাগন তৈরি করে যা গ্লাইকোজেনকে গ্লুকোজে পরিণত করে।",
+    "question_en": "Which of the following statements is correct regarding the Islets of Langerhans in the pancreas and their functions?",
+    "options_en": [
+      "Alpha cells produce insulin which converts glycogen to glucose.",
+      "Beta cells produce insulin which converts glucose to glycogen (Glycogenesis).",
+      "Alpha cells produce glucagon which decreases the blood glucose level.",
+      "Beta cells produce glucagon which converts glucose to glycogen."
+    ],
+    "explanation_en": "The document clearly states that the beta cells (β-Cells) of the pancreas produce insulin, which reduces blood sugar levels by converting glucose to glycogen (Glycogenesis), and alpha cells (α-Cells) produce glucagon, which converts glycogen to glucose.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "পিটুইটারি গ্রন্থি থেকে নিঃসৃত হরমোনের অভাব বা আধিক্যের কারণে সৃষ্ট রোগগুলোর মধ্যে কোন জোড়টি সঠিকভাবে মেলানো হয়েছে?",
+    "options_bn": [
+      "ADH-এর অভাব - ডায়াবেটিস মেলিটাস",
+      "প্রাপ্তবয়স্কদের ক্ষেত্রে GH-এর আধিক্য - অ্যাক্রোমেগালি",
+      "শিশুদের ক্ষেত্রে GH-এর অভাব - জাইগান্টিজম",
+      "প্রোল্যাকটিনের অভাব - ডায়াবেটিস ইনসিপিডাস"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, প্রাপ্তবয়স্কদের মধ্যে গ্রোথ হরমোন (GH) বেশি নিঃসৃত হলে অ্যাক্রোমেগালি (Acromegaly) হয়। ADH-এর অভাবে ডায়াবেটিস ইনসিপিডাস হয়, মেলিটাস নয়; এবং শিশুদের GH-এর অভাবে বামনত্ব (Dwarfism) হয়।",
+    "question_en": "Which pair is correctly matched regarding the diseases caused by the deficiency or excess of hormones secreted by the pituitary gland?",
+    "options_en": [
+      "Deficiency of ADH - Diabetes Mellitus",
+      "Excess of GH in adults - Acromegaly",
+      "Deficiency of GH in children - Gigantism",
+      "Deficiency of Prolactin - Diabetes Insipidus"
+    ],
+    "explanation_en": "According to the document, an excess secretion of Growth Hormone (GH) in adults causes Acromegaly. Deficiency of ADH causes Diabetes Insipidus, not Mellitus; and deficiency of GH in children causes Dwarfism.",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_bn": "উদ্ভিদের চলন সম্পর্কিত কোন তথ্যটি সম্পূর্ণ সঠিক?",
+    "options_bn": [
+      "ফটোট্রপিজমের ক্ষেত্রে শিকড় আলোর দিকে এবং কাণ্ড আলোর বিপরীত দিকে বৃদ্ধি পায়।",
+      "জিওট্রপিজমের ক্ষেত্রে শিকড় positive এবং কাণ্ড negative সাড়া দেয়।",
+      "নাস্টিক চলন হলো বৃদ্ধি-সম্পর্কিত এবং দিকনির্ভর চলন।",
+      "থিগমোন্যাস্টিক চলন মাধ্যাকর্ষণের প্রতি উদ্ভিদের সাড়াকে বোঝায়।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, জিওট্রপিজমে শিকড় positive (মাধ্যাকর্ষণের দিকে) এবং কাণ্ড negative সাড়া দেয়। নাস্টিক চলন দিকনির্ভর নয় এবং থিগমোন্যাস্টিক হলো স্পর্শ বা কম্পনের প্রতি সাড়া।",
+    "question_en": "Which information regarding plant movements is completely correct?",
+    "options_en": [
+      "In phototropism, roots grow towards the light and stems grow away from the light.",
+      "In geotropism, roots show a positive response and stems show a negative response.",
+      "Nastic movement is a growth-related and directional movement.",
+      "Thigmonastic movement refers to the plant's response to gravity."
+    ],
+    "explanation_en": "The document states that in geotropism, roots respond positively (towards gravity) and stems respond negatively. Nastic movement is non-directional, and thigmonastic movement is the response to touch or vibration.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "গ্রন্থিগুলোর প্রকারভেদ সম্পর্কে নিচের কোন পার্থক্যটি সঠিক?",
+    "options_bn": [
+      "বহিঃস্রাবী গ্রন্থি নালীবিহীন এবং সরাসরি রক্তে এনজাইম মেশায়।",
+      "অন্তঃস্রাবী গ্রন্থি স্থানীয়ভাবে কাজ করে এবং নালীর মাধ্যমে হরমোন নিঃসরণ করে।",
+      "থাইরয়েড হলো মানবদেহের সবচেয়ে বড় বহিঃস্রাবী গ্রন্থি।",
+      "অন্তঃস্রাবী গ্রন্থি নালীবিহীন (Ductless) এবং সরাসরি রক্তে হরমোন নিঃসরণ করে।"
+    ],
+    "explanation_bn": "নথি অনুসারে, অন্তঃস্রাবী গ্রন্থি (Endocrine Glands) হলো নালীবিহীন (Ductless) এবং এরা সরাসরি রক্তে হরমোন ছেড়ে দেয়। অন্যদিকে বহিঃস্রাবী গ্রন্থির নালী থাকে।",
+    "question_en": "Which of the following differences regarding the types of glands is correct?",
+    "options_en": [
+      "Exocrine glands are ductless and release enzymes directly into the blood.",
+      "Endocrine glands work locally and secrete hormones through ducts.",
+      "The thyroid is the largest exocrine gland in the human body.",
+      "Endocrine glands are ductless and secrete hormones directly into the blood."
+    ],
+    "explanation_en": "According to the document, Endocrine Glands are ductless and they release hormones directly into the blood. On the other hand, exocrine glands have ducts.",
+    "correctIndex": 3
+  },
+  {
+    "id": 5,
+    "question_bn": "থাইরয়েড গ্রন্থি এবং এর রোগ সম্পর্কিত কোন বিবৃতিটি নথিতে দেওয়া তথ্যের সাথে সামঞ্জস্যপূর্ণ?",
+    "options_bn": [
+      "হাশিমোটো রোগটি শিশুদের থাইরক্সিন অভাবে মানসিক বিকাশ বাধাগ্রস্ত হওয়ার কারণে হয়।",
+      "থাইরক্সিন হরমোনে 4টি আয়োডিন পরমাণু থাকে বলে একে T4 বলা হয়।",
+      "হাইপারথাইরয়েডিজমের ফলে থাইরক্সিন কম নিঃসৃত হয় এবং ওজন বাড়ে।",
+      "থাইরয়েড মানবদেহের সবচেয়ে বড় মিশ্র গ্রন্থি।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে থাইরক্সিনে 4টি আয়োডিন পরমাণু থাকে, তাই একে T4 বলে। হাশিমোটো হলো একটি Autoimmune রোগ, এবং হাইপারথাইরয়েডিজমে ওজন কমে।",
+    "question_en": "Which statement regarding the thyroid gland and its diseases is consistent with the information provided in the document?",
+    "options_en": [
+      "Hashimoto's disease occurs due to hindered mental development in children from a lack of thyroxine.",
+      "The thyroxine hormone is called T4 because it contains 4 iodine atoms.",
+      "Hyperthyroidism results in lower thyroxine secretion and weight gain.",
+      "The thyroid is the largest mixed gland in the human body."
+    ],
+    "explanation_en": "The document mentions that thyroxine contains 4 iodine atoms, which is why it is called T4. Hashimoto is an autoimmune disease, and hyperthyroidism causes weight loss.",
+    "correctIndex": 1
+  },
+  {
+    "id": 6,
+    "question_bn": "হরমোনের কাজ করার প্রক্রিয়া সম্পর্কে কোনটি সঠিক?",
+    "options_bn": [
+      "হরমোন নালীর মাধ্যমে সরাসরি লক্ষ্য অঙ্গে পৌঁছায়।",
+      "গ্রন্থি এনজাইম তৈরি করে রক্তে মিশিয়ে দেয় যা গ্রাহকের সাথে যুক্ত হয়।",
+      "রক্ত হরমোনকে বহন করে লক্ষ্য অঙ্গে নিয়ে যায় এবং সেখানে কোষের বিশেষ গ্রাহক (Receptor)-এর সাথে এটি যুক্ত হয়।",
+      "হরমোন কেবল স্থানীয়ভাবে কাজ করে এবং এর কোনো গ্রাহকের প্রয়োজন হয় না।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, গ্রন্থি হরমোন তৈরি করে সরাসরি রক্তে মিশিয়ে দেয়, রক্ত তা লক্ষ্য অঙ্গে বহন করে এবং হরমোন সেই অঙ্গের কোষের বিশেষ গ্রাহকের (Receptor) সাথে যুক্ত হয়ে কাজ করে।",
+    "question_en": "Which of the following is correct about the mechanism of hormone action?",
+    "options_en": [
+      "Hormones reach the target organ directly through ducts.",
+      "Glands produce enzymes and mix them into the blood to bind with receptors.",
+      "Blood carries hormones to target organs, where they bind to specific cellular receptors.",
+      "Hormones act only locally and do not require any receptors."
+    ],
+    "explanation_en": "According to the document, a gland produces a hormone and releases it directly into the blood; the blood carries it to the target organ, where the hormone binds to a specific receptor on the cells to perform its function.",
+    "correctIndex": 2
+  },
+  {
+    "id": 7,
+    "question_bn": "অ্যাড্রেনাল গ্রন্থির গঠন এবং নিঃসৃত হরমোন প্রসঙ্গে কোনটি সঠিক?",
+    "options_bn": [
+      "অ্যাড্রেনাল মেডালা থেকে কর্টিসল নিঃসৃত হয় যা প্রদাহ কমায়।",
+      "অ্যাড্রেনাল কর্টেক্স থেকে অ্যাড্রেনালিন নিঃসৃত হয় যা হৃদস্পন্দন বাড়ায়।",
+      "অ্যাড্রেনাল গ্রন্থির হরমোনের অভাবে অ্যাডিসন্স (Addison's) রোগ হয়।",
+      "অ্যাড্রেনাল গ্রন্থিকে মিশ্র গ্রন্থি বলা হয় কারণ এটি পরিপাকতন্ত্রে সাহায্য করে।"
+    ],
+    "explanation_bn": "নথি অনুসারে, অ্যাড্রেনাল গ্রন্থির অভাবজনিত কারণে অ্যাডিসন্স রোগ (Addison's Disease) হয়। কর্টিসল নিঃসৃত হয় কর্টেক্স থেকে এবং অ্যাড্রেনালিন নিঃসৃত হয় মেডালা থেকে।",
+    "question_en": "Which is correct regarding the structure of the adrenal gland and the hormones it secretes?",
+    "options_en": [
+      "Cortisol is secreted from the adrenal medulla to reduce inflammation.",
+      "Adrenaline is secreted from the adrenal cortex to increase heart rate.",
+      "A deficiency in adrenal gland hormones causes Addison's disease.",
+      "The adrenal gland is called a mixed gland because it aids in the digestive system."
+    ],
+    "explanation_en": "According to the document, Addison's Disease is caused by a deficiency in adrenal hormones. Cortisol is secreted from the cortex, and adrenaline is secreted from the medulla.",
+    "correctIndex": 2
+  },
+  {
+    "id": 8,
+    "question_bn": "উদ্ভিদ হরমোন সম্পর্কে নিচের কোন জোড়টি তার নির্দিষ্ট কাজের সাথে সঠিকভাবে মেলানো নয়?",
+    "options_bn": [
+      "অক্সিন - কোষ দীর্ঘায়ন এবং ফটোট্রপিজম নিয়ন্ত্রণ",
+      "জিবেরেলিন - অঙ্কুরোদ্গম এবং কাণ্ড দীর্ঘায়ন",
+      "সাইটোকাইনিন - বৃদ্ধি বাধা দেওয়া এবং পাতা ঝরানো",
+      "ইথিলিন - ফল পাকানো"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে সাইটোকাইনিন কোষ বিভাজন ঘটায় এবং বার্ধক্য বিলম্বিত করে। বৃদ্ধি বাধা দেওয়া এবং পাতা ঝরানোর কাজ করে অ্যাবসিসিক এসিড (ABA)।",
+    "question_en": "Which of the following pairs regarding plant hormones is NOT correctly matched with its specific function?",
+    "options_en": [
+      "Auxin - Cell elongation and phototropism control",
+      "Gibberellin - Germination and stem elongation",
+      "Cytokinin - Inhibiting growth and causing leaf fall",
+      "Ethylene - Fruit ripening"
+    ],
+    "explanation_en": "The document states that cytokinin causes cell division and delays aging. Inhibiting growth and causing leaf fall are the functions of Abscisic Acid (ABA).",
+    "correctIndex": 2
+  },
+  {
+    "id": 9,
+    "question_bn": "প্যারাথাইরয়েড গ্রন্থি এবং ক্যালসিয়াম নিয়ন্ত্রণের ক্ষেত্রে কোন প্রক্রিয়াটি ঘটে?",
+    "options_bn": [
+      "রক্তে ক্যালসিয়াম বেশি হলে প্যারাথাইরয়েড হরমোন নিঃসরণ বন্ধ করে দেয়।",
+      "রক্তে ক্যালসিয়াম কম হলে PTH বেশি নিঃসৃত হয় এবং হাড় থেকে ক্যালসিয়াম রক্তে আনে।",
+      "প্যারাথাইরয়েড গ্রন্থি সরাসরি পেশীর সংকোচন নিয়ন্ত্রণ করতে ক্যালসিয়াম তৈরি করে।",
+      "এটি থাইরয়েড গ্রন্থির সামনে অবস্থিত এবং আয়োডিন দিয়ে ক্যালসিয়াম নিয়ন্ত্রণ করে।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা আছে যে রক্তে ক্যালসিয়াম কম হলে প্যারাথাইরয়েড হরমোন (PTH) বেশি নিঃসরণ হয় এবং এটি হাড় থেকে ক্যালসিয়াম রক্তে নিয়ে আসে।",
+    "question_en": "Which process occurs regarding the parathyroid gland and calcium regulation?",
+    "options_en": [
+      "When blood calcium is high, parathyroid hormone secretion stops completely.",
+      "When blood calcium is low, more PTH is secreted, which brings calcium from the bones into the blood.",
+      "The parathyroid gland produces calcium directly to control muscle contraction.",
+      "It is located in front of the thyroid gland and regulates calcium using iodine."
+    ],
+    "explanation_en": "The document clearly states that when blood calcium is low, more parathyroid hormone (PTH) is secreted, which pulls calcium from the bones into the blood.",
+    "correctIndex": 1
+  },
+  {
+    "id": 10,
+    "question_bn": "পিটুইটারি গ্রন্থির লোব এবং সেখান থেকে নিঃসৃত হরমোন সম্পর্কে কোনটি সঠিক?",
+    "options_bn": [
+      "Posterior Lobe থেকে গ্রোথ হরমোন এবং প্রোল্যাকটিন নিঃসৃত হয়।",
+      "Anterior Lobe থেকে ADH এবং অক্সিটোসিন নিঃসৃত হয়।",
+      "Anterior Lobe থেকে প্রোল্যাকটিন নিঃসৃত হয় যা দুধ উৎপাদনে সহায়ক।",
+      "Posterior Lobe থেকে GHRH নিঃসৃত হয়।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, Anterior Lobe থেকে গ্রোথ হরমোন (GH) এবং প্রোল্যাকটিন নিঃসৃত হয়। Posterior Lobe থেকে ADH এবং অক্সিটোসিন নিঃসৃত হয়।",
+    "question_en": "Which is correct regarding the lobes of the pituitary gland and the hormones secreted from them?",
+    "options_en": [
+      "Growth hormone and prolactin are secreted from the posterior lobe.",
+      "ADH and oxytocin are secreted from the anterior lobe.",
+      "Prolactin is secreted from the anterior lobe, which helps in milk production.",
+      "GHRH is secreted from the posterior lobe."
+    ],
+    "explanation_en": "According to the document, growth hormone (GH) and prolactin are secreted from the anterior lobe. ADH and oxytocin are secreted from the posterior lobe.",
+    "correctIndex": 2
+  },
+  {
+    "id": 11,
+    "question_bn": "রক্তচাপ নিয়ন্ত্রণের সাথে যুক্ত ANF হরমোনটি কোথা থেকে নিঃসৃত হয়?",
+    "options_bn": [
+      "অ্যাড্রেনাল গ্রন্থির মেডালা থেকে",
+      "মস্তিষ্কের হাইপোথ্যালামাস থেকে",
+      "হৃদপিণ্ডের অ্যাট্রিয়াল দেয়াল (Atrial Wall) থেকে",
+      "কিডনির উপরের সুপ্রারেনাল গ্রন্থি থেকে"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে মানুষের হৃদপিণ্ডের অ্যাট্রিয়াল দেয়াল (Atrial Wall) একটি গুরুত্বপূর্ণ পেপটাইড হরমোন (ANF) নিঃসরণ করে যা রক্তচাপ নিয়ন্ত্রণে সাহায্য করে।",
+    "question_en": "Where is the ANF hormone, which is associated with blood pressure regulation, secreted from?",
+    "options_en": [
+      "The medulla of the adrenal gland",
+      "The hypothalamus of the brain",
+      "The atrial wall of the heart",
+      "The suprarenal gland above the kidney"
+    ],
+    "explanation_en": "The document mentions that the atrial wall of the human heart secretes an important peptide hormone called ANF, which helps regulate blood pressure.",
+    "correctIndex": 2
+  },
+  {
+    "id": 12,
+    "question_bn": "ডায়াবেটিস ইনসিপিডাস (Diabetes Insipidus) এবং ডায়াবেটিস মেলিটাস (Diabetes Mellitus)-এর মধ্যে মূল পার্থক্য কী?",
+    "options_bn": [
+      "মেলিটাস ADH-এর অভাবে হয়, আর ইনসিপিডাস ইনসুলিনের অভাবে হয়।",
+      "ইনসিপিডাস ADH-এর অভাবে হয় এবং এতে অতিরিক্ত প্রস্রাব হয়, অন্যদিকে মেলিটাস ইনসুলিনের অভাবে হয় এবং রক্তে গ্লুকোজ বাড়ে।",
+      "দুটি রোগই অগ্ন্যাশয়ের বেটা কোষের অকার্যকারিতার কারণে ঘটে।",
+      "ইনসিপিডাস রক্তে গ্লুকোজ বাড়ায়, আর মেলিটাস জল পুনঃশোষণ বাধাগ্রস্ত করে।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে ADH-এর অভাবে ডায়াবেটিস ইনসিপিডাস হয় (যার লক্ষণ অতিরিক্ত প্রস্রাব), এবং ইনসুলিনের অভাবে রক্তে গ্লুকোজ বাড়ে যা ডায়াবেটিস মেলিটাস।",
+    "question_en": "What is the main difference between Diabetes Insipidus and Diabetes Mellitus?",
+    "options_en": [
+      "Mellitus is caused by a lack of ADH, and insipidus is caused by a lack of insulin.",
+      "Insipidus is caused by a lack of ADH resulting in excessive urination, while mellitus is caused by a lack of insulin leading to increased blood glucose.",
+      "Both diseases occur due to the dysfunction of beta cells in the pancreas.",
+      "Insipidus increases blood glucose, while mellitus disrupts water reabsorption."
+    ],
+    "explanation_en": "The document states that a deficiency of ADH causes Diabetes Insipidus (characterized by excessive urination), whereas a deficiency of insulin increases blood glucose, resulting in Diabetes Mellitus.",
+    "correctIndex": 1
+  },
+  {
+    "id": 13,
+    "question_bn": "থাইমাস গ্রন্থি (Thymus Gland) সম্পর্কে কোন তথ্যটি নথিতে প্রদান করা হয়েছে?",
+    "options_bn": [
+      "এটি মস্তিষ্কের ঠিক মাঝখানে অবস্থিত এবং মেলাটোনিন নিঃসরণ করে।",
+      "এটি শ্বেত রক্তকণিকা (WBC) প্রশিক্ষণে সাহায্য করে এবং বয়স বাড়ার সাথে সাথে ছোট হয়ে যায়।",
+      "এটি মানবদেহের সবচেয়ে বড় অন্তঃস্রাবী গ্রন্থি এবং আজীবন একই আকৃতির থাকে।",
+      "এটি মিশ্র গ্রন্থি হিসেবে কাজ করে এবং T-lymphocyte ধ্বংস করে।"
+    ],
+    "explanation_bn": "নথি অনুসারে, থাইমাস গ্রন্থি বুকের উপরের অংশে অবস্থিত, এটি শ্বেত রক্তকণিকা (WBC) বা T-lymphocyte কোষগুলিকে প্রশিক্ষিত করে এবং বয়স বাড়ার সাথে সাথে এটি ছোট হয়ে যায়।",
+    "question_en": "Which information about the Thymus Gland is provided in the document?",
+    "options_en": [
+      "It is located in the middle of the brain and secretes melatonin.",
+      "It helps in training white blood cells (WBC) and shrinks with increasing age.",
+      "It is the largest endocrine gland in the human body and remains the same size throughout life.",
+      "It acts as a mixed gland and destroys T-lymphocytes."
+    ],
+    "explanation_en": "According to the document, the thymus gland is located in the upper part of the chest, it trains white blood cells (WBCs) or T-lymphocytes, and it shrinks as age increases.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "“মাস্টার অফ দ্য মাস্টার গ্ল্যান্ড” কাকে বলা হয় এবং কেন?",
+    "options_bn": [
+      "পিটুইটারিকে, কারণ এটি সমস্ত অন্তঃস্রাবী গ্রন্থিকে নিয়ন্ত্রণ করে।",
+      "থাইরয়েডকে, কারণ এটি বিপাক ক্রিয়া নিয়ন্ত্রণ করে।",
+      "হাইপোথ্যালামাসকে, কারণ এটি পিটুইটারি গ্রন্থিকে নিয়ন্ত্রণ করে।",
+      "পিনিয়াল গ্রন্থিকে, কারণ এটি শরীরের দৈনন্দিন ঘড়ি নিয়ন্ত্রণ করে।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে হাইপোথ্যালামাস পিটুইটারি গ্রন্থিকে নিয়ন্ত্রণ করে বলে একে \"মাস্টার অফ দ্য মাস্টার গ্ল্যান্ড\" বলা হয়।",
+    "question_en": "What is called the \"Master of the Master Gland\" and why?",
+    "options_en": [
+      "The pituitary, because it controls all endocrine glands.",
+      "The thyroid, because it regulates metabolism.",
+      "The hypothalamus, because it controls the pituitary gland.",
+      "The pineal gland, because it controls the body's daily clock."
+    ],
+    "explanation_en": "The document mentions that the hypothalamus is called the \"Master of the Master Gland\" because it controls the pituitary gland.",
+    "correctIndex": 2
+  },
+  {
+    "id": 15,
+    "question_bn": "নাস্টিক চলনের (Nastic Movement) বৈশিষ্ট্য হিসেবে কোনটি সঠিক?",
+    "options_bn": [
+      "এটি উদ্দীপনার দিকের উপর নির্ভর করে এবং কাণ্ড আলোর দিকে বাঁকে।",
+      "এটি বৃদ্ধি-সম্পর্কিত চলন এবং মাধ্যাকর্ষণের দ্বারা প্রভাবিত হয়।",
+      "এটি দিকনির্ভর নয় এবং এর একটি উদাহরণ হলো লজ্জাবতী গাছের স্পর্শে পাতা বন্ধ হওয়া।",
+      "এটি কেবল রাসায়নিকের প্রতি সাড়া দিয়ে পরাগনালি বৃদ্ধিতে সাহায্য করে।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, নাস্টিক চলন দিকনির্ভর নয় এবং বৃদ্ধি-নিরপেক্ষ। থিগমোন্যাস্টিক চলন (স্পর্শের প্রতি সাড়া) এর উদাহরণ হলো লজ্জাবতী গাছের পাতা বন্ধ হওয়া।",
+    "question_en": "Which of the following is correct as a characteristic of Nastic Movement?",
+    "options_en": [
+      "It depends on the direction of the stimulus and stems bend towards the light.",
+      "It is a growth-related movement and is influenced by gravity.",
+      "It is non-directional, and an example is the closing of Mimosa leaves upon touch.",
+      "It responds only to chemicals to aid in pollen tube growth."
+    ],
+    "explanation_en": "According to the document, nastic movement is non-directional and independent of growth. An example of thigmonastic movement (response to touch) is the closing of the leaves of the Mimosa plant.",
+    "correctIndex": 2
+  },
+  {
+    "id": 16,
+    "question_bn": "পিনিয়াল গ্রন্থি থেকে নিঃসৃত মেলাটোনিন হরমোনের কাজ কী?",
+    "options_bn": [
+      "শরীরের তাপমাত্রা এবং ক্ষুধা নিয়ন্ত্রণ করা।",
+      "রক্তে ক্যালসিয়ামের মাত্রা বাড়ানো।",
+      "শরীরের দৈনন্দিন ঘড়ি (Circadian Rhythm) বা ঘুম-জাগার চক্র নিয়ন্ত্রণ করা।",
+      "শ্বেত রক্তকণিকাকে প্রশিক্ষিত করে রোগপ্রতিরোধ ক্ষমতা বৃদ্ধি করা।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে পিনিয়াল গ্রন্থি থেকে নিঃসৃত মেলাটোনিন দৈনন্দিন ঘড়ি (Circadian Rhythm) নিয়ন্ত্রণ করে, অন্ধকারে বেশি নিঃসৃত হয়ে ঘুম আনে।",
+    "question_en": "What is the function of the melatonin hormone secreted from the pineal gland?",
+    "options_en": [
+      "Controlling body temperature and hunger.",
+      "Increasing the calcium level in the blood.",
+      "Regulating the body's daily clock (Circadian Rhythm) or sleep-wake cycle.",
+      "Training white blood cells to increase immunity."
+    ],
+    "explanation_en": "The document states that melatonin secreted from the pineal gland controls the daily clock (Circadian Rhythm) and induces sleep by being secreted more in the dark.",
+    "correctIndex": 2
+  },
+  {
+    "id": 17,
+    "question_bn": "প্রথম আবিষ্কৃত হরমোন কোনটি এবং কে এটি আবিষ্কার করেন?",
+    "options_bn": [
+      "থাইরক্সিন, 1902 সালে ই.এইচ. স্টার্লিং আবিষ্কার করেন।",
+      "সিক্রেটিন, 1902 সালে ই.এইচ. স্টার্লিং আবিষ্কার করেন।",
+      "ইনসুলিন, 1902 সালে ল্যাঙ্গারহ্যান্স আবিষ্কার করেন।",
+      "গ্রোথ হরমোন, রবার্ট ওয়াড্লো আবিষ্কার করেন।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ আছে যে হরমোন আবিষ্কার করেন বিজ্ঞানী ই.এইচ. স্টার্লিং (E.H. Starling) এবং প্রথম আবিষ্কৃত হরমোনের নাম হলো সিক্রেটিন (Secretin) যা 1902 সালে আবিষ্কৃত হয়।",
+    "question_en": "What was the first discovered hormone and who discovered it?",
+    "options_en": [
+      "Thyroxine, discovered by E.H. Starling in 1902.",
+      "Secretin, discovered by E.H. Starling in 1902.",
+      "Insulin, discovered by Langerhans in 1902.",
+      "Growth hormone, discovered by Robert Wadlow."
+    ],
+    "explanation_en": "The document clearly mentions that the scientist E.H. Starling discovered hormones, and the first discovered hormone was Secretin, which was discovered in 1902.",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "অক্সিটোসিন (Oxytocin) হরমোনের প্রধান কাজ কী?",
+    "options_bn": [
+      "এটি জল পুনঃশোষণ নিয়ন্ত্রণ করে এবং রক্তচাপ বজায় রাখে।",
+      "এটি মহিলাদের ডিম্বাশয় থেকে নিঃসৃত হয়ে মাসিক চক্র নিয়ন্ত্রণ করে।",
+      "এটি প্রোল্যাকটিনের সাথে মিলে দুধ উৎপাদন করে।",
+      "এটি দুধ নিঃসরণে এবং প্রসব বেদনায় জরায়ুর সংকোচনে সাহায্য করে।"
+    ],
+    "explanation_bn": "নথি অনুসারে, অক্সিটোসিন (Oxytocin) Posterior Lobe থেকে নিঃসৃত হয় এবং এটি দুধ নিঃসরণে ও প্রসব বেদনায় জরায়ুর সংকোচনে সাহায্য করে। একে \"লাভ হরমোন\"ও বলা হয়।",
+    "question_en": "What is the main function of the Oxytocin hormone?",
+    "options_en": [
+      "It controls water reabsorption and maintains blood pressure.",
+      "It is secreted from female ovaries and controls the menstrual cycle.",
+      "It works with prolactin to produce milk.",
+      "It helps in milk ejection and uterine contraction during labor pains."
+    ],
+    "explanation_en": "According to the document, oxytocin is secreted from the posterior lobe and aids in milk ejection and uterine contractions during labor. It is also referred to as the \"love hormone\".",
+    "correctIndex": 3
+  },
+  {
+    "id": 19,
+    "question_bn": "অ্যাড্রেনালিন হরমোনকে \"ফাইট-অর-ফ্লাইট\" (Flight-or-Fight) হরমোন বলার কারণ কী?",
+    "options_bn": [
+      "এটি প্রদাহ কমিয়ে শরীরকে শিথিল করে।",
+      "এটি রক্তে ক্যালসিয়াম কমিয়ে পেশীর সংকোচন বাড়ায়।",
+      "এটি হৃদস্পন্দন বাড়ায় এবং শরীরকে বিপদের সময় লড়তে বা পালাতে প্রস্তুত করে।",
+      "এটি শুধুমাত্র ঘুমের সময় নিঃসৃত হয়ে শরীরকে শক্তি জোগায়।"
+    ],
+    "explanation_bn": "নথিতে উদাহরণ দিয়ে বোঝানো হয়েছে যে হঠাৎ বিপদে (যেমন বড় কুকুর দেখলে) অ্যাড্রেনালিন হৃদস্পন্দন বাড়ায় এবং শরীরকে লড়তে (Fight) বা পালাতে (Flight) প্রস্তুত করে।",
+    "question_en": "Why is the adrenaline hormone called the \"Flight-or-Fight\" hormone?",
+    "options_en": [
+      "It relaxes the body by reducing inflammation.",
+      "It decreases blood calcium to increase muscle contraction.",
+      "It increases the heart rate and prepares the body to either fight or flee during danger.",
+      "It is secreted only during sleep to provide energy to the body."
+    ],
+    "explanation_en": "The document explains with an example that during a sudden danger (like seeing a large dog), adrenaline increases the heart rate and prepares the body to either fight or flee.",
+    "correctIndex": 2
+  },
+  {
+    "id": 20,
+    "question_bn": "গয়টার (Goitre) রোগের প্রধান কারণ কী?",
+    "options_bn": [
+      "অতিরিক্ত গ্রোথ হরমোনের নিঃসরণ।",
+      "রক্তে ইনসুলিনের অভাব।",
+      "খাবারে আয়োডিনের অভাবের কারণে থাইরয়েড গ্রন্থি ফুলে যাওয়া।",
+      "অ্যাড্রেনাল গ্রন্থি থেকে কর্টিসল হরমোনের অভাব।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে আয়োডিনের অভাবে থাইরয়েড গ্রন্থি ফুলে যায়, এই রোগটিকেই গয়টার (Goitre) বলা হয়।",
+    "question_en": "What is the primary cause of Goitre disease?",
+    "options_en": [
+      "Excessive secretion of growth hormone.",
+      "Lack of insulin in the blood.",
+      "Swelling of the thyroid gland due to iodine deficiency in food.",
+      "Lack of cortisol hormone from the adrenal gland."
+    ],
+    "explanation_en": "The document mentions that the thyroid gland swells due to a deficiency of iodine; this disease is called Goitre.",
+    "correctIndex": 2
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
