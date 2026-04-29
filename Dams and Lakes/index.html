@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 600, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "রিজার্ভার ইনডিউসড আর্থকোয়াক (Reservoir Induced Earthquake)-এর সাথে সম্পর্কিত কোন ঘটনাটি এই নথিতে উল্লেখ করা হয়েছে?",
+    "options_bn": [
+      "1975 সালে ফরাক্কা বাঁধ নির্মাণের সময় পশ্চিমবঙ্গে ভূমিকম্প হয়েছিল।",
+      "1967 সালে মহারাষ্ট্রের কোয়না রিজার্ভার নির্মাণকালে ভয়াবহ ভূমিকম্প হয়েছিল।",
+      "1948 সালে দামোদর ভ্যালি প্রকল্পের সময় ঝাড়খণ্ডে ভূমিকম্প হয়েছিল।",
+      "তেহরি বাঁধ নির্মাণের পরেই উত্তরাখণ্ডে বড় ভূমিকম্প হয়েছিল।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ আছে যে 1967 সালে মহারাষ্ট্রের কোয়না রিজার্ভার নির্মাণের সময় একটি ভয়াবহ ভূমিকম্প হয়েছিল, যা রিজার্ভার ইনডিউসড আর্থকোয়াকের ঐতিহাসিক উদাহরণ হিসেবে চিহ্নিত। অন্য বিকল্পগুলোর কোনো উল্লেখ নথিতে নেই।",
+    "question_en": "Which event related to a Reservoir Induced Earthquake is mentioned in the document?",
+    "options_en": [
+      "An earthquake occurred in West Bengal during the construction of the Farakka Dam in 1975.",
+      "A devastating earthquake occurred during the construction of Koyna Reservoir in Maharashtra in 1967.",
+      "An earthquake occurred in Jharkhand during the Damodar Valley Project in 1948.",
+      "A major earthquake struck Uttarakhand after the construction of Tehri Dam."
+    ],
+    "explanation_en": "The document explicitly states that a devastating earthquake occurred during the construction of the Koyna Reservoir in Maharashtra in 1967, which became a historical example of a Reservoir Induced Earthquake. The other options find no mention in the document.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "ভাখরা-নাঙ্গাল বাঁধ সম্পর্কে নিচের কোন বক্তব্যটি সম্পূর্ণ সঠিক?",
+    "options_bn": [
+      "এটি ভারতের সর্বোচ্চ বাঁধ এবং ভাগীরথী নদীর উপর নির্মিত।",
+      "এটি ভারতের সর্বোচ্চ গ্রাভিটি বাঁধ এবং ক্ষেত্রফলের দিক থেকে বৃহত্তম; সুতলজ নদীর উপর।",
+      "এটি বিশ্বের দীর্ঘতম বাঁধ এবং পাঞ্জাব রাজ্যে অবস্থিত।",
+      "এটি ভারতের প্রথম পঞ্চবার্ষিকী পরিকল্পনায় নির্মিত একটি Rock and Earth Filled বাঁধ।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী ভাখরা-নাঙ্গাল বাঁধ ভারতের সর্বোচ্চ গ্রাভিটি বাঁধ এবং ক্ষেত্রফলের দিক থেকে ভারতের বৃহত্তম বাঁধ, এটি সুতলজ নদীর উপর নির্মিত। (A) ভুল কারণ সর্বোচ্চ বাঁধ তেহরি। (C) ভুল কারণ দীর্ঘতম হিরাকুদ। (D) আংশিক সত্য — প্রথম পঞ্চবার্ষিকী তথ্য সঠিক কিন্তু Rock and Earth Filled বলা হয়েছে তেহরি বাঁধকে, ভাখরাকে নয়।",
+    "question_en": "Which statement about the Bhakra-Nangal Dam is completely correct?",
+    "options_en": [
+      "It is India's highest dam and is built on the Bhagirathi River.",
+      "It is India's highest gravity dam and largest in terms of area; built on the Sutlej River.",
+      "It is the world's longest dam and is located in Punjab.",
+      "It is a Rock and Earth Filled dam built during India's First Five Year Plan."
+    ],
+    "explanation_en": "According to the document, Bhakra-Nangal is India's highest gravity dam and the largest dam in terms of area, built on the Sutlej River. (A) is wrong as the highest dam is Tehri. (C) is wrong as the longest dam is Hirakud. (D) is partially correct — the First Five Year Plan detail is right, but the Rock and Earth Filled description belongs to Tehri Dam, not Bhakra.",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_bn": "ফরাক্কা ব্যারেজের সাথে সাধারণ বাঁধের মূল পার্থক্য কী এবং এটি নির্মাণের মূল উদ্দেশ্য কী ছিল?",
+    "options_bn": [
+      "ব্যারেজ পানি সম্পূর্ণ আটকায়, ফরাক্কার উদ্দেশ্য ছিল গঙ্গার বন্যা নিয়ন্ত্রণ।",
+      "ব্যারেজ পানির দিক পরিবর্তন করে; ফরাক্কার উদ্দেশ্য ছিল হুগলি নদীতে পানি পাঠিয়ে কলকাতা বন্দর সচল রাখা।",
+      "ব্যারেজ জলবিদ্যুৎ তৈরি করে; ফরাক্কার উদ্দেশ্য ছিল বাংলাদেশকে পানি সরবরাহ করা।",
+      "ব্যারেজ ও বাঁধ একই কাঠামো; ফরাক্কার উদ্দেশ্য ছিল দামোদর নদীর বন্যা নিয়ন্ত্রণ।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী ব্যারেজ হলো এমন কাঠামো যেখানে পানিকে পুরোপুরি আটকানো হয় না, বরং দিক পরিবর্তন করা হয়। ফরাক্কার মূল উদ্দেশ্য ছিল গঙ্গার পানির একটি অংশ হুগলি নদীতে পাঠানো যাতে কলকাতা বন্দর সচল থাকে। (A), (C), ও (D) সম্পূর্ণ ভুল।",
+    "question_en": "What is the key distinction between a barrage and a regular dam, and what was the primary purpose of the Farakka Barrage?",
+    "options_en": [
+      "A barrage completely blocks water; Farakka's purpose was to control Ganga floods.",
+      "A barrage diverts the flow of water; Farakka's purpose was to divert Ganga water into the Hooghly River to keep Kolkata port operational.",
+      "A barrage generates hydroelectric power; Farakka's purpose was to supply water to Bangladesh.",
+      "A barrage and a dam are the same structure; Farakka's purpose was to control Damodar River floods."
+    ],
+    "explanation_en": "According to the document, a barrage does not fully block water but diverts its direction. Farakka was built to divert a portion of Ganga water into the Hooghly River to keep the Kolkata port functional. Options (A), (C), and (D) are entirely incorrect.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "নথি অনুসারে দামোদর ভ্যালি প্রকল্পের কোন বৈশিষ্ট্যটি সঠিকভাবে উল্লেখিত?",
+    "options_bn": [
+      "এটি 1947 সালে শুরু হয়েছিল এবং আমেরিকার মিসিসিপি নদী কর্তৃপক্ষের আদলে তৈরি।",
+      "এটি 1948 সালে শুরু হয়েছিল এবং আমেরিকার টেনেসি ভ্যালি অথরিটির আদলে তৈরি।",
+      "এটি ভারতের প্রথম জলবিদ্যুৎ প্রকল্প এবং দামোদর নদীতে 6টি বাঁধ নির্মিত হয়েছে।",
+      "দামোদর নদীকে 'বাংলার আনন্দ' বলা হতো এবং এটি 1951 সালে শুরু হয়েছিল।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্ট উল্লেখ আছে যে দামোদর ভ্যালি প্রকল্প 1948 সালে শুরু হয়েছিল এবং এটি আমেরিকার টেনেসি ভ্যালি অথরিটির (TVA) আদলে তৈরি। (A) ভুল কারণ সাল 1947 নয়। (C) ভুল কারণ বাঁধ 8টি। (D) ভুল কারণ দামোদরকে 'বাংলার দুঃখ' বলা হতো, 'আনন্দ' নয়।",
+    "question_en": "Which characteristic of the Damodar Valley Project is correctly stated according to the document?",
+    "options_en": [
+      "It started in 1947 and was modelled after the Mississippi River Authority of America.",
+      "It started in 1948 and was modelled after the Tennessee Valley Authority of America.",
+      "It is India's first hydroelectric project and 6 dams were built on the Damodar River.",
+      "The Damodar River was called the 'Joy of Bengal' and the project started in 1951."
+    ],
+    "explanation_en": "The document clearly states that the Damodar Valley Project started in 1948 and was modelled after the Tennessee Valley Authority (TVA) of America. (A) is wrong as the year is not 1947. (C) is wrong as there are 8 dams, not 6. (D) is wrong as the Damodar was called the 'Sorrow of Bengal', not the 'Joy of Bengal'.",
+    "correctIndex": 1
+  },
+  {
+    "id": 5,
+    "question_bn": "নথি অনুযায়ী, নিচের কোন জুটিটি (বাঁধ — নদী — রাজ্য) সম্পূর্ণ সঠিক?",
+    "options_bn": [
+      "বাগলিহার — জেলাম — জম্মু ও কাশ্মীর",
+      "কিশান গঙ্গা — চেনাব — জম্মু ও কাশ্মীর",
+      "সালাল — চেনাব — জম্মু ও কাশ্মীর",
+      "তুলবুল — চেনাব — জম্মু ও কাশ্মীর"
+    ],
+    "explanation_bn": "নথি অনুযায়ী সালাল বাঁধ চেনাব নদীর উপর জম্মু ও কাশ্মীরে অবস্থিত। (A) ভুল — বাগলিহার চেনাব নদীতে, জেলামে নয়। (B) ভুল — কিশান গঙ্গা জেলাম নদীতে, চেনাবে নয়। (D) ভুল — তুলবুল জেলাম নদীতে, চেনাবে নয়।",
+    "question_en": "According to the document, which pairing (Dam — River — State) is completely correct?",
+    "options_en": [
+      "Baglihar — Jhelum — Jammu & Kashmir",
+      "Kishan Ganga — Chenab — Jammu & Kashmir",
+      "Salal — Chenab — Jammu & Kashmir",
+      "Tulbul — Chenab — Jammu & Kashmir"
+    ],
+    "explanation_en": "As per the document, Salal Dam is located on the Chenab River in Jammu & Kashmir. (A) is wrong — Baglihar is on the Chenab, not Jhelum. (B) is wrong — Kishan Ganga is on the Jhelum, not Chenab. (D) is wrong — Tulbul is on the Jhelum, not Chenab.",
+    "correctIndex": 2
+  },
+  {
+    "id": 6,
+    "question_bn": "মাহি নদী সম্পর্কে নথিতে উল্লিখিত কোন অনন্য বৈশিষ্ট্যটি সঠিক?",
+    "options_bn": [
+      "মাহি নদী মকরক্রান্তি রেখাকে একবার অতিক্রম করে এবং এটি রাজস্থানে উৎপন্ন হয়।",
+      "মাহি নদী কর্কটক্রান্তি রেখাকে দুইবার অতিক্রম করে।",
+      "মাহি নদী বিষুবরেখাকে দুইবার অতিক্রম করে এবং গুজরাটে শেষ হয়।",
+      "মাহি নদী কর্কটক্রান্তি রেখাকে একবার অতিক্রম করে এবং এটি ভারতের একমাত্র নদী যা পশ্চিমে প্রবাহিত।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্ট উল্লেখ আছে যে মাহি নদীর একটি অনন্য বৈশিষ্ট্য হলো এটি কর্কটক্রান্তি রেখাকে (Tropic of Cancer) দুইবার অতিক্রম করে। অন্য কোনো বিকল্পের তথ্য নথিতে নেই।",
+    "question_en": "Which unique characteristic of the Mahi River mentioned in the document is correct?",
+    "options_en": [
+      "The Mahi River crosses the Tropic of Capricorn once and originates in Rajasthan.",
+      "The Mahi River crosses the Tropic of Cancer twice.",
+      "The Mahi River crosses the Equator twice and ends in Gujarat.",
+      "The Mahi River crosses the Tropic of Cancer once and is the only Indian river flowing westward."
+    ],
+    "explanation_en": "The document explicitly states that a unique characteristic of the Mahi River is that it crosses the Tropic of Cancer twice. No other option's details are mentioned in the document.",
+    "correctIndex": 1
+  },
+  {
+    "id": 7,
+    "question_bn": "গবিন্দ বল্লভ পন্ত সাগর এবং গোবিন্দ সাগর হ্রদের মধ্যে পার্থক্য করতে গেলে নথি অনুসারে কোন বক্তব্যটি সঠিক?",
+    "options_bn": [
+      "দুটিই কৃত্রিম হ্রদ এবং দুটিই সুতলজ নদীতে অবস্থিত।",
+      "গবিন্দ সাগর ভাখরা বাঁধের ফলে হিমাচলে এবং গবিন্দ বল্লভ পন্ত সাগর রিহান্দ বাঁধের ফলে উত্তর প্রদেশে তৈরি হয়েছে।",
+      "গবিন্দ বল্লভ পন্ত সাগর হিমাচল প্রদেশে এবং গোবিন্দ সাগর উত্তর প্রদেশে অবস্থিত।",
+      "দুটিই মিষ্টি পানির প্রাকৃতিক হ্রদ এবং দুটির অবস্থান রাজস্থানে।"
+    ],
+    "explanation_bn": "নথি অনুসারে গোবিন্দ সাগর হ্রদ ভাখরা-নাঙ্গাল বাঁধের কারণে হিমাচল প্রদেশে তৈরি হয়েছে, আর গবিন্দ বল্লভ পন্ত সাগর রিহান্দ বাঁধের কারণে উত্তর প্রদেশের সোনভদ্র জেলায় তৈরি হয়েছে। এটিই ভারতের বৃহত্তম কৃত্রিম হ্রদ।",
+    "question_en": "To distinguish between Gobind Ballabh Pant Sagar and Govind Sagar Lake, which statement is correct according to the document?",
+    "options_en": [
+      "Both are artificial lakes located on the Sutlej River.",
+      "Govind Sagar was formed by Bhakra Dam in Himachal Pradesh, and Gobind Ballabh Pant Sagar was formed by Rihand Dam in Uttar Pradesh.",
+      "Gobind Ballabh Pant Sagar is in Himachal Pradesh and Govind Sagar is in Uttar Pradesh.",
+      "Both are natural freshwater lakes located in Rajasthan."
+    ],
+    "explanation_en": "According to the document, Govind Sagar Lake was created due to the Bhakra-Nangal Dam in Himachal Pradesh, while Gobind Ballabh Pant Sagar was created by the Rihand Dam in Sonbhadra district, Uttar Pradesh — and it is India's largest artificial lake.",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_bn": "চিলিকা হ্রদ সম্পর্কে নিচের কোন যুক্তিটি নথির তথ্যের সাথে সবচেয়ে বেশি সামঞ্জস্যপূর্ণ?",
+    "options_bn": [
+      "এটি মিষ্টি পানির হ্রদ এবং 1982 সালে রামসার সাইট ঘোষিত হয়।",
+      "এটি ব্র্যাকিশ ওয়াটার হ্রদ (মিষ্টি ও নোনা উভয়), ভারতের বৃহত্তম লবণাক্ত হ্রদ এবং 1981 সালে ভারতের প্রথম রামসার সাইট ঘোষিত হয়।",
+      "এটি ভারতের দ্বিতীয় বৃহত্তম লবণাক্ত হ্রদ এবং 1982 সালে রামসার সাইট হয়।",
+      "এটি ওড়িশার একটি কৃত্রিম হ্রদ এবং বিশ্বের বৃহত্তম স্থলবেষ্টিত নোনা হ্রদ।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী চিলিকা হ্রদ ওড়িশায় অবস্থিত একটি ব্র্যাকিশ ওয়াটার হ্রদ যেখানে মিষ্টি ও নোনা উভয় পানি মেশে। এটি ভারতের বৃহত্তম লবণাক্ত হ্রদ এবং 1981 সালে ভারতের প্রথম রামসার সাইট হিসেবে ঘোষিত হয়। ভারত রামসার চুক্তিতে স্বাক্ষর করেছিল 1982 সালে, কিন্তু চিলিকা রামসার সাইট ঘোষিত হয়েছিল 1981 সালে — এই পার্থক্যটি গুরুত্বপূর্ণ।",
+    "question_en": "Which argument about Chilika Lake is most consistent with the information in the document?",
+    "options_en": [
+      "It is a freshwater lake and was declared a Ramsar Site in 1982.",
+      "It is a brackish water lake (mix of fresh and salt water), India's largest saline lake, and was declared India's first Ramsar Site in 1981.",
+      "It is India's second largest saline lake and became a Ramsar Site in 1982.",
+      "It is an artificial lake in Odisha and the world's largest landlocked saltwater lake."
+    ],
+    "explanation_en": "According to the document, Chilika Lake in Odisha is a brackish water lake where both fresh and saltwater mix. It is India's largest brackish water lake and was declared India's first Ramsar Site in 1981. India signed the Ramsar Convention in 1982, but Chilika was declared a Ramsar Site in 1981 — this distinction is critical.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "লোকটক হ্রদ ও লোনার হ্রদের তুলনা করলে নথি অনুযায়ী নিচের কোনটি সঠিক?",
+    "options_bn": [
+      "উভয়ই মহারাষ্ট্রে অবস্থিত এবং উভয়ই উল্কাপিণ্ডের আঘাতে তৈরি।",
+      "লোকটক মণিপুরে (ভাসমান জাতীয় উদ্যানের ধারক) এবং লোনার মহারাষ্ট্রে (উল্কাপিণ্ডের আঘাতে তৈরি ক্রেটার হ্রদ)।",
+      "লোকটক একটি ক্রেটার হ্রদ এবং লোনার একটি অক্সবো হ্রদ।",
+      "লোকটক কেরালায় এবং লোনার ওড়িশায় অবস্থিত।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী লোকটক হ্রদ মণিপুরে অবস্থিত এবং এটিতে ফুম্ডি নামক ভাসমান দ্বীপের উপর বিশ্বের একমাত্র ভাসমান জাতীয় উদ্যান (কেইবুল লামজাও) রয়েছে। অপরদিকে লোনার হ্রদ মহারাষ্ট্রের বুলধানায় অবস্থিত, এটি প্রায় 50,000 বছর আগে উল্কাপিণ্ডের আঘাতে তৈরি একটি ক্রেটার হ্রদ।",
+    "question_en": "Comparing Loktak Lake and Lonar Lake, which of the following is correct according to the document?",
+    "options_en": [
+      "Both are in Maharashtra and both were formed by meteorite impact.",
+      "Loktak is in Manipur (host of the floating national park) and Lonar is in Maharashtra (a crater lake formed by meteorite impact).",
+      "Loktak is a crater lake and Lonar is an oxbow lake.",
+      "Loktak is in Kerala and Lonar is in Odisha."
+    ],
+    "explanation_en": "According to the document, Loktak Lake is in Manipur and contains the world's only floating national park — Keibul Lamjao — on floating islands called Phumdis. Lonar Lake, on the other hand, is located in Buldhana district of Maharashtra and is a crater lake formed approximately 50,000 years ago by a meteorite impact.",
+    "correctIndex": 1
+  },
+  {
+    "id": 10,
+    "question_bn": "জলবিদ্যুৎ উৎপাদনের শক্তি রূপান্তর প্রক্রিয়া সম্পর্কে নথিতে যে সমীকরণ বা সূত্র দেওয়া হয়েছে, সেটি অনুসারে কোনটি সঠিক?",
+    "options_bn": [
+      "গতিশক্তি (K.E.) = বৈদ্যুতিক শক্তি (E.E.) + বিভব শক্তি (P.E.)",
+      "মোট যান্ত্রিক শক্তি (M.E.) = বিভব শক্তি (P.E.) + গতিশক্তি (K.E.)",
+      "বিভব শক্তি (P.E.) = মোট যান্ত্রিক শক্তি (M.E.) − বৈদ্যুতিক শক্তি (E.E.)",
+      "বৈদ্যুতিক শক্তি (E.E.) = বিভব শক্তি (P.E.) × গতিশক্তি (K.E.)"
+    ],
+    "explanation_bn": "নথিতে সরাসরি উল্লেখ আছে যে মোট যান্ত্রিক শক্তি (M.E.) = বিভব শক্তি (P.E.) + গতিশক্তি (K.E.)। বাঁধের জলাধারে পানিতে বিভব শক্তি থাকে, পানি পড়ার সময় তা গতিশক্তিতে রূপান্তরিত হয় এবং টারবাইন ঘুরিয়ে বৈদ্যুতিক শক্তি তৈরি করে। অন্য সমীকরণগুলো নথিতে নেই।",
+    "question_en": "According to the formula or equation given in the document about the energy conversion process in hydroelectric power generation, which is correct?",
+    "options_en": [
+      "Kinetic Energy (K.E.) = Electrical Energy (E.E.) + Potential Energy (P.E.)",
+      "Total Mechanical Energy (M.E.) = Potential Energy (P.E.) + Kinetic Energy (K.E.)",
+      "Potential Energy (P.E.) = Total Mechanical Energy (M.E.) − Electrical Energy (E.E.)",
+      "Electrical Energy (E.E.) = Potential Energy (P.E.) × Kinetic Energy (K.E.)"
+    ],
+    "explanation_en": "The document directly states that Total Mechanical Energy (M.E.) = Potential Energy (P.E.) + Kinetic Energy (K.E.). Water stored at height in the reservoir has potential energy, which converts to kinetic energy as it falls, then drives turbines to generate electrical energy. The other equations are not mentioned in the document.",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "ভোজতাল (Bhojtal) হ্রদ সম্পর্কে নথিতে কোন বিশেষ তথ্যটি সঠিকভাবে উল্লেখিত?",
+    "options_bn": [
+      "এটি রাজস্থানে অবস্থিত এবং এশিয়ার দ্বিতীয় বৃহত্তম কৃত্রিম হ্রদ।",
+      "এটি মধ্যপ্রদেশে অবস্থিত, রাজা ভোজ 52টি নদীর পানি একত্রিত করতে গিয়ে এটি তৈরি করেন এবং এটি এশিয়ার বৃহত্তম কৃত্রিম হ্রদ।",
+      "এটি উত্তর প্রদেশে অবস্থিত এবং ভারতের বৃহত্তম কৃত্রিম হ্রদ।",
+      "এটি গুজরাটে অবস্থিত এবং রাজা ভোজ পর্যটনের জন্য এটি তৈরি করেছিলেন।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী ভোজতাল মধ্যপ্রদেশে অবস্থিত। পরমার রাজবংশের রাজা ভোজ চর্মরোগে আক্রান্ত হলে পণ্ডিতরা তাঁকে 52টি নদীর পানিতে স্নান করতে বলেন, সেই উদ্দেশ্যে পানি সংগ্রহ করতে গিয়ে এই হ্রদ তৈরি হয়। এটি এশিয়ার বৃহত্তম কৃত্রিম হ্রদ।",
+    "question_en": "Which specific information about Bhojtal Lake is correctly mentioned in the document?",
+    "options_en": [
+      "It is located in Rajasthan and is the second largest artificial lake in Asia.",
+      "It is in Madhya Pradesh; Raja Bhoj created it while collecting water from 52 rivers, and it is Asia's largest artificial lake.",
+      "It is in Uttar Pradesh and is India's largest artificial lake.",
+      "It is in Gujarat and Raja Bhoj created it for tourism purposes."
+    ],
+    "explanation_en": "According to the document, Bhojtal is located in Madhya Pradesh. When Raja Bhoj of the Paramara dynasty contracted a skin disease, scholars advised him to bathe in water collected from 52 rivers — this led to the creation of this lake. It is Asia's largest artificial lake.",
+    "correctIndex": 1
+  },
+  {
+    "id": 12,
+    "question_bn": "নথি অনুসারে পুন্নমদা হ্রদের সাথে কোন বিখ্যাত ঘটনা বা উৎসবের সরাসরি সম্পর্ক রয়েছে?",
+    "options_bn": [
+      "পুন্নমদা হ্রদে প্রতি বছর চিপকো আন্দোলনের স্মরণে অনুষ্ঠান হয়।",
+      "পুন্নমদা হ্রদে নেহরু ট্রফি নৌকা বাইচ অনুষ্ঠিত হয়।",
+      "পুন্নমদা হ্রদে প্রতি বছর রামসার চুক্তি স্বাক্ষর অনুষ্ঠান হয়।",
+      "পুন্নমদা হ্রদে সাঙ্গাই হরিণ দেখতে পাওয়া যায়।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী কেরালার ব্যাকওয়াটারে বিখ্যাত নেহরু ট্রফি নৌকা বাইচ (Nehru Trophy Boat Race) অনুষ্ঠিত হয়, যেটি পুন্নমদা হ্রদে আয়োজিত হয়। সাঙ্গাই হরিণ মণিপুরের লোকটক হ্রদে পাওয়া যায়, পুন্নমদায় নয়।",
+    "question_en": "According to the document, which famous event or festival is directly associated with Punnammada Lake?",
+    "options_en": [
+      "An event is held annually at Punnammada Lake to commemorate the Chipko Movement.",
+      "The Nehru Trophy Boat Race is held at Punnammada Lake.",
+      "The Ramsar Convention signing ceremony is held annually at Punnammada Lake.",
+      "The Sangai Deer is found at Punnammada Lake."
+    ],
+    "explanation_en": "According to the document, the famous Nehru Trophy Boat Race takes place in Kerala's backwaters and is organised at Punnammada Lake. The Sangai Deer is found at Loktak Lake in Manipur, not at Punnammada.",
+    "correctIndex": 1
+  },
+  {
+    "id": 13,
+    "question_bn": "নথিতে উল্লিখিত তথ্য অনুসারে, পাঞ্জাবের হারিকে বাঁধ (Harike Dam) থেকে তৈরি ইন্দিরা গান্ধী খাল এবং হারিকে বাঁধের অবস্থান সম্পর্কে কোনটি সঠিক?",
+    "options_bn": [
+      "হারিকে বাঁধ রাভি ও সুতলজ নদীর সঙ্গমস্থলে এবং এখান থেকে ইন্দিরা গান্ধী খাল তৈরি হয়েছে।",
+      "হারিকে বাঁধ সুতলজ ও ব্যাস নদীর সঙ্গমস্থলে এবং এখান থেকে ইন্দিরা গান্ধী খাল তৈরি হয়েছে।",
+      "হারিকে বাঁধ চেনাব ও রাভি নদীর সঙ্গমস্থলে এবং এখান থেকে ভাখরা খাল তৈরি হয়েছে।",
+      "হারিকে বাঁধ গঙ্গা ও যমুনার সঙ্গমস্থলে এবং এখান থেকে নর্মদা খাল তৈরি হয়েছে।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী পাঞ্জাবে সুতলজ ও ব্যাস নদীর সঙ্গমস্থলে হারিকে বাঁধ অবস্থিত এবং এই বাঁধ থেকেই বিখ্যাত ইন্দিরা গান্ধী খাল তৈরি করা হয়েছে, যা মরুভূমিতে সবুজায়নে সাহায্য করেছে।",
+    "question_en": "According to the information in the document, which statement about the location of Harike Dam in Punjab and the Indira Gandhi Canal formed from it is correct?",
+    "options_en": [
+      "Harike Dam is at the confluence of the Ravi and Sutlej rivers, and the Indira Gandhi Canal originates from it.",
+      "Harike Dam is at the confluence of the Sutlej and Beas rivers, and the Indira Gandhi Canal originates from it.",
+      "Harike Dam is at the confluence of the Chenab and Ravi rivers, and the Bhakra Canal originates from it.",
+      "Harike Dam is at the confluence of the Ganga and Yamuna rivers, and the Narmada Canal originates from it."
+    ],
+    "explanation_en": "According to the document, Harike Dam is located in Punjab at the confluence of the Sutlej and Beas rivers, and the famous Indira Gandhi Canal was created from this dam, which has helped bring greenery to the desert region.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "নথি অনুযায়ী, ভারতের সর্বোচ্চ হ্রদ কোনটি এবং এর অবস্থান কোথায়? এই প্রেক্ষিতে লাদাখের হ্রদগুলো নোনা পানির হওয়ার যে বৈজ্ঞানিক কারণ দেওয়া হয়েছে, সেটিও নির্ণয় করো।",
+    "options_bn": [
+      "পাঙ্গং তসো — লাদাখ; নোনা কারণ লাদাখে বৃষ্টিপাত বেশি।",
+      "চোলামু/সো লামো — সিকিম; লাদাখের হ্রদ নোনা কারণ বাষ্পীভবনের হার বৃষ্টিপাতের চেয়ে বেশি।",
+      "তসো মোরিরি — লাদাখ; নোনা কারণ ভূগর্ভস্থ নোনা পানির উৎস আছে।",
+      "সোমগো — সিকিম; নোনা কারণ সমুদ্রের পানি মিশে যায়।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী ভারতের সর্বোচ্চ হ্রদ হলো সো লামো (Tso Lhamo) বা চোলামু হ্রদ, যা সিকিমে অবস্থিত। লাদাখের হ্রদগুলো নোনা পানির কারণ সম্পর্কে নথিতে বলা হয়েছে যে লাদাখ একটি শীতল মরুভূমি যেখানে বাষ্পীভবনের হার বৃষ্টিপাতের চেয়ে অনেক বেশি — পানি বাষ্প হয়ে উড়ে গেলেও লবণ থেকে যায়, ফলে হ্রদ নোনা হয়।",
+    "question_en": "According to the document, which is India's highest lake and where is it located? Also identify the scientific reason given in the document for why Ladakh's lakes are saline.",
+    "options_en": [
+      "Pangong Tso — Ladakh; saline because Ladakh receives heavy rainfall.",
+      "Cholamu/Tso Lhamo — Sikkim; Ladakh's lakes are saline because the rate of evaporation exceeds the rate of precipitation.",
+      "Tso Moriri — Ladakh; saline because of underground saline water sources.",
+      "Tsomgo — Sikkim; saline because seawater mixes in."
+    ],
+    "explanation_en": "According to the document, India's highest lake is Tso Lhamo (Cholamu Lake), located in Sikkim. Regarding why Ladakh's lakes are saline, the document states that Ladakh is a cold desert where the rate of evaporation far exceeds precipitation — water evaporates but salts remain, making the lakes saline.",
+    "correctIndex": 1
+  },
+  {
+    "id": 15,
+    "question_bn": "কুঞ্চিকাল ও জোগ জলপ্রপাত উভয়ই কর্ণাটকে হলেও এদের মধ্যে পার্থক্য কী? নথি অনুসারে সঠিক উত্তর বেছে নাও।",
+    "options_bn": [
+      "কুঞ্চিকাল শরাবতী নদীতে (ভারতের সর্বোচ্চ) এবং জোগ বারাহী নদীতে (2য় সর্বোচ্চ)।",
+      "কুঞ্চিকাল বারাহী নদীতে শিবমোগায় (ভারতের সর্বোচ্চ, 455 মি) এবং জোগ শরাবতী নদীতে শিবমোগায় (2য় সর্বোচ্চ)।",
+      "কুঞ্চিকাল কাবেরী নদীতে এবং জোগ শরাবতী নদীতে।",
+      "কুঞ্চিকাল গোয়ায় মন্ডোভি নদীতে এবং জোগ কর্ণাটকে।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী কুঞ্চিকাল জলপ্রপাত কর্ণাটকের শিবমোগা জেলায় বারাহী (Varahi) নদীর উপর অবস্থিত এবং এটি ভারতের সর্বোচ্চ জলপ্রপাত (455 মি)। জোগ জলপ্রপাতও কর্ণাটকের শিবমোগা জেলায় অবস্থিত কিন্তু এটি শরাবতী (Sharavati) নদীর উপর এবং ভারতের দ্বিতীয় সর্বোচ্চ জলপ্রপাত।",
+    "question_en": "Although both Kunchikal and Jog waterfalls are in Karnataka, what is the difference between them? Choose the correct answer as per the document.",
+    "options_en": [
+      "Kunchikal is on the Sharavati River (India's highest) and Jog is on the Varahi River (2nd highest).",
+      "Kunchikal is on the Varahi River in Shimoga (India's highest, 455 m) and Jog is on the Sharavati River in Shimoga (2nd highest).",
+      "Kunchikal is on the Kaveri River and Jog is on the Sharavati River.",
+      "Kunchikal is in Goa on the Mandovi River and Jog is in Karnataka."
+    ],
+    "explanation_en": "According to the document, Kunchikal Waterfall is located in Shimoga district, Karnataka, on the Varahi River and is India's highest waterfall at 455 m. Jog Waterfall is also in Shimoga, Karnataka, but on the Sharavati River, and is India's second highest waterfall.",
+    "correctIndex": 1
+  },
+  {
+    "id": 16,
+    "question_bn": "নথিতে বর্ণিত পাঞ্চেত বাঁধ ও মাইথন বাঁধের মধ্যে পার্থক্য কোনটি সঠিকভাবে চিহ্নিত করে?",
+    "options_bn": [
+      "পাঞ্চেত বরাকার নদীতে এবং মাইথন দামোদর নদীতে — উভয়ই পশ্চিমবঙ্গে।",
+      "পাঞ্চেত দামোদর নদীতে এবং মাইথন বরাকার নদীতে — উভয়ই ঝাড়খণ্ডে।",
+      "পাঞ্চেত গঙ্গা নদীতে এবং মাইথন যমুনা নদীতে অবস্থিত।",
+      "পাঞ্চেত ও মাইথন উভয়ই কোনার নদীতে এবং মধ্যপ্রদেশে অবস্থিত।"
+    ],
+    "explanation_bn": "নথির সারণি অনুযায়ী পাঞ্চেত বাঁধ দামোদর নদীতে ঝাড়খণ্ডে এবং মাইথন বাঁধ বরাকার নদীতে ঝাড়খণ্ডে অবস্থিত। তিলাইয়া বাঁধও বরাকার নদীতে ঝাড়খণ্ডে। এগুলো সবই দামোদর ভ্যালি প্রকল্পের অংশ।",
+    "question_en": "Which option correctly identifies the distinction between Panchet Dam and Maithon Dam as described in the document?",
+    "options_en": [
+      "Panchet is on the Barakar River and Maithon is on the Damodar River — both in West Bengal.",
+      "Panchet is on the Damodar River and Maithon is on the Barakar River — both in Jharkhand.",
+      "Panchet is on the Ganga River and Maithon is on the Yamuna River.",
+      "Both Panchet and Maithon are on the Konar River and located in Madhya Pradesh."
+    ],
+    "explanation_en": "According to the table in the document, Panchet Dam is on the Damodar River in Jharkhand, and Maithon Dam is on the Barakar River in Jharkhand. Tilaiyah Dam is also on the Barakar River in Jharkhand. All of these are part of the Damodar Valley Project.",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_bn": "নথি অনুসারে, কানওয়ার তাল এবং লোনার হ্রদ — দুটিরই গঠন প্রক্রিয়া আলাদা। কোন বিকল্পটি উভয়ের সঠিক গঠন প্রক্রিয়া ও অবস্থান চিহ্নিত করে?",
+    "options_bn": [
+      "কানওয়ার তাল — মহারাষ্ট্র — ক্রেটার হ্রদ; লোনার — বিহার — অক্সবো হ্রদ।",
+      "কানওয়ার তাল — বিহার — এশিয়ার বৃহত্তম অক্সবো হ্রদ; লোনার — মহারাষ্ট্রের বুলধানা — উল্কাপিণ্ডের আঘাতে তৈরি ক্রেটার হ্রদ।",
+      "কানওয়ার তাল — রাজস্থান — টেকটোনিক হ্রদ; লোনার — ওড়িশা — লগুন হ্রদ।",
+      "কানওয়ার তাল — উত্তর প্রদেশ — হিমবাহ হ্রদ; লোনার — কর্ণাটক — ক্রেটার হ্রদ।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী কানওয়ার তাল (কবর তাল) বিহারে অবস্থিত এশিয়ার বৃহত্তম অক্সবো হ্রদ — এটি 2022 সালে রামসার সাইট হয়েছে। অক্সবো হ্রদ তৈরি হয় নদীর বাঁক আলাদা হয়ে গিয়ে। লোনার হ্রদ মহারাষ্ট্রের বুলধানা জেলায় অবস্থিত, প্রায় 50,000 বছর আগে উল্কাপিণ্ডের আঘাতে তৈরি একটি ক্রেটার হ্রদ।",
+    "question_en": "According to the document, both Kanwar Tal and Lonar Lake have different formation processes. Which option correctly identifies both their formation processes and locations?",
+    "options_en": [
+      "Kanwar Tal — Maharashtra — Crater Lake; Lonar — Bihar — Oxbow Lake.",
+      "Kanwar Tal — Bihar — Asia's largest Oxbow Lake; Lonar — Buldhana, Maharashtra — Crater Lake formed by meteorite impact.",
+      "Kanwar Tal — Rajasthan — Tectonic Lake; Lonar — Odisha — Lagoon Lake.",
+      "Kanwar Tal — Uttar Pradesh — Glacial Lake; Lonar — Karnataka — Crater Lake."
+    ],
+    "explanation_en": "According to the document, Kanwar Tal (Kabar Tal) in Bihar is Asia's largest oxbow lake — it became a Ramsar Site in 2022. Oxbow lakes form when a river meander gets cut off from the main channel. Lonar Lake is located in Buldhana district, Maharashtra, and is a crater lake formed approximately 50,000 years ago by a meteorite impact.",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "তেহরি বাঁধ সম্পর্কে নথিতে উল্লিখিত কোন তথ্যটি সর্বাধিক সম্পূর্ণ এবং সঠিক?",
+    "options_bn": [
+      "তেহরি বাঁধ সুতলজ নদীতে, উচ্চতা 359 মিটার, এবং এটি একটি গ্রাভিটি বাঁধ।",
+      "তেহরি বাঁধ ভাগীরথী নদীতে উত্তরাখণ্ডে, উচ্চতা 261 মিটার, Rock and Earth Filled Embankment Dam এবং সুন্দরলাল বহুগুণা এর বিরুদ্ধে আন্দোলন করেছিলেন।",
+      "তেহরি বাঁধ গঙ্গা নদীতে উত্তর প্রদেশে এবং উচ্চতা 261 মিটার; বিশ্বের সর্বোচ্চ বাঁধ।",
+      "তেহরি বাঁধ যমুনা নদীতে হিমাচল প্রদেশে এবং এটি ভারতের দীর্ঘতম বাঁধ।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী তেহরি বাঁধ উত্তরাখণ্ডে ভাগীরথী নদীর উপর নির্মিত, এর উচ্চতা 261 মিটার এবং এটি ভারতের সর্বোচ্চ বাঁধ। এটি একটি Rock and Earth Filled Embankment Dam। চিপকো আন্দোলনের জন্য পরিচিত পরিবেশবিদ সুন্দরলাল বহুগুণা এই বাঁধের বিরুদ্ধে আন্দোলন করেছিলেন। 359 মিটার হলো চেনাব রেল সেতুর উচ্চতা, তেহরি বাঁধের নয়।",
+    "question_en": "Which statement about Tehri Dam as mentioned in the document is the most complete and accurate?",
+    "options_en": [
+      "Tehri Dam is on the Sutlej River, height 359 metres, and it is a gravity dam.",
+      "Tehri Dam is on the Bhagirathi River in Uttarakhand, height 261 metres, it is a Rock and Earth Filled Embankment Dam, and Sunderlal Bahuguna led a movement against it.",
+      "Tehri Dam is on the Ganga River in Uttar Pradesh, height 261 metres; it is the world's highest dam.",
+      "Tehri Dam is on the Yamuna River in Himachal Pradesh and is India's longest dam."
+    ],
+    "explanation_en": "According to the document, Tehri Dam is built on the Bhagirathi River in Uttarakhand, stands at 261 metres making it India's highest dam, and is a Rock and Earth Filled Embankment Dam. Environmentalist Sunderlal Bahuguna, known for the Chipko Movement, also led a movement against this dam. 359 metres is the height of the Chenab Rail Bridge, not the Tehri Dam.",
+    "correctIndex": 1
+  },
+  {
+    "id": 19,
+    "question_bn": "নথি অনুযায়ী, ভেম্বানাড হ্রদ, উলার হ্রদ এবং সাম্ভার হ্রদ — তিনটি হ্রদের বিশেষত্বের মধ্যে কোন সমন্বয়টি সম্পূর্ণ সঠিক?",
+    "options_bn": [
+      "ভেম্বানাড → ভারতের বৃহত্তম মিষ্টি পানির হ্রদ (জম্মু ও কাশ্মীর); উলার → দীর্ঘতম হ্রদ (কেরালা); সাম্ভার → বৃহত্তম কৃত্রিম হ্রদ (রাজস্থান)।",
+      "ভেম্বানাড → ভারতের দীর্ঘতম হ্রদ (কেরালা); উলার → বৃহত্তম মিষ্টি পানির হ্রদ (জম্মু ও কাশ্মীর); সাম্ভার → বৃহত্তম স্থলবেষ্টিত নোনা হ্রদ (রাজস্থান)।",
+      "ভেম্বানাড → ভারতের বৃহত্তম লবণাক্ত হ্রদ (কেরালা); উলার → বৃহত্তম কৃত্রিম হ্রদ (জম্মু ও কাশ্মীর); সাম্ভার → দীর্ঘতম হ্রদ (রাজস্থান)।",
+      "ভেম্বানাড → ভারতের সর্বোচ্চ হ্রদ (সিকিম); উলার → বৃহত্তম অক্সবো হ্রদ (বিহার); সাম্ভার → লগুন হ্রদ (ওড়িশা)।"
+    ],
+    "explanation_bn": "নথির সারণি অনুযায়ী ভেম্বানাড হলো ভারতের দীর্ঘতম হ্রদ (কেরালা), উলার হলো ভারতের বৃহত্তম মিষ্টি পানির হ্রদ (জম্মু ও কাশ্মীর, টেকটোনিক) এবং সাম্ভার হলো ভারতের বৃহত্তম স্থলবেষ্টিত নোনা পানির হ্রদ (রাজস্থান, জয়পুরে)।",
+    "question_en": "According to the document, which combination correctly matches Vembanad Lake, Wular Lake, and Sambhar Lake with their respective distinctions?",
+    "options_en": [
+      "Vembanad → India's largest freshwater lake (J&K); Wular → longest lake (Kerala); Sambhar → largest artificial lake (Rajasthan).",
+      "Vembanad → India's longest lake (Kerala); Wular → largest freshwater lake (J&K); Sambhar → largest inland saltwater lake (Rajasthan).",
+      "Vembanad → India's largest saline lake (Kerala); Wular → largest artificial lake (J&K); Sambhar → longest lake (Rajasthan).",
+      "Vembanad → India's highest lake (Sikkim); Wular → largest oxbow lake (Bihar); Sambhar → lagoon lake (Odisha)."
+    ],
+    "explanation_en": "According to the document's summary table, Vembanad is India's longest lake (Kerala), Wular is India's largest freshwater lake (Jammu & Kashmir, tectonic origin), and Sambhar is India's largest inland saltwater lake (Rajasthan, located in Jaipur).",
+    "correctIndex": 1
+  },
+  {
+    "id": 20,
+    "question_bn": "নথিতে বর্ণিত জলপ্রপাতের তিনটি প্রকারের (ক্যাটারেক্ট, প্লাঞ্জ, ক্যাসকেড) বৈশিষ্ট্য বিবেচনা করে, দুধসাগর জলপ্রপাত কোন প্রকারের এবং এর সাথে সঠিকভাবে কোন তথ্যটি মেলে?",
+    "options_bn": [
+      "দুধসাগর — প্লাঞ্জ জলপ্রপাত — কর্ণাটক — শরাবতী নদী — সরাসরি খাড়া নিচে পড়ে।",
+      "দুধসাগর — ক্যাসকেড জলপ্রপাত — গোয়া — মন্ডোভি নদী — ধাপে ধাপে নামে।",
+      "দুধসাগর — ক্যাটারেক্ট জলপ্রপাত — মধ্যপ্রদেশ — নর্মদা নদী — বিশাল আয়তনের পানি।",
+      "দুধসাগর — প্লাঞ্জ জলপ্রপাত — গোয়া — মন্ডোভি নদী — নিচে বড় গর্ত তৈরি করে।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী দুধসাগর জলপ্রপাত গোয়ায় মন্ডোভি নদীর উপর অবস্থিত এবং এটি একটি ক্যাসকেড জলপ্রপাত — অর্থাৎ পানি ধাপে ধাপে সিঁড়ির মতো নামে। ক্যাসকেডকে মাল্টিস্টেপ জলপ্রপাতও বলা হয়। নামটির অর্থ 'দুধের সাগর' কারণ পানি সাদা দুধের মতো দেখায়।",
+    "question_en": "Considering the characteristics of the three types of waterfalls described in the document (Cataract, Plunge, Cascade), what type is Dudh Sagar Waterfall, and which set of information correctly matches it?",
+    "options_en": [
+      "Dudh Sagar — Plunge Waterfall — Karnataka — Sharavati River — falls straight down vertically.",
+      "Dudh Sagar — Cascade Waterfall — Goa — Mandovi River — descends in steps.",
+      "Dudh Sagar — Cataract Waterfall — Madhya Pradesh — Narmada River — large volume of water.",
+      "Dudh Sagar — Plunge Waterfall — Goa — Mandovi River — creates a large plunge pool below."
+    ],
+    "explanation_en": "According to the document, Dudh Sagar Waterfall is located in Goa on the Mandovi River and is a Cascade Waterfall — meaning water descends in steps like a staircase. A cascade is also called a multistep waterfall. The name means 'Sea of Milk' because the water appears white like milk.",
+    "correctIndex": 1
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
