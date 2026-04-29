@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 600, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "নথিতে উল্লেখিত আর্যদের আগমন থেকে শুরু করে প্রাচীন ভারতের রাজনৈতিক কাঠামোর বিবর্তনের সঠিক ক্রম কোনটি?",
+    "options_bn": [
+      "জনপদ (Janapada) -> জন (Jana) -> উপজাতি (Tribe) -> মহাজনপদ (Mahajanapada)",
+      "উপজাতি বা জন (Tribe/Jana) -> জনপদ (Janapada) -> মহাজনপদ (Mahajanapada)",
+      "মহাজনপদ (Mahajanapada) -> জনপদ (Janapada) -> গণসংঘ (Gana-Sangha)",
+      "জন (Jana) -> গণসংঘ (Gana-Sangha) -> জনপদ (Janapada)"
+    ],
+    "explanation_bn": "নথি অনুসারে, আর্যরা প্রথমে উপজাতি বা 'জন' হিসেবে বসবাস করত। পরে তারা একটি নির্দিষ্ট এলাকায় স্থায়ী হলে তা 'জনপদ' নামে পরিচিত হয় এবং একাধিক জনপদ একত্রিত হয়ে বড় রাজ্য গঠন করলে তা 'মহাজনপদ' হিসেবে আত্মপ্রকাশ করে।",
+    "question_en": "According to the document, which is the correct sequence of the evolution of the political structure in ancient India starting from the arrival of the Aryans?",
+    "options_en": [
+      "Janapada -> Jana -> Tribe -> Mahajanapada",
+      "Tribe/Jana -> Janapada -> Mahajanapada",
+      "Mahajanapada -> Janapada -> Gana-Sangha",
+      "Jana -> Gana-Sangha -> Janapada"
+    ],
+    "explanation_en": "According to the text, the Aryans initially lived as tribes or 'Jana'. When they settled in a specific area permanently, it became known as 'Janapada', and later when multiple Janapadas combined to form a large state, it became a 'Mahajanapada'.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "কোনো ইতিহাসবিদ যদি প্রাচীন ভারতের ঠিক 12টি মহাজনপদের উল্লেখ খুঁজে পেতে চান, তবে নথির তথ্য অনুযায়ী তাকে কোন উৎসটি পরীক্ষা করতে হবে?",
+    "options_bn": [
+      "পাণিনির অষ্টাধ্যায়ী (Ashtadhyayi)",
+      "অঙ্গুত্তর নিকায় (Anguttara Nikaya)",
+      "দীঘ নিকায় (Digha Nikaya)",
+      "ভগবতী সূত্র (Bhagavathi Sutra)"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে যে বৌদ্ধ পালি গ্রন্থ দীঘ নিকায়-এ 12টি মহাজনপদের উল্লেখ পাওয়া যায়, যেখানে অঙ্গুত্তর নিকায়-এ 16টি এবং অষ্টাধ্যায়ীতে 40টি জনপদের কথা বলা হয়েছে।",
+    "question_en": "If a historian wants to find the mention of exactly 12 Mahajanapadas, which source should they examine according to the document?",
+    "options_en": [
+      "Ashtadhyayi by Panini",
+      "Anguttara Nikaya",
+      "Digha Nikaya",
+      "Bhagavathi Sutra"
+    ],
+    "explanation_en": "The document explicitly states that the Buddhist Pali text Digha Nikaya contains the mention of 12 Mahajanapadas, whereas Anguttara Nikaya lists 16 and Ashtadhyayi mentions 40 Janapadas.",
+    "correctIndex": 2
+  },
+  {
+    "id": 3,
+    "question_bn": "মহাজনপদগুলির শাসনব্যবস্থার পরিপ্রেক্ষিতে, নিচের কোন গোষ্ঠীটি সম্পূর্ণরূপে 'গণসংঘ' বা প্রজাতান্ত্রিক রাজ্য নিয়ে গঠিত?",
+    "options_bn": [
+      "বজ্জি, মল্ল, মগধ, কুরু",
+      "কোশল, কাশি, অবন্তি, অঙ্গ",
+      "বজ্জি, মল্ল, কুরু, কম্বোজ, অসাকা",
+      "মৎস্য, পাঞ্চাল, সুরসেন, বৎস"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে যে বজ্জি, মল্ল, কুরু, কম্বোজ এবং অসাকা—এই 5টি ছিল প্রজাতান্ত্রিক বা 'গণসংঘ' রাজ্য। মগধ, কোশল, কাশি এবং অবন্তি ছিল রাজতান্ত্রিক।",
+    "question_en": "In the context of the governance systems of the Mahajanapadas, which of the following groups consists exclusively of 'Gana-Sangha' or republican states?",
+    "options_en": [
+      "Vajji, Malla, Magadha, Kuru",
+      "Kosala, Kasi, Avanti, Anga",
+      "Vajji, Malla, Kuru, Kamboja, Assaka",
+      "Matsya, Panchala, Surasena, Vatsa"
+    ],
+    "explanation_en": "The document mentions that Vajji, Malla, Kuru, Kamboja, and Assaka—these 5 were republican or 'Gana-Sangha' states. Magadha, Kosala, Kasi, and Avanti were monarchies.",
+    "correctIndex": 2
+  },
+  {
+    "id": 4,
+    "question_bn": "মগধের রাজা বিম্বিসার তার সাম্রাজ্যের প্রভাব বিস্তারের জন্য তিনটি গুরুত্বপূর্ণ বিবাহ করেছিলেন। নিচের কোন বিকল্পটি তার তিনজন স্ত্রীর রাজ্যের সঠিক উৎস নির্দেশ করে?",
+    "options_bn": [
+      "কোশল, লিচ্ছাবি এবং মাদ্রা (পাঞ্জাব)",
+      "কাশি, অবন্তি এবং অঙ্গ",
+      "বজ্জি, মল্ল এবং গান্ধার",
+      "অবন্তি, কোশল এবং লিচ্ছাবি"
+    ],
+    "explanation_bn": "বিম্বিসার তিন স্ত্রীর মাধ্যমে কূটনীতি করেছিলেন: প্রথম স্ত্রী কোশলের রাজকন্যা, দ্বিতীয় স্ত্রী লিচ্ছাবি রাজকুমারী চেল্লনা এবং তৃতীয় স্ত্রী মাদ্রা গোষ্ঠীর (পাঞ্জাব) রাজকুমারী।",
+    "question_en": "Magadha's King Bimbisara engaged in three significant marriages to expand his empire's influence. Which of the following options correctly indicates the origins of his three wives?",
+    "options_en": [
+      "Kosala, Lichchavi, and Madra (Punjab)",
+      "Kasi, Avanti, and Anga",
+      "Vajji, Malla, and Gandhar",
+      "Avanti, Kosala, and Lichchavi"
+    ],
+    "explanation_en": "Bimbisara used diplomacy through three wives: the first was a Kosala princess, the second was Lichchavi princess Chellana, and the third was a princess from the Madra clan (Punjab).",
+    "correctIndex": 0
+  },
+  {
+    "id": 5,
+    "question_bn": "অজাতশত্রু বৈশালী জয়ের সময় 'রথমূশল' (Ratha-musala) ব্যবহার করেছিলেন। নথিতে এটিকে কীভাবে বর্ণনা করা হয়েছে?",
+    "options_bn": [
+      "এটি একটি যুদ্ধ ইঞ্জিন যা দিয়ে দূর থেকে পাথর ছোঁড়া যেত।",
+      "এটি একটি বিশেষ রথ যার চাকায় ধারালো অস্ত্র লাগানো থাকত এবং এটি শত্রুদের মধ্যে দ্রুত চলে যেত।",
+      "এটি বিশাল হাতির পিঠে স্থাপিত একটি দুর্গ।",
+      "এটি নদীর উপর দিয়ে সৈন্য পারাপারের জন্য নির্মিত একটি বিশেষ সেতু।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, রথমূশল হলো একটি বিশেষ রথ যার চাকায় ধারালো অস্ত্র লাগানো থাকত এবং এটি শত্রুর সৈন্যদের মধ্যে দিয়ে দ্রুত চলে যেত। অন্যদিকে পাথর ছোঁড়ার ইঞ্জিনটিকে ক্যাটাপাল্ট বলা হয়েছে।",
+    "question_en": "Ajatashatru used the 'Ratha-musala' during his conquest of Vaishali. How is it described in the document?",
+    "options_en": [
+      "It was a war engine used to throw stones from a distance.",
+      "It was a special chariot with sharp weapons attached to its wheels, which moved swiftly through enemy troops.",
+      "It was a fortress mounted on the back of huge elephants.",
+      "It was a special bridge built to transport troops across rivers."
+    ],
+    "explanation_en": "The document states that the Ratha-musala was a special chariot with sharp weapons attached to its wheels that would drive swiftly through enemy troops. The stone-throwing engine was called a Catapult.",
+    "correctIndex": 1
+  },
+  {
+    "id": 6,
+    "question_bn": "বজ্জি মহাজনপদ 8টি গোষ্ঠীর সমন্বয়ে গঠিত ছিল। এদের মধ্যে সবচেয়ে শক্তিশালী 3টি গোষ্ঠী কোনটি ছিল?",
+    "options_bn": [
+      "শাক্য, বিদেহ এবং কুরু",
+      "জ্ঞাতৃক, বিদেহ এবং লিচ্ছাবি",
+      "মল্ল, লিচ্ছাবি এবং কোশল",
+      "লিচ্ছাবি, মাদ্রা এবং চেদি"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে বজ্জি মহাজনপদের 8টি বংশের মধ্যে সবচেয়ে শক্তিশালী তিনটি ছিল: জ্ঞাতৃক (Jnatrika), বিদেহ (Videha) এবং লিচ্ছাবি (Lichchavi)।",
+    "question_en": "The Vajji Mahajanapada consisted of 8 clans. Which were the 3 most powerful clans among them?",
+    "options_en": [
+      "Shakya, Videha, and Kuru",
+      "Jnatrika, Videha, and Lichchavi",
+      "Malla, Lichchavi, and Kosala",
+      "Lichchavi, Madra, and Chedi"
+    ],
+    "explanation_en": "The document notes that out of the 8 clans in the Vajji Mahajanapada, the three most powerful were: Jnatrika, Videha, and Lichchavi.",
+    "correctIndex": 1
+  },
+  {
+    "id": 7,
+    "question_bn": "নন্দ বংশের প্রতিষ্ঠাতা মহাপদ্মনন্দ 'একরাট' উপাধি গ্রহণ করেছিলেন। নথির বর্ণনা অনুযায়ী এই উপাধির পেছনের মূল কারণ কী?",
+    "options_bn": [
+      "তিনি মগধের গণতান্ত্রিক কাঠামো ভেঙে একনায়কতন্ত্র প্রতিষ্ঠা করেন।",
+      "তিনি হাইডাসপিসের যুদ্ধে আলেকজান্ডারকে পরাজিত করেছিলেন।",
+      "তিনি পুরোনো ক্ষত্রিয় রাজবংশগুলো ধ্বংস করে উত্তর ভারতের বেশিরভাগ অংশ একত্রিত করে এক বিশাল সাম্রাজ্য গড়ে তুলেছিলেন।",
+      "তিনি মগধের রাজধানী রাজগির থেকে পাটালিপুত্রে সরিয়ে নেন।"
+    ],
+    "explanation_bn": "মহাপদ্মনন্দের 'একরাট' উপাধির অর্থ হলো 'সাম্রাজ্য নির্মাতা' বা 'ক্ষত্রিয়দের উৎখাতকারী'। তিনি পুরোনো ক্ষত্রিয় বংশ ধ্বংস করে সমগ্র উত্তর ভারতের বেশিরভাগ অংশ একত্রিত করেছিলেন।",
+    "question_en": "Mahapadmananda, the founder of the Nanda dynasty, adopted the title 'Ekrat'. According to the document, what is the main reason behind this title?",
+    "options_en": [
+      "He dismantled Magadha's democratic structure to establish a dictatorship.",
+      "He defeated Alexander in the Battle of Hydaspes.",
+      "He completely eradicated old Kshatriya dynasties and unified most of northern India to build a vast empire.",
+      "He shifted the capital of Magadha from Rajgir to Pataliputra."
+    ],
+    "explanation_en": "Mahapadmananda's title 'Ekrat' means 'empire builder' or 'uprooter of Kshatriyas'. He earned this by destroying old Kshatriya dynasties and unifying most of northern India under one empire.",
+    "correctIndex": 2
+  },
+  {
+    "id": 8,
+    "question_bn": "মহাজনপদ যুগের কর ব্যবস্থায় নিয়মিত কৃষিকর এবং 'বলি' (Bali)-এর মধ্যে প্রধান পার্থক্য কী ছিল?",
+    "options_bn": [
+      "কৃষিকর ছিল 1/6 অংশ যা বাধ্যতামূলক, কিন্তু বলি ছিল রাজাকে দেওয়া স্বেচ্ছামূলক উপহার।",
+      "কৃষিকর নিত ভোজক, আর বলি সংগ্রহ করত শৌলকিকরা।",
+      "কৃষিকর মুদ্রায় দেওয়া হতো, আর বলি শুধু পশু হিসেবে দেওয়া হতো।",
+      "কৃষিকর শুধু বজ্জি মহাজনপদে ছিল, আর বলি মগধে নেওয়া হতো।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্ট বলা হয়েছে যে কৃষকদের উৎপাদনের 1/6 ভাগ কর হিসেবে বাধ্যতামূলকভাবে দিতে হতো, অন্যদিকে বলি ছিল রাজাকে দেওয়া একটি স্বেচ্ছামূলক উপহার বা অর্ঘ্য।",
+    "question_en": "In the taxation system of the Mahajanapada period, what was the primary difference between the regular agricultural tax and 'Bali'?",
+    "options_en": [
+      "The agricultural tax was an obligatory 1/6th share, whereas Bali was a voluntary gift offered to the king.",
+      "The agricultural tax was collected by the Bhojaka, while Bali was collected by the Shaulkika.",
+      "The agricultural tax was paid in coins, whereas Bali was only given as livestock.",
+      "The agricultural tax was unique to Vajji, while Bali was collected in Magadha."
+    ],
+    "explanation_en": "The document clearly states that a 1/6th share of the farmers' produce was a mandatory tax, whereas Bali was a voluntary offering or gift presented to the king.",
+    "correctIndex": 0
+  },
+  {
+    "id": 9,
+    "question_bn": "ভারতের প্রাচীন ইতিহাসে মহাজনপদ যুগকে কেন 'দ্বিতীয় নগরায়ন' (2nd Urbanisation) বলা হয়?",
+    "options_bn": [
+      "কারণ রূপার মুদ্রার ব্যাপক ব্যবহার কৃষি কাজকে প্রতিস্থাপন করে পুরোপুরি বাণিজ্যভিত্তিক সমাজ গড়ে তুলেছিল।",
+      "কারণ আলেকজান্ডারের আক্রমণের ভয়ে মানুষ গ্রামে ছেড়ে শহরে প্রাচীর তুলে বসবাস শুরু করে।",
+      "কারণ লোহার লাঙ্গলের ফলার ব্যবহারে কৃষি উৎপাদন ব্যাপকভাবে বাড়ে এবং এই উদ্বৃত্ত ফসলকে কেন্দ্র করে শহরের উদ্ভব ঘটে।",
+      "কারণ এই সময়ে এনবিপিডব্লিউ (NBPW) মৃৎপাত্র বিদেশে রপ্তানি করে প্রচুর বৈদেশিক মুদ্রা আসে।"
+    ],
+    "explanation_bn": "নথিতে ব্যাখ্যা করা হয়েছে যে লোহার লাঙ্গলের ফলার ব্যবহারের ফলে কৃষি উৎপাদন এতটা বেড়ে যায় যে উদ্বৃত্ত ফসল শহরে বিক্রি করা সম্ভব হয়, যা নতুন নগরায়নের ভিত্তি তৈরি করে। হরপ্পার পর এটিই ছিল দ্বিতীয় নগরায়ন।",
+    "question_en": "Why is the Mahajanapada era referred to as the '2nd Urbanisation' in ancient Indian history?",
+    "options_en": [
+      "Because the widespread use of silver coins replaced agriculture, creating a wholly trade-based society.",
+      "Because people, fearing Alexander's invasion, left villages and began living in walled cities.",
+      "Because the use of iron ploughshares vastly increased agricultural production, and cities emerged around this surplus produce.",
+      "Because the export of NBPW pottery brought massive foreign wealth."
+    ],
+    "explanation_en": "The document explains that the use of iron ploughshares increased agricultural output so significantly that surplus crops could be sold, laying the foundation for towns. Occurring after Harappa, this is known as the second urbanisation.",
+    "correctIndex": 2
+  },
+  {
+    "id": 10,
+    "question_bn": "মগধের প্রথম ও দ্বিতীয় রাজধানীর ভৌগোলিক সুরক্ষার ক্ষেত্রে মূল প্রাকৃতিক সুবিধা কী ছিল?",
+    "options_bn": [
+      "রাজগির গঙ্গা নদীর তীরে ছিল, আর পাটালিপুত্র পাঁচ পাহাড় দিয়ে ঘেরা ছিল।",
+      "রাজগির পাঁচটি পাহাড় দিয়ে ঘেরা ছিল, আর পাটালিপুত্র গঙ্গা ও শোন নদীর সঙ্গমে অবস্থিত ছিল।",
+      "উভয় রাজধানীই বিশাল লোহার খনির মাঝে অবস্থিত ছিল।",
+      "উভয় রাজধানীই জলাভূমি অঞ্চলে ছিল যেখানে যুদ্ধহাতিরা প্রাকৃতিকভাবে প্রজনন করত।"
+    ],
+    "explanation_bn": "মগধের প্রথম রাজধানী রাজগির পাঁচটি পাহাড় দিয়ে ঘেরা থাকায় প্রাকৃতিক দুর্গের কাজ করত। দ্বিতীয় রাজধানী পাটালিপুত্র গঙ্গা ও শোন নদীর সঙ্গমে অবস্থিত হওয়ায় তিন দিকে নদী দ্বারা সুরক্ষিত ছিল।",
+    "question_en": "What were the main natural advantages for the geographical defense of Magadha's first and second capitals?",
+    "options_en": [
+      "Rajgir was on the banks of the Ganga, and Pataliputra was surrounded by five hills.",
+      "Rajgir was surrounded by five hills, while Pataliputra was located at the confluence of the Ganga and Son rivers.",
+      "Both capitals were located amidst massive iron mines.",
+      "Both capitals were in marshy regions where war elephants naturally bred."
+    ],
+    "explanation_en": "Magadha's first capital, Rajgir, was surrounded by five hills acting as a natural fort. The second capital, Pataliputra, was protected on three sides by water as it sat at the confluence of the Ganga and Son rivers.",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "মহাজনপদ যুগের অর্থনীতিতে 'শ্রেণী' (Shreni) বলতে কী বোঝানো হয়েছে?",
+    "options_bn": [
+      "এটি ছিল রূপা ও সোনার তৈরি একটি বিশেষ ধরনের মুদ্রা।",
+      "এটি ছিল গ্রামপ্রধান বা ভোজকের প্রশাসনিক পরিষদ।",
+      "এটি ছিল ব্যবসায়ী ও কারিগরদের সংগঠন বা গিল্ড।",
+      "এটি ছিল নদীপথে পণ্য পরিবহনের ওপর নেওয়া টোল ট্যাক্স।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে 'শ্রেণী' বা গিল্ড ছিল ব্যবসায়ী ও কারিগরদের একটি সংগঠন বা সমিতি যারা একসাথে পণ্য তৈরি করত, মূল্য নির্ধারণ করত এবং বিক্রি করত।",
+    "question_en": "In the economy of the Mahajanapada era, what did the term 'Shreni' refer to?",
+    "options_en": [
+      "It was a specific type of coin made of silver and gold.",
+      "It was the administrative council of the village headman or Bhojaka.",
+      "It was an organization or guild of merchants and artisans.",
+      "It was the toll tax collected for transporting goods via rivers."
+    ],
+    "explanation_en": "The document notes that 'Shreni' or guild was an organization or association of merchants and artisans who collectively manufactured products, set prices, and sold them.",
+    "correctIndex": 2
+  },
+  {
+    "id": 12,
+    "question_bn": "নথির তথ্য অনুযায়ী 'গৃহপতি' (Gahapati) শব্দের সামাজিক বিবর্তনের ক্ষেত্রে কোনটি সঠিক?",
+    "options_bn": [
+      "প্রথমে এটি গ্রামপ্রধানকে বোঝাত, পরে এটি রাজকর্মচারীদের উপাধিতে পরিণত হয়।",
+      "এরা ছিলেন মূলত ধনী কৃষক যারা পরবর্তীতে 'বৈশ্য' বা ব্যবসায়ী শ্রেণীর সমার্থক হয়ে যান।",
+      "এরা ছিলেন দরিদ্র কৃষক যারা উৎপাদনের 1/6 অংশ কর দিতে ব্যর্থ হয়ে শ্রমিকে পরিণত হন।",
+      "এরা ছিলেন সেই সব ক্ষত্রিয় যারা অস্ত্র ত্যাগ করে কৃষিকাজে যুক্ত হন।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে যে 'গৃহপতি' শব্দটি ধনী কৃষক এবং গৃহস্বামীদের বোঝাত, যা পরবর্তীকালে 'বৈশ্য' বা ব্যবসায়ী শ্রেণীর প্রতিশব্দ হয়ে যায়, কারণ এই দুই শ্রেণি কার্যত একই হয়ে উঠেছিল।",
+    "question_en": "According to the document, which statement correctly describes the social evolution of the term 'Gahapati'?",
+    "options_en": [
+      "It initially referred to the village headman and later became a title for royal officials.",
+      "They were primarily rich farmers who subsequently became synonymous with the 'Vaishya' or merchant class.",
+      "They were poor farmers who, failing to pay the 1/6th tax, became laborers.",
+      "They were Kshatriyas who abandoned weapons to engage in agriculture."
+    ],
+    "explanation_en": "The document states that the term 'Gahapati' referred to wealthy farmers and householders, which eventually became synonymous with 'Vaishyas' or the merchant class, as these two groups practically merged.",
+    "correctIndex": 1
+  },
+  {
+    "id": 13,
+    "question_bn": "মগধ সাম্রাজ্যের রাজনৈতিক সম্প্রসারণে শিশুনাগ (Shishunaga) বংশের সবচেয়ে গুরুত্বপূর্ণ অর্জন কী ছিল?",
+    "options_bn": [
+      "তারা আলেকজান্ডারকে ভারত আক্রমণ করা থেকে বিরত রাখে।",
+      "তারা রাজধানী পাটালিপুত্র থেকে রাজগিরে ফিরিয়ে আনে।",
+      "তারা দীর্ঘদিনের প্রতিদ্বন্দ্বী অবন্তি রাজ্যকে পরাজিত করে মগধের সাথে একত্রিত করে।",
+      "তারা প্রথম বারের মতো 'ক্যাটাপাল্ট' প্রযুক্তি ব্যবহার করে।"
+    ],
+    "explanation_bn": "নথিতে পরিষ্কার বলা হয়েছে যে শিশুনাগ বংশের সবচেয়ে বড় অর্জন হলো দীর্ঘদিনের প্রতিদ্বন্দ্বী অবন্তি রাজ্যকে পরাজিত করে মগধের সাথে স্থায়ীভাবে একত্রিত করা।",
+    "question_en": "What was the most significant achievement of the Shishunaga dynasty in the political expansion of the Magadha empire?",
+    "options_en": [
+      "They stopped Alexander from invading India.",
+      "They shifted the capital back from Pataliputra to Rajgir.",
+      "They defeated their long-time rival, the state of Avanti, and annexed it into Magadha.",
+      "They used the 'Catapult' technology for the first time."
+    ],
+    "explanation_en": "The document clearly states that the greatest achievement of the Shishunaga dynasty was defeating their long-time rival, Avanti, and integrating it completely with Magadha.",
+    "correctIndex": 2
+  },
+  {
+    "id": 14,
+    "question_bn": "নথি অনুসারে, ধর্মীয় বা পৌরাণিক ব্যক্তিত্ব এবং তাদের মহাজনপদের সাথে সংযুক্তির সঠিক জোড়া কোনটি?",
+    "options_bn": [
+      "রাজা জনক - কোশল; গৌতম বুদ্ধ - মল্ল",
+      "রাজা জনক - বজ্জি (বিদেহ); গৌতম বুদ্ধ - বজ্জি (শাক্য)",
+      "রাজা জনক - বজ্জি (বিদেহ); মহাবীর - বজ্জি (বৈশালী)",
+      "মহাবীর - অবন্তি; সীতা - কাশী"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে সীতার পিতা রাজা জনক ছিলেন বজ্জি মহাজনপদের বিদেহ রাজ্যের। আর জৈন ধর্মের তীর্থঙ্কর মহাবীর জন্মগ্রহণ করেছিলেন এই বজ্জি মহাজনপদেরই বৈশালীতে। (নোট: বুদ্ধ শাক্য বংশের ছিলেন, কিন্তু শাক্য বংশকে বজ্জি হিসেবে উল্লেখ করা হয়নি)।",
+    "question_en": "According to the document, which is the correct pair of a religious/mythological figure and their associated Mahajanapada?",
+    "options_en": [
+      "King Janaka - Kosala; Gautama Buddha - Malla",
+      "King Janaka - Vajji (Videha); Gautama Buddha - Vajji (Shakya)",
+      "King Janaka - Vajji (Videha); Mahavira - Vajji (Vaishali)",
+      "Mahavira - Avanti; Sita - Kasi"
+    ],
+    "explanation_en": "The text states that Sita's father King Janaka was from the Videha state of the Vajji Mahajanapada. Also, Jain Tirthankara Mahavira was born in Vaishali, which is within the Vajji Mahajanapada. (Note: Buddha was from the Shakya clan, but Shakya wasn't listed as part of Vajji).",
+    "correctIndex": 2
+  },
+  {
+    "id": 15,
+    "question_bn": "প্রত্নতাত্ত্বিকদের কাছে 'এনবিপিডব্লিউ' (NBPW) মৃৎপাত্র অত্যন্ত গুরুত্বপূর্ণ কেন?",
+    "options_bn": [
+      "কারণ এটি দিয়ে শুধুমাত্র মহাজনপদ যুগে বলি (Bali) কর সংগ্রহ করা হতো।",
+      "কারণ এটি ছিল লোহার সমতুল্য শক্ত মাটির পাত্র যা যুদ্ধের কাজে ব্যবহার হতো।",
+      "কারণ এটি মহাজনপদ যুগের নির্দিষ্ট সাংস্কৃতিক সূচক এবং সমৃদ্ধ নগর সভ্যতার প্রমাণ।",
+      "কারণ এর মধ্যে পাঞ্চ মার্কড কয়েন বা মুদ্রা গলিয়ে তৈরি করা হতো।"
+    ],
+    "explanation_bn": "NBPW হলো অত্যন্ত উন্নত, চকচকে মাটির পাত্র যা মূলত বিত্তশালীরা ব্যবহার করত। নথিতে একে মহাজনপদ যুগের নির্দিষ্ট সাংস্কৃতিক সূচক এবং সমৃদ্ধ নগরায়নের প্রমাণ হিসেবে উল্লেখ করা হয়েছে।",
+    "question_en": "Why is 'NBPW' pottery extremely important to archaeologists?",
+    "options_en": [
+      "Because it was exclusively used to collect the Bali tax during the Mahajanapada era.",
+      "Because it was a clay vessel as strong as iron, used in warfare.",
+      "Because it acts as a specific cultural indicator of the Mahajanapada era and is proof of a prosperous urban civilization.",
+      "Because punch-marked coins were melted down to create it."
+    ],
+    "explanation_en": "NBPW was a highly advanced, glossy pottery primarily used by the affluent. The document notes it as a specific cultural indicator of the Mahajanapada era, serving as evidence of prosperous urbanization.",
+    "correctIndex": 2
+  },
+  {
+    "id": 16,
+    "question_bn": "বিম্বিসার তাঁর ব্যক্তিগত চিকিৎসক 'জীবক'-কে উজ্জয়িনীতে কেন পাঠিয়েছিলেন এবং এর তাৎপর্য কী ছিল?",
+    "options_bn": [
+      "উজ্জয়িনীর চিকিৎসা ব্যবস্থাকে গিল্ডে পরিণত করতে; এটি ছিল অর্থনৈতিক সম্প্রসারণ।",
+      "রাজা প্রদ্যোত জন্ডিস রোগে আক্রান্ত হলে তাঁর চিকিৎসার্থে; এটি ছিল একটি অসাধারণ কূটনৈতিক পদক্ষেপ।",
+      "উজ্জয়িনীতে বৌদ্ধ ধর্মের প্রচারের জন্য; এটি ছিল ধর্মীয় কূটনীতি।",
+      "উজ্জয়িনীর লোহার খনিতে কাজ করা শ্রমিকদের সুস্থ করতে; এটি ছিল সামরিক কৌশল।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে, উজ্জয়িনীর রাজা প্রদ্যোত জন্ডিস রোগে আক্রান্ত হলে বিম্বিসার তাঁর চিকিৎসক জীবককে পাঠান। এটি সামরিক যুদ্ধের পরিবর্তে চিকিৎসা সহায়তা দিয়ে কূটনৈতিক সম্পর্ক স্থাপনের একটি অসাধারণ উদাহরণ।",
+    "question_en": "Why did Bimbisara send his personal physician 'Jivaka' to Ujjain, and what was its significance?",
+    "options_en": [
+      "To transform Ujjain's medical system into a guild; it was economic expansion.",
+      "To treat King Pradyota when he suffered from jaundice; it was an extraordinary diplomatic move.",
+      "To preach Buddhism in Ujjain; it was religious diplomacy.",
+      "To cure workers at Ujjain's iron mines; it was a military strategy."
+    ],
+    "explanation_en": "The text states that when Ujjain's King Pradyota suffered from jaundice, Bimbisara sent Jivaka to treat him. This was an outstanding example of establishing diplomatic relations through medical aid instead of military conflict.",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_bn": "মহাজনপদ যুগে রাস্তা বা নদীপথে পণ্য পরিবহনের ওপর ধার্য করা কর বা টোল ট্যাক্স কে সংগ্রহ করতেন?",
+    "options_bn": [
+      "ভোজক (Bhojaka)",
+      "শৌলকিক (Shaulkika)",
+      "গৃহপতি (Gahapati)",
+      "সেনিয়া (Seniya)"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ করা হয়েছে যে পণ্য পরিবহনের ওপর টোল ট্যাক্স সংগ্রহ করতেন 'শৌলকিক' বা 'শুল্কাধ্যক্ষ' নামক রাজকর্মচারীরা।",
+    "question_en": "During the Mahajanapada period, who collected the toll tax levied on the transportation of goods via roads or rivers?",
+    "options_en": [
+      "Bhojaka",
+      "Shaulkika",
+      "Gahapati",
+      "Seniya"
+    ],
+    "explanation_en": "The document explicitly mentions that royal officials known as 'Shaulkika' or 'Shulkadhyaksha' collected toll taxes for transporting goods.",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "326 খ্রিস্টপূর্বাব্দে ধনানন্দের রাজত্বকালে আলেকজান্ডারের ভারত আক্রমণ শেষ পর্যন্ত মগধ পর্যন্ত পৌঁছায়নি কেন?",
+    "options_bn": [
+      "কারণ ধনানন্দ আলেকজান্ডারকে বিশাল অর্থ দিয়ে শান্ত করেছিলেন।",
+      "কারণ আলেকজান্ডার হাইডাসপিসের যুদ্ধে পৌরব কর্তৃক পরাজিত হন।",
+      "কারণ আলেকজান্ডারের সেনাবাহিনী বিদ্রোহ করে এবং তারা আর পূর্বদিকে এগোতে চায়নি।",
+      "কারণ মগধের রথমূশল এবং ক্যাটাপাল্ট দেখে আলেকজান্ডার ভয় পেয়ে যান।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, আলেকজান্ডারের নিজের সেনাবাহিনীই ভারতে এসে বিদ্রোহ করে এবং আর পূর্বদিকে এগোতে চায়নি, যার ফলে আলেকজান্ডার মগধের দিকে অগ্রসর হতে পারেননি।",
+    "question_en": "Why did Alexander's invasion of India during Dhanananda's reign in 326 BC ultimately fail to reach Magadha?",
+    "options_en": [
+      "Because Dhanananda pacified Alexander with massive wealth.",
+      "Because Alexander was defeated by Porus in the Battle of Hydaspes.",
+      "Because Alexander's own army mutinied and refused to advance further east.",
+      "Because Alexander was terrified upon seeing Magadha's Ratha-musalas and Catapults."
+    ],
+    "explanation_en": "The text states that Alexander's own army mutinied upon reaching India and refused to move further east, which prevented Alexander from advancing towards Magadha.",
+    "correctIndex": 2
+  },
+  {
+    "id": 19,
+    "question_bn": "মগধ সাম্রাজ্যের রাজাদের বৌদ্ধ সঙ্গীতির সাথে যুক্ত করার ক্ষেত্রে নিচের কোন জোড়াটি নথির তথ্যের সাথে সঠিক?",
+    "options_bn": [
+      "বিম্বিসার - 1ম বৌদ্ধ সঙ্গীতি; কালাশোক - 2য় বৌদ্ধ সঙ্গীতি",
+      "অজাতশত্রু - 1ম বৌদ্ধ সঙ্গীতি; কালাশোক - 2য় বৌদ্ধ সঙ্গীতি",
+      "উদয়িন - 1ম বৌদ্ধ সঙ্গীতি; মহাপদ্মনন্দ - 2য় বৌদ্ধ সঙ্গীতি",
+      "অজাতশত্রু - 1ম বৌদ্ধ সঙ্গীতি; ধনানন্দ - 2য় বৌদ্ধ সঙ্গীতি"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে বুদ্ধের মৃত্যুর পর অজাতশত্রু রাজগিরিহায় প্রথম বৌদ্ধ সঙ্গীতি আয়োজন করেন। আর শিশুনাগ বংশের কালাশোক বৈশালীতে দ্বিতীয় বৌদ্ধ সঙ্গীতির পৃষ্ঠপোষকতা করেন।",
+    "question_en": "Which of the following pairs correctly matches the kings of the Magadha empire with the Buddhist Councils they patronized, according to the document?",
+    "options_en": [
+      "Bimbisara - 1st Buddhist Council; Kalashoka - 2nd Buddhist Council",
+      "Ajatashatru - 1st Buddhist Council; Kalashoka - 2nd Buddhist Council",
+      "Udayin - 1st Buddhist Council; Mahapadmananda - 2nd Buddhist Council",
+      "Ajatashatru - 1st Buddhist Council; Dhanananda - 2nd Buddhist Council"
+    ],
+    "explanation_en": "The document notes that Ajatashatru organized the first Buddhist Council at Rajgriha after Buddha's death. Furthermore, Kalashoka of the Shishunaga dynasty patronized the second Buddhist Council in Vaishali.",
+    "correctIndex": 1
+  },
+  {
+    "id": 20,
+    "question_bn": "মহাজনপদ যুগে বিনিময় প্রথা (Barter System) বাদ দিয়ে যে রূপার মুদ্রাগুলোর ব্যাপকভাবে প্রচলন হয়েছিল, তার নাম কী ছিল?",
+    "options_bn": [
+      "পাঞ্চ মার্কড কয়েন (নিষ্ক ও কর্ষাপণ)",
+      "এনবিপিডব্লিউ (NBPW) মুদ্রা",
+      "শৌলকিক (Shaulkika) মুদ্রা",
+      "গণসংঘ (Gana-Sangha) টোকেন"
+    ],
+    "explanation_bn": "বাণিজ্যের সুবিধার্থে মহাজনপদ যুগে 'পাঞ্চ মার্কড কয়েন' বা ছাপাঙ্কিত মুদ্রার প্রচলন হয়। এগুলোর মধ্যে নিষ্ক এবং কর্ষাপণ নামক রূপার মুদ্রাগুলো বাণিজ্যে ব্যাপকভাবে ব্যবহৃত হতো।",
+    "question_en": "What were the names of the widely used silver coins that replaced the Barter System during the Mahajanapada period?",
+    "options_en": [
+      "Punch Marked Coins (Nishka and Karshapana)",
+      "NBPW Coins",
+      "Shaulkika Coins",
+      "Gana-Sangha Tokens"
+    ],
+    "explanation_en": "To facilitate trade, 'Punch Marked Coins' were introduced during the Mahajanapada era. Among these, the silver coins named Nishka and Karshapana were widely used in commerce.",
+    "correctIndex": 0
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
