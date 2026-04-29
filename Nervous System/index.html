@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "একজন ব্যক্তি স্ট্রোক করার পর তাঁর কফির তাপমাত্রা অনুভব করতে পারছেন না এবং মহাশূন্যে তাঁর হাতের অবস্থান ঠিক কোথায় তা বুঝতে পারছেন না। তবে তাঁর দৃষ্টিশক্তি এবং শোনার ক্ষমতা সম্পূর্ণ স্বাভাবিক। প্রদত্ত নথি অনুযায়ী, তাঁর মস্তিষ্কের সেরেব্রামের কোন অংশটি ক্ষতিগ্রস্ত হয়েছে?",
+    "options_bn": [
+      "ফ্রন্টাল লোব (Frontal Lobe)",
+      "প্যারাইটাল লোব (Parietal Lobe)",
+      "টেম্পোরাল লোব (Temporal Lobe)",
+      "অক্সিপিটাল লোব (Occipital Lobe)"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে, সেরেব্রামের প্যারাইটাল লোব স্পর্শ, ব্যথা, তাপমাত্রা অনুভব করা এবং শরীরের অবস্থান বোঝার মতো কাজগুলি নিয়ন্ত্রণ করে। যেহেতু ব্যক্তির তাপমাত্রা ও অবস্থান বুঝতে সমস্যা হচ্ছে, তাই এই লোবটিই ক্ষতিগ্রস্ত হয়েছে।",
+    "question_en": "After suffering a stroke, a person is unable to feel the temperature of their coffee and cannot sense the spatial position of their hand. However, their vision and hearing are completely normal. According to the provided document, which part of their cerebrum is damaged?",
+    "options_en": [
+      "Frontal Lobe",
+      "Parietal Lobe",
+      "Temporal Lobe",
+      "Occipital Lobe"
+    ],
+    "explanation_en": "The document states that the parietal lobe of the cerebrum controls functions like perceiving touch, pain, temperature, and understanding body position. Since the person is having trouble sensing temperature and position, this lobe is the one damaged.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "রিফ্লেক্স ক্রিয়ার (Reflex Action) সময় সংকেত দ্রুত কাজ করার জন্য মস্তিষ্ক পর্যন্ত যায় না। নথি অনুযায়ী, সুষুম্নাকাণ্ডের ভেতরে রিলে নিউরন (Relay Neuron) থেকে সংকেতটি পেশিতে পৌঁছানোর ঠিক আগে কোন কোষের মধ্য দিয়ে যায়?",
+    "options_bn": [
+      "সেন্সরি নিউরন (Sensory Neuron)",
+      "মোটর নিউরন (Motor Neuron)",
+      "থ্যালামাস (Thalamus)",
+      "অ্যাফেরেন্ট স্নায়ু (Afferent Nerve)"
+    ],
+    "explanation_bn": "নথিতে সংকেত প্রবাহের যে পথ দেওয়া হয়েছে তা হলো: ত্বকের রিসেপ্টর → সেন্সরি নিউরন → সুষুম্নাকাণ্ড → রিলে নিউরন → মোটর নিউরন → পেশি। সুতরাং, রিলে নিউরনের ঠিক পরেই মোটর নিউরন অবস্থান করে।",
+    "question_en": "During a Reflex Action, the signal does not travel to the brain in order to act quickly. According to the document, through which cell does the signal pass right before reaching the muscle after leaving the relay neuron in the spinal cord?",
+    "options_en": [
+      "Sensory Neuron",
+      "Motor Neuron",
+      "Thalamus",
+      "Afferent Nerve"
+    ],
+    "explanation_en": "The signal pathway provided in the document is: Skin receptor → Sensory neuron → Spinal cord → Relay neuron → Motor neuron → Muscle. Therefore, the motor neuron is located right after the relay neuron.",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_bn": "একজন ব্যক্তি ভারী খাবার খাওয়ার পর আরাম করে বিশ্রাম নিচ্ছেন। হঠাৎ তিনি ঘরে একটি বন্য প্রাণী দেখে তীব্র আতঙ্কিত হয়ে পড়েন। নথির তথ্য অনুযায়ী, তাঁর অটোনমিক স্নায়ুতন্ত্রে (Autonomic NS) তাৎক্ষণিক কী কাঠামোগত পরিবর্তন ঘটবে?",
+    "options_bn": [
+      "সোমাটিক স্নায়ুতন্ত্র সক্রিয় হয়ে দ্রুত হজম প্রক্রিয়া বন্ধ করে দেবে।",
+      "প্যারাসিম্প্যাথেটিক অবস্থা থেকে সিম্প্যাথেটিক ব্যবস্থায় স্থানান্তর ঘটবে, যার ফলে পিউপিল বড় হবে এবং হজম বন্ধ হবে।",
+      "সিম্প্যাথেটিক অবস্থা থেকে প্যারাসিম্প্যাথেটিক ব্যবস্থায় স্থানান্তর ঘটবে, যার ফলে হৃদস্পন্দন দ্রুত কমে যাবে।",
+      "অ্যাফেরেন্ট স্নায়ুগুলি স্বয়ংক্রিয়ভাবে 'Fight-or-Flight' প্রতিক্রিয়া তৈরি করতে মোটর স্নায়ুকে বাধা দেবে।"
+    ],
+    "explanation_bn": "বিশ্রামের সময় মানুষের প্যারাসিম্প্যাথেটিক (Rest-and-Digest) সিস্টেম কাজ করে, যা হজম চালু রাখে। ভয় পেলে তাৎক্ষণিকভাবে সিম্প্যাথেটিক (Fight-or-Flight) সিস্টেম সক্রিয় হয়, যা পিউপিল বড় করে এবং হজম প্রক্রিয়া বন্ধ করে দেয়।",
+    "question_en": "A person is relaxing comfortably after eating a heavy meal. Suddenly, they become extremely terrified upon seeing a wild animal in the room. According to the information in the document, what immediate structural transition will occur in their Autonomic NS?",
+    "options_en": [
+      "The somatic nervous system will activate and quickly stop the digestion process.",
+      "A shift from the parasympathetic state to the sympathetic system will occur, causing pupils to dilate and digestion to stop.",
+      "A shift from the sympathetic state to the parasympathetic system will occur, causing the heart rate to drop rapidly.",
+      "Afferent nerves will automatically block motor nerves to create a 'Fight-or-Flight' response."
+    ],
+    "explanation_en": "During rest, a person's parasympathetic (Rest-and-Digest) system is active, which keeps digestion going. Upon feeling fear, the sympathetic (Fight-or-Flight) system is instantly activated, which dilates the pupils and stops the digestion process.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "বিজ্ঞানীরা মস্তিষ্কের এমন একটি অংশ নিয়ে গবেষণা করছেন যা সমস্ত সংবেদনশীল তথ্যের প্রধান সমন্বয়কারী বা 'রিলে স্টেশন' (Relay Station) হিসেবে কাজ করে। নথির তথ্য অনুযায়ী, ঠিক এই রিলে স্টেশনের নিচে অবস্থিত গঠনটির প্রধান কাজ কী?",
+    "options_bn": [
+      "এটি মস্তিষ্কের দুটি অর্ধগোলককে সংযুক্ত করে।",
+      "এটি শরীরের তাপমাত্রা নিয়ন্ত্রণ করে এবং বিশেষ হরমোন নিঃসরণ করে।",
+      "এটি দৃষ্টিশক্তি এবং শ্রবণ তথ্য প্রক্রিয়াকরণ করে।",
+      "এটি স্বয়ংক্রিয় শ্বাসক্রিয়া এবং হৃদস্পন্দন নিয়ন্ত্রণ করে।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, থ্যালামাস হলো 'রিলে স্টেশন'। থ্যালামাসের ঠিক নিচে থাকে হাইপোথ্যালামাস (Hypothalamus), যার কাজ হলো শরীরের তাপমাত্রা নিয়ন্ত্রণ করা, খাওয়ার ইচ্ছা জাগানো এবং হাইপোথ্যালামিক হরমোন নিঃসরণ করা।",
+    "question_en": "Scientists are researching a part of the brain that acts as the primary coordinator or 'Relay Station' for all sensory information. According to the document, what is the primary function of the structure located exactly below this relay station?",
+    "options_en": [
+      "It connects the two hemispheres of the brain.",
+      "It regulates body temperature and secretes special hormones.",
+      "It processes visual and auditory information.",
+      "It controls involuntary respiration and heartbeat."
+    ],
+    "explanation_en": "The document states that the Thalamus is the 'Relay Station'. Located right below the thalamus is the Hypothalamus, whose function is to regulate body temperature, trigger hunger, and secrete hypothalamic hormones.",
+    "correctIndex": 1
+  },
+  {
+    "id": 5,
+    "question_bn": "একজন চিকিৎসকের জরুরি ভিত্তিতে একজন রোগীর মস্তিষ্ক থেকে সেরিব্রোস্পাইনাল ফ্লুইড (CSF) সংগ্রহ করা প্রয়োজন। নথির তথ্য অনুযায়ী, ক্র্যানিয়াল মেনিনজেসের (Cranial Meninges) ঠিক কোন স্তর থেকে এই তরলটি পাওয়া যাবে?\n(A) পিয়া মেটার (Pia Mater), কারণ এটি মস্তিষ্কের টিস্যুর সাথে লেগে থাকে।\n(B) ডুরা মেটার (Dura Mater), কারণ এটি সবচেয়ে শক্ত বাইরের স্তর।\n(C) অ্যারাকনয়েড (Arachnoid), কারণ এটি মাকড়সার জালের মতো এবং এটিই CSF ধারণ করে।\n(D) গ্রে ম্যাটার (Grey Matter), কারণ এটি সেরেব্রামের বাইরের আবরণ।",
+    "options_bn": [
+      "পিয়া মেটার (Pia Mater), কারণ এটি মস্তিষ্কের টিস্যুর সাথে লেগে থাকে।",
+      "ডুরা মেটার (Dura Mater), কারণ এটি সবচেয়ে শক্ত বাইরের স্তর।",
+      "অ্যারাকনয়েড (Arachnoid), কারণ এটি মাকড়সার জালের মতো এবং এটিই CSF ধারণ করে।",
+      "গ্রে ম্যাটার (Grey Matter), কারণ এটি সেরেব্রামের বাইরের আবরণ।"
+    ],
+    "explanation_bn": "নথির মেনিনজেস সংক্রান্ত ছকে স্পষ্টভাবে বলা হয়েছে যে, মধ্যবর্তী স্তর অ্যারাকনয়েড (Arachnoid) পাতলা এবং মাকড়সার জালের মতো, যা CSF ধারণ করে।",
+    "question_en": "A doctor urgently needs to collect Cerebrospinal Fluid (CSF) from a patient's brain. According to the document, from exactly which layer of the Cranial Meninges will this fluid be found?\n(A) Pia Mater, because it is attached to the brain tissue.\n(B) Dura Mater, because it is the toughest outer layer.\n(C) Arachnoid, because it is spider web-like and it contains the CSF.\n(D) Grey Matter, because it is the outer covering of the cerebrum.",
+    "options_en": [
+      "Pia Mater, because it is attached to the brain tissue.",
+      "Dura Mater, because it is the toughest outer layer.",
+      "Arachnoid, because it is spider web-like and it contains the CSF.",
+      "Grey Matter, because it is the outer covering of the cerebrum."
+    ],
+    "explanation_en": "The meninges table in the document clearly states that the middle layer, Arachnoid, is thin and spider web-like, which contains the CSF.",
+    "correctIndex": 2
+  },
+  {
+    "id": 6,
+    "question_bn": "নথিতে মানুষের চোখের নড়াচড়া (Eye Movements) নিয়ন্ত্রণ বা সমন্বয় করার ক্ষেত্রে মস্তিষ্কের কোন দুটি অংশের কথা বিশেষভাবে উল্লেখ করা হয়েছে?",
+    "options_bn": [
+      "সেরেব্রাম এবং থ্যালামাস",
+      "মিডব্রেইন এবং পনস",
+      "সেরেবেলাম এবং মেডুলা অবলংগেটা",
+      "হাইপোথ্যালামাস এবং ফ্রন্টাল লোব"
+    ],
+    "explanation_bn": "নথিতে মিডব্রেইনের কাজে বলা হয়েছে এটি 'চোখের নড়াচড়া' নিয়ন্ত্রণ করে। একইভাবে, হিন্ডব্রেইনের অংশ পনসের কাজেও 'মুখ ও চোখের নড়াচড়া' সমন্বয়ের কথা উল্লেখ করা হয়েছে।",
+    "question_en": "Which two parts of the brain are specifically mentioned in the document regarding the control or coordination of human Eye Movements?",
+    "options_en": [
+      "Cerebrum and Thalamus",
+      "Midbrain and Pons",
+      "Cerebellum and Medulla Oblongata",
+      "Hypothalamus and Frontal Lobe"
+    ],
+    "explanation_en": "The document mentions in the functions of the Midbrain that it controls 'eye movements'. Similarly, the function of the Pons, a part of the Hindbrain, also mentions the coordination of 'facial and eye movements'.",
+    "correctIndex": 1
+  },
+  {
+    "id": 7,
+    "question_bn": "75 বছর বয়সী রহমান সাহেব তাঁর ছোটবেলার কথা স্পষ্ট মনে করতে পারেন, কিন্তু আজকে সকালে কী খেয়েছেন তা বারবার ভুলে যান। অন্যদিকে, সেন সাহেব মস্তিষ্কে আঘাত পাওয়ার পর শুধু গত বছরের গাড়ি দুর্ঘটনার সময়ের ঘটনাগুলো মনে করতে পারেন না। নথির ভিত্তিতে তাঁরা যথাক্রমে কোন রোগে আক্রান্ত?",
+    "options_bn": [
+      "রহমান সাহেব: অ্যামনেশিয়া; সেন সাহেব: আলঝেইমার",
+      "রহমান সাহেব: ডিমেনশিয়া; সেন সাহেব: মেনিনজাইটিস",
+      "রহমান সাহেব: আলঝেইমার; সেন সাহেব: অ্যামনেশিয়া",
+      "রহমান সাহেব: মেনিনজাইটিস; সেন সাহেব: ডিমেনশিয়া"
+    ],
+    "explanation_bn": "নথির উদাহরণ অনুযায়ী, স্বল্পমেয়াদী স্মৃতি (Short-term memory) ভুলে যাওয়া আলঝেইমার (Alzheimer's) রোগের লক্ষণ, যেখানে দীর্ঘমেয়াদী স্মৃতি ঠিক থাকে। আর নির্দিষ্ট একটি সময়ের ঘটনা মনে রাখতে না পারা হলো অ্যামনেশিয়া (Amnesia)।",
+    "question_en": "75-year-old Mr. Rahman clearly remembers his childhood but repeatedly forgets what he ate this morning. On the other hand, Mr. Sen, after suffering a brain injury, only cannot remember the events during a car accident last year. Based on the document, which diseases are they respectively suffering from?",
+    "options_en": [
+      "Mr. Rahman: Amnesia; Mr. Sen: Alzheimer's",
+      "Mr. Rahman: Dementia; Mr. Sen: Meningitis",
+      "Mr. Rahman: Alzheimer's; Mr. Sen: Amnesia",
+      "Mr. Rahman: Meningitis; Mr. Sen: Dementia"
+    ],
+    "explanation_en": "According to the document's examples, forgetting short-term memory is a symptom of Alzheimer's disease, where long-term memory remains intact. Inability to remember events of a specific period is Amnesia.",
+    "correctIndex": 2
+  },
+  {
+    "id": 8,
+    "question_bn": "একজন শল্যচিকিৎসক যদি কোনো রোগীর মেরুদণ্ডের কোমর (Lumbar) এবং নিতম্ব (Sacrum) অঞ্চলের ভার্টিব্রি নিয়ে কাজ করেন, তবে নথির তথ্য অনুযায়ী এই দুটি অঞ্চল মিলিয়ে মোট কত জোড়া স্পাইনাল স্নায়ু রয়েছে?",
+    "options_bn": [
+      "5 জোড়া",
+      "10 জোড়া",
+      "12 জোড়া",
+      "17 জোড়া"
+    ],
+    "explanation_bn": "নথির স্পাইনাল স্নায়ুর ছকে দেওয়া আছে যে, লাম্বার (কোমর) অঞ্চলে 5 জোড়া এবং স্যাক্রাম (নিতম্ব) অঞ্চলে 5 জোড়া স্নায়ু থাকে। সুতরাং মোট 5 + 5 = 10 জোড়া স্নায়ু।",
+    "question_en": "If a surgeon works on the vertebrae of a patient's waist (Lumbar) and hip (Sacrum) regions, how many total pairs of spinal nerves are present combining these two regions according to the document?",
+    "options_en": [
+      "5 pairs",
+      "10 pairs",
+      "12 pairs",
+      "17 pairs"
+    ],
+    "explanation_en": "The spinal nerves table in the document shows that there are 5 pairs of nerves in the lumbar (waist) region and 5 pairs in the sacrum (hip) region. Therefore, the total is 5 + 5 = 10 pairs of nerves.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "একজন প্রাপ্তবয়স্ক পুরুষের মস্তিষ্ক তাঁর শরীরের মোট ওজনের মাত্র 2%। তবুও এই অঙ্গটির বিপুল শক্তির চাহিদা রয়েছে। নথিতে প্রদত্ত তথ্য অনুযায়ী এর শক্তির ব্যবহারের কোন বিবৃতিটি সম্পূর্ণরূপে সঠিক?",
+    "options_bn": [
+      "এটি শরীরের মোট অক্সিজেনের 20% এবং শরীরের মোট শক্তির অর্ধেক চিনি (Sugar) ব্যবহার করে।",
+      "এটি শরীরের মোট অক্সিজেনের 25% এবং মোট শক্তির এক-পঞ্চমাংশ গ্লুকোজ ব্যবহার করে।",
+      "এটি শরীরের মোট অক্সিজেনের 50% এবং মোট শক্তির 20% চিনি ব্যবহার করে।",
+      "এটি শরীরের মোট গ্লুকোজের 10% এবং মোট অক্সিজেনের 20% ব্যবহার করে।"
+    ],
+    "explanation_bn": "নথির \"মস্তিষ্কের শক্তি খরচ\" অংশে স্পষ্টভাবে বলা হয়েছে যে, মস্তিষ্ক শরীরের 20% অক্সিজেন (O2) ব্যবহার করে এবং প্রতিদিন শরীরের মোট শক্তির অর্ধেক চিনি (Sugar) ব্যবহার করে।",
+    "question_en": "An adult male's brain is only 2% of his total body weight. Yet, this organ has a massive energy demand. According to the document, which statement regarding its energy usage is entirely correct?",
+    "options_en": [
+      "It uses 20% of the body's total oxygen and half of the body's total sugar energy.",
+      "It uses 25% of the body's total oxygen and one-fifth of the body's total glucose energy.",
+      "It uses 50% of the body's total oxygen and 20% of the body's sugar energy.",
+      "It uses 10% of the body's total glucose and 20% of the body's total oxygen."
+    ],
+    "explanation_en": "The \"Brain's energy consumption\" section of the document clearly states that the brain uses 20% of the body's oxygen (O2) and consumes half of the body's total sugar energy daily.",
+    "correctIndex": 0
+  },
+  {
+    "id": 10,
+    "question_bn": "প্রান্তীয় স্নায়ুতন্ত্রের (PNS) আলোচনায় সোমাটিক স্নায়ুতন্ত্রের (Somatic NS) প্রকৃতি এবং মস্তিষ্ক থেকে পেশিতে নির্দেশ বহনকারী স্নায়ুর ধরনের মধ্যে সঠিক সম্পর্ক কোনটি?",
+    "options_bn": [
+      "সোমাটিক স্নায়ুতন্ত্র অনৈচ্ছিক; নির্দেশ বহন করে অ্যাফেরেন্ট (Afferent) স্নায়ু।",
+      "সোমাটিক স্নায়ুতন্ত্র স্বেচ্ছামূলক; নির্দেশ বহন করে অ্যাফেরেন্ট (Afferent) স্নায়ু।",
+      "সোমাটিক স্নায়ুতন্ত্র স্বেচ্ছামূলক; নির্দেশ বহন করে এফেরেন্ট (Efferent) বা মোটর স্নায়ু।",
+      "সোমাটিক স্নায়ুতন্ত্র অনৈচ্ছিক; নির্দেশ বহন করে এফেরেন্ট (Efferent) বা মোটর স্নায়ু।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে সোমাটিক স্নায়ুতন্ত্র স্বেচ্ছামূলক (Voluntary) কাজ নিয়ন্ত্রণ করে। আর CNS থেকে শরীরের অঙ্গে নির্দেশ বহন করার কাজটি করে মোটর স্নায়ু, যার অপর নাম এফেরেন্ট (Efferent) স্নায়ু।",
+    "question_en": "In the discussion of the Peripheral Nervous System (PNS), what is the correct relationship between the nature of the somatic nervous system (Somatic NS) and the type of nerve carrying instructions from the brain to the muscles?",
+    "options_en": [
+      "Somatic NS is involuntary; instructions are carried by Afferent nerves.",
+      "Somatic NS is voluntary; instructions are carried by Afferent nerves.",
+      "Somatic NS is voluntary; instructions are carried by Efferent or motor nerves.",
+      "Somatic NS is involuntary; instructions are carried by Efferent or motor nerves."
+    ],
+    "explanation_en": "The document states that the somatic nervous system controls voluntary functions. The task of carrying instructions from the CNS to body parts is done by motor nerves, also known as Efferent nerves.",
+    "correctIndex": 2
+  },
+  {
+    "id": 11,
+    "question_bn": "মানুষের মস্তিষ্কের বিভিন্ন অংশ উচ্চ মাত্রায় সমন্বিত। নথির তথ্য অনুযায়ী, মস্তিষ্কের সবচেয়ে বড় অংশের বাম এবং ডান অর্ধগোলককে (Hemisphere) ভৌতভাবে সংযুক্ত করে কোন নির্দিষ্ট গঠনটি?",
+    "options_bn": [
+      "মেনিনজেস (Meninges)",
+      "কর্পাস ক্যালোসাম (Corpus Callosum)",
+      "সুষুম্নাকাণ্ড (Spinal Cord)",
+      "থ্যালামাস (Thalamus)"
+    ],
+    "explanation_bn": "নথিতে ফোরব্রেইনের অংশে বলা হয়েছে যে, সেরেব্রামের (মস্তিষ্কের সবচেয়ে বড় অংশ) দুটি অর্ধগোলককে সংযুক্ত করে একটি বিশেষ স্নায়ুতন্তুর গুচ্ছ, যার নাম কর্পাস ক্যালোসাম।",
+    "question_en": "The various parts of the human brain are highly integrated. According to the document, which specific structure physically connects the left and right hemispheres of the largest part of the brain?",
+    "options_en": [
+      "Meninges",
+      "Corpus Callosum",
+      "Spinal Cord",
+      "Thalamus"
+    ],
+    "explanation_en": "The forebrain section of the document states that a special bundle of nerve fibers called the Corpus Callosum connects the two hemispheres of the cerebrum (the largest part of the brain).",
+    "correctIndex": 1
+  },
+  {
+    "id": 12,
+    "question_bn": "হিন্ডব্রেইনে (Hindbrain) মারাত্মক আঘাত লাগার ফলে একজন রোগীর স্বয়ংক্রিয় শ্বাসক্রিয়া এবং হৃদস্পন্দন তাৎক্ষণিকভাবে বন্ধ হয়ে যায়। নথির বর্ণনা অনুসারে, সুষুম্নাকাণ্ডের সাথে সংযুক্ত হিন্ডব্রেইনের ঠিক কোন অংশটি গুরুতরভাবে ক্ষতিগ্রস্ত হয়েছে?",
+    "options_bn": [
+      "পনস (Pons)",
+      "সেরেবেলাম (Cerebellum)",
+      "হাইপোথ্যালামাস (Hypothalamus)",
+      "মেডুলা অবলংগেটা (Medulla Oblongata)"
+    ],
+    "explanation_bn": "নথির ছক অনুযায়ী, মেডুলা অবলংগেটা সরাসরি সুষুম্নাকাণ্ডের সাথে সংযুক্ত থাকে এবং এটি শ্বাসক্রিয়া ও হৃদস্পন্দনের মতো অতি গুরুত্বপূর্ণ স্বয়ংক্রিয় কাজ নিয়ন্ত্রণ করে।",
+    "question_en": "Severe trauma to the Hindbrain causes a patient's automatic breathing and heartbeat to stop immediately. According to the document's description, exactly which part of the hindbrain connected to the spinal cord has been critically damaged?",
+    "options_en": [
+      "Pons",
+      "Cerebellum",
+      "Hypothalamus",
+      "Medulla Oblongata"
+    ],
+    "explanation_en": "According to the document's table, the Medulla Oblongata is directly connected to the spinal cord and controls vital involuntary functions like breathing and heartbeat.",
+    "correctIndex": 3
+  },
+  {
+    "id": 13,
+    "question_bn": "প্রদত্ত নথির ভিত্তিতে কেন্দ্রীয় স্নায়ুতন্ত্র (CNS) এবং প্রান্তীয় স্নায়ুতন্ত্রের (PNS) মধ্যে সবচেয়ে নির্ভুল পার্থক্যটি কোনটি?",
+    "options_bn": [
+      "CNS তথ্য প্রক্রিয়াকরণ করে, অন্যদিকে PNS কেবলমাত্র 12 জোড়া ক্র্যানিয়াল স্নায়ু নিয়ে গঠিত যা তথ্য বহন করে।",
+      "CNS ঐচ্ছিক কাজ নিয়ন্ত্রণ করে, অন্যদিকে PNS অনৈচ্ছিক কাজ নিয়ন্ত্রণ করে।",
+      "CNS হলো মস্তিষ্ক ও সুষুম্নাকাণ্ডের সমন্বয়, যেখানে PNS হলো শরীরের বাকি সব স্নায়ু যা অঙ্গগুলোকে CNS-এর সাথে যুক্ত রাখে।",
+      "CNS সম্পূর্ণভাবে গ্রে ম্যাটার দিয়ে তৈরি, আর PNS ডুরা মেটার দিয়ে সুরক্ষিত থাকে।"
+    ],
+    "explanation_bn": "প্রথম অধ্যায়ে স্পষ্ট বলা হয়েছে, CNS গঠিত হয় মস্তিষ্ক ও সুষুম্নাকাণ্ড নিয়ে, আর PNS হলো মস্তিষ্ক ও সুষুম্নাকাণ্ডের বাইরে শরীরের বাকি সব স্নায়ু, যা শরীরকে CNS-এর সাথে যুক্ত করে।",
+    "question_en": "Based strictly on the provided document, which is the most accurate difference between the Central Nervous System (CNS) and the Peripheral Nervous System (PNS)?",
+    "options_en": [
+      "The CNS processes information, while the PNS consists only of 12 pairs of cranial nerves that carry information.",
+      "The CNS controls voluntary actions, while the PNS controls involuntary actions.",
+      "The CNS is a combination of the brain and spinal cord, whereas the PNS comprises all the rest of the body's nerves that connect organs to the CNS.",
+      "The CNS is made entirely of grey matter, while the PNS is protected by the dura mater."
+    ],
+    "explanation_en": "Chapter 1 explicitly states that the CNS consists of the brain and spinal cord, while the PNS is all the other nerves in the body outside the brain and spinal cord, connecting the body to the CNS.",
+    "correctIndex": 2
+  },
+  {
+    "id": 14,
+    "question_bn": "নিউরনের ঘনত্ব এবং আকার বিবেচনা করে, সেরেবেলাম (Cerebellum) সম্পর্কে নথিতে প্রদত্ত চমকপ্রদ তথ্য কোনটি?",
+    "options_bn": [
+      "এটি মস্তিষ্কের আকারের 50% হলেও এতে মাত্র 10% নিউরন থাকে।",
+      "এটি মস্তিষ্কের সবচেয়ে বড় অংশ যা 50% ওজন বহন করে।",
+      "'ছোট মস্তিষ্ক' নামে পরিচিত এই অংশের আকার মোট মস্তিষ্কের 10% হলেও, এতে মস্তিষ্কের প্রায় 50% নিউরন থাকে।",
+      "এটি ফোরব্রেইনে অবস্থিত এবং প্রধানত স্বল্পমেয়াদী স্মৃতি ধারণের জন্য দায়ী।"
+    ],
+    "explanation_bn": "নথির \"চমক তথ্য\" অংশে বলা হয়েছে, সেরেবেলামে মস্তিষ্কের মোট নিউরনের প্রায় 50% থাকে, অথচ এটির আকার পুরো মস্তিষ্কের মাত্র 10%। এটি 'ছোট মস্তিষ্ক' নামে পরিচিত।",
+    "question_en": "Considering neuron density and size, what is the fascinating fact provided in the document about the Cerebellum?",
+    "options_en": [
+      "Although it is 50% of the brain's size, it contains only 10% of the neurons.",
+      "It is the largest part of the brain that accounts for 50% of the weight.",
+      "Known as the 'little brain', its size is 10% of the total brain, but it contains about 50% of the brain's neurons.",
+      "It is located in the forebrain and is primarily responsible for holding short-term memory."
+    ],
+    "explanation_en": "The \"Fun fact\" section of the document states that the cerebellum contains about 50% of the brain's total neurons, yet its size is only 10% of the entire brain. It is known as the 'little brain'.",
+    "correctIndex": 2
+  },
+  {
+    "id": 15,
+    "question_bn": "একজন ব্যক্তি যখন খাবার খান, তখন ফোরব্রেইনের (Forebrain) কোন অংশটি তাঁর খাওয়ার ইচ্ছাকে (ক্ষুধা) নিয়ন্ত্রণ করে এবং কোন অংশটি খাবারের স্বাদ সেরেব্রাল কর্টেক্সে প্রক্রিয়াজাত করার জন্য পাঠায়?",
+    "options_bn": [
+      "হাইপোথ্যালামাস ক্ষুধা নিয়ন্ত্রণ করে; থ্যালামাস স্বাদ প্রক্রিয়াকরণের জন্য পাঠায়।",
+      "থ্যালামাস ক্ষুধা নিয়ন্ত্রণ করে; সেরেব্রাম সরাসরি স্বাদ প্রক্রিয়াকরণ করে।",
+      "সেরেবেলাম ক্ষুধা নিয়ন্ত্রণ করে; পনস স্বাদ প্রক্রিয়াকরণ করে।",
+      "হাইপোথ্যালামাস ক্ষুধা নিয়ন্ত্রণ করে; ফ্রন্টাল লোব স্বাদ প্রক্রিয়াকরণ করে।"
+    ],
+    "explanation_bn": "নথি অনুসারে, হাইপোথ্যালামাস খাওয়ার ইচ্ছা (ক্ষুধা) নিয়ন্ত্রণ করে এবং থ্যালামাস 'রিলে স্টেশন' হিসেবে কাজ করে স্বাদ, স্পর্শ ও শব্দের অনুভূতি সেরেব্রাল কর্টেক্সে পাঠায়।",
+    "question_en": "When a person eats food, which part of the Forebrain regulates their desire to eat (hunger), and which part sends the taste of the food to be processed in the cerebral cortex?",
+    "options_en": [
+      "Hypothalamus regulates hunger; Thalamus sends taste for processing.",
+      "Thalamus regulates hunger; Cerebrum processes taste directly.",
+      "Cerebellum regulates hunger; Pons processes taste.",
+      "Hypothalamus regulates hunger; Frontal Lobe processes taste."
+    ],
+    "explanation_en": "According to the document, the hypothalamus controls the desire to eat (hunger), and the thalamus acts as a 'relay station' sending sensations of taste, touch, and sound to the cerebral cortex.",
+    "correctIndex": 0
+  },
+  {
+    "id": 16,
+    "question_bn": "একজন রোগী তীব্র মাথাব্যথা, ঘাড় শক্ত হওয়া এবং জ্বর নিয়ে হাসপাতালে এসেছেন। চিকিৎসক জানালেন মস্তিষ্কের আবরণে প্রদাহের কারণে ব্যথার রিসেপ্টরগুলি কাজ করছে। নথির তথ্য অনুযায়ী, এই প্রদাহ ও ব্যথার রিসেপ্টরগুলি ঠিক কোথায় অবস্থান করছে?",
+    "options_bn": [
+      "সেরেব্রামের গ্রে ম্যাটারে",
+      "মস্তিষ্কের আবরণ বা ক্র্যানিয়াল মেনিনজেসে (Cranial Meninges)",
+      "খুলির 22টি হাড়ের সংযোগস্থলে",
+      "সোমাটিক স্নায়ুতন্ত্রের সেন্সরি স্নায়ুতে"
+    ],
+    "explanation_bn": "নথিতে মেনিনজাইটিস রোগের বর্ণনায় বলা হয়েছে এটি মেনিনজেস বা মস্তিষ্কের আবরণের প্রদাহ, যার লক্ষণ তীব্র মাথাব্যথা, ঘাড় শক্ত হওয়া। এছাড়া অন্য একটি পয়েন্টে বলা হয়েছে, মস্তিষ্কের মেনিনজেসেই ব্যথার রিসেপ্টর থাকে, তাই মাথাব্যথা হয়।",
+    "question_en": "A patient comes to the hospital with a severe headache, a stiff neck, and a fever. The doctor mentions that pain receptors are firing due to inflammation in the brain's covering. According to the document, exactly where are this inflammation and the pain receptors located?",
+    "options_en": [
+      "In the grey matter of the Cerebrum",
+      "In the brain's covering or Cranial Meninges",
+      "In the joints of the 22 bones of the skull",
+      "In the sensory nerves of the somatic nervous system"
+    ],
+    "explanation_en": "The document describes meningitis as an inflammation of the meninges or brain covering, with symptoms including a severe headache and stiff neck. Another point states that pain receptors are located in the meninges of the brain, which is why headaches occur.",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_bn": "একজন শিক্ষার্থী একটি বক্তৃতা শুনছেন, ব্যবহৃত ভাষা বোঝার চেষ্টা করছেন এবং তথ্যগুলি স্মৃতিতে সংরক্ষণ করছেন। নথির বর্ণনা অনুসারে, এই সমস্ত সুনির্দিষ্ট কাজের জন্য সেরেব্রামের কোন লোবটি এককভাবে দায়ী?",
+    "options_bn": [
+      "ফ্রন্টাল লোব (Frontal Lobe)",
+      "প্যারাইটাল লোব (Parietal Lobe)",
+      "টেম্পোরাল লোব (Temporal Lobe)",
+      "অক্সিপিটাল লোব (Occipital Lobe)"
+    ],
+    "explanation_bn": "সেরেব্রামের লোব সংক্রান্ত ছক অনুযায়ী, টেম্পোরাল লোব একই সাথে শব্দ শোনা, ভাষা বোঝা, এবং স্মৃতি প্রক্রিয়াকরণের মতো গুরুত্বপূর্ণ কাজগুলি নিয়ন্ত্রণ করে।",
+    "question_en": "A student is listening to a lecture, trying to understand the language used, and storing the information in memory. According to the document's description, which single lobe of the cerebrum is responsible for all these specific tasks?",
+    "options_en": [
+      "Frontal Lobe",
+      "Parietal Lobe",
+      "Temporal Lobe",
+      "Occipital Lobe"
+    ],
+    "explanation_en": "According to the cerebrum lobes table, the Temporal Lobe controls vital functions simultaneously such as hearing sound, understanding language, and memory processing.",
+    "correctIndex": 2
+  },
+  {
+    "id": 18,
+    "question_bn": "মস্তিষ্ক মাথার খুলির (Skull) ভেতর সুরক্ষিত থাকে, যা মোট 22টি হাড় নিয়ে গঠিত। নথির তথ্য অনুযায়ী, এই 22টি হাড় কীভাবে বিভক্ত থাকে?",
+    "options_bn": [
+      "12টি ক্র্যানিয়াল হাড় এবং 10টি মুখমণ্ডলীয় হাড়",
+      "14টি মুখমণ্ডলীয় হাড় এবং 8টি ক্র্যানিয়াল হাড়",
+      "8টি মুখমণ্ডলীয় হাড় এবং 14টি ক্র্যানিয়াল হাড়",
+      "22টি ক্র্যানিয়াল হাড়, এখানে মুখমণ্ডলীয় কোনো হাড় নেই"
+    ],
+    "explanation_bn": "মস্তিষ্কের সুরক্ষা ব্যবস্থা অংশে স্পষ্টভাবে লেখা আছে যে, খুলির মোট 22টি হাড়ের মধ্যে 14টি মুখমণ্ডলীয় হাড় (Facial bones) এবং 8টি ক্র্যানিয়াল হাড় (Cranial bones) থাকে।",
+    "question_en": "The brain is protected inside the skull, which consists of a total of 22 bones. According to the document, how are these 22 bones divided?",
+    "options_en": [
+      "12 cranial bones and 10 facial bones",
+      "14 facial bones and 8 cranial bones",
+      "8 facial bones and 14 cranial bones",
+      "22 cranial bones, with no facial bones here"
+    ],
+    "explanation_en": "The brain's protection system section explicitly states that out of the total 22 bones in the skull, there are 14 facial bones and 8 cranial bones.",
+    "correctIndex": 1
+  },
+  {
+    "id": 19,
+    "question_bn": "মানব বিবর্তনে আমাদের পূর্বপুরুষদের 'লেজের হাড়ের' একটি ভেস্টিজিয়াল (Vestigial) অংশ মেরুদণ্ডের সবচেয়ে নিচে রয়ে গেছে। নথির তথ্য অনুযায়ী, এই কাঠামোগত অংশের নাম কী এবং এর সাথে কত জোড়া স্পাইনাল স্নায়ু যুক্ত থাকে?",
+    "options_bn": [
+      "স্যাক্রাম (Sacrum); 5 জোড়া",
+      "লাম্বার (Lumbar); 5 জোড়া",
+      "কক্সিক্স (Coccyx); 1 জোড়া",
+      "সার্ভিকাল (Cervical); 8 জোড়া"
+    ],
+    "explanation_bn": "নথিতে স্পাইনাল স্নায়ুর ছকে এবং চমক তথ্যে বলা হয়েছে, কক্সিক্স হলো মেরুদণ্ডের সবচেয়ে নিচের লেজের হাড়ের ভেস্টিজিয়াল অংশ, যার সাথে মাত্র 1 জোড়া স্পাইনাল স্নায়ু যুক্ত থাকে।",
+    "question_en": "In human evolution, a vestigial part of our ancestors' 'tailbone' remains at the very bottom of the spine. According to the document, what is the name of this structural part and how many pairs of spinal nerves are connected to it?",
+    "options_en": [
+      "Sacrum; 5 pairs",
+      "Lumbar; 5 pairs",
+      "Coccyx; 1 pair",
+      "Cervical; 8 pairs"
+    ],
+    "explanation_en": "The document states in the spinal nerve table and fun facts that the Coccyx is the lowest vestigial tailbone part of the spine, which is connected to only 1 pair of spinal nerves.",
+    "correctIndex": 2
+  },
+  {
+    "id": 20,
+    "question_bn": "মস্তিষ্কের অভ্যন্তরীণ স্থাপত্য বর্ণনায় মিডব্রেইনের (Midbrain) নির্দিষ্ট অবস্থান সম্পর্কে নথিতে কী বলা হয়েছে?",
+    "options_bn": [
+      "এটি সেরেব্রাম এবং থ্যালামাসের মাঝখানে অবস্থিত।",
+      "এটি ফোরব্রেইনের হাইপোথ্যালামাস এবং হিন্ডব্রেইনের পনসের মাঝখানে অবস্থিত।",
+      "এটি সুষুম্নাকাণ্ড এবং মেডুলা অবলংগেটার সংযোগস্থলে অবস্থিত।",
+      "এটি ফোরব্রেইনের ঠিক উপরে এবং খুলির ঠিক নিচে অবস্থিত।"
+    ],
+    "explanation_bn": "নথিতে মিডব্রেইনের বর্ণনায় স্পষ্টভাবে বলা হয়েছে, \"মিডব্রেইন ফোরব্রেইনের হাইপোথ্যালামাস এবং হিন্ডব্রেইনের পনসের মাঝখানে অবস্থিত।\"",
+    "question_en": "In describing the internal architecture of the brain, what does the document state about the specific location of the Midbrain?",
+    "options_en": [
+      "It is located between the cerebrum and the thalamus.",
+      "It is located between the hypothalamus of the forebrain and the pons of the hindbrain.",
+      "It is located at the junction of the spinal cord and the medulla oblongata.",
+      "It is located right above the forebrain and right below the skull."
+    ],
+    "explanation_en": "The description of the Midbrain in the document explicitly states, \"The midbrain is located between the hypothalamus of the forebrain and the pons of the hindbrain.\"",
+    "correctIndex": 1
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
