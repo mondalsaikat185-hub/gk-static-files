@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 600, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "অভিসারী সীমানায় (Convergent boundary) মহাসাগরীয় ক্রাস্ট কেন মহাদেশীয় ক্রাস্টের নিচে সাবডাক্ট (Subduction) করে, যদিও এটি অনেক বেশি পাতলা?",
+    "options_bn": [
+      "মহাসাগরীয় ক্রাস্ট গ্রানাইট শিলা দিয়ে তৈরি যা গঠনগতভাবে দুর্বল।",
+      "মহাসাগরীয় ক্রাস্ট বেশি ঘনত্বের (Dense) ব্যাসল্ট শিলা দিয়ে তৈরি, যা মাত্র 5 কিমি পুরু হওয়া সত্ত্বেও ভারী।",
+      "পর্বতের ওজনের কারণে মহাদেশীয় ক্রাস্ট নিচের দিকে চেপে যায়।",
+      "সিলিকা-অ্যালুমিনিয়াম (SiAl) গঠনের কারণে অ্যাস্থেনোস্ফিয়ার মহাসাগরীয় ক্রাস্টকে টেনে নেয়।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, মহাসাগরীয় ক্রাস্ট মাত্র 5 কিমি পুরু হলেও এটি ব্যাসল্ট শিলা দিয়ে তৈরি হওয়ায় মহাদেশীয় ক্রাস্টের (গ্রানাইট) চেয়ে অনেক বেশি ঘন (Dense)। তাই অভিসারী সীমানায় বেশি ঘন প্লেটটি অপেক্ষাকৃত হালকা প্লেটের নিচে সাবডাক্ট করে।",
+    "question_en": "Why does the oceanic crust subduct under the continental crust at a convergent boundary, even though it is much thinner?",
+    "options_en": [
+      "The oceanic crust is made of granitic rock which is structurally weaker.",
+      "The oceanic crust is made of higher density basaltic rock, making it heavier despite being only 5 km thick.",
+      "The continental crust is pushed downwards due to the weight of mountains.",
+      "The asthenosphere pulls the oceanic crust down due to its silica-aluminum composition."
+    ],
+    "explanation_en": "The document states that although the oceanic crust is only 5 km thick, it is made of basaltic rock, which makes it much denser than the continental crust (granite). Therefore, at a convergent boundary, the denser plate subducts under the relatively lighter plate.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "প্রদত্ত নথি অনুযায়ী লিথোস্ফিয়ার (Lithosphere) এবং অ্যাস্থেনোস্ফিয়ার (Asthenosphere)-এর মধ্যকার সম্পর্কটি কোন বাক্যে সঠিকভাবে বর্ণনা করা হয়েছে?",
+    "options_bn": [
+      "অ্যাস্থেনোস্ফিয়ার হলো লিথোস্ফিয়ারের নিচের অংশ যেখানে টেকটোনিক প্লেট তৈরি হয়।",
+      "লিথোস্ফিয়ার ক্রাস্ট এবং সম্পূর্ণ আপার ম্যান্টেল নিয়ে গঠিত, যা অ্যাস্থেনোস্ফিয়ারের নিচে অবস্থিত।",
+      "লিথোস্ফিয়ার ক্রাস্ট এবং ম্যান্টেলের উপরের কঠিন অংশ নিয়ে গঠিত, এবং এটি অর্ধগলিত, দুর্বল অ্যাস্থেনোস্ফিয়ারের উপর দিয়ে চলাচল করে।",
+      "লিথোস্ফিয়ার এবং অ্যাস্থেনোস্ফিয়ার উভয়ই সম্পূর্ণ কঠিন স্তর যা একত্রে টেকটোনিক প্লেট গঠন গঠন করে।"
+    ],
+    "explanation_bn": "নথি অনুসারে, লিথোস্ফিয়ার হলো ক্রাস্ট এবং ম্যান্টেলের উপরের কঠিন অংশ (10 থেকে 200 কিমি পুরু)। অ্যাস্থেনোস্ফিয়ার লিথোস্ফিয়ারের অংশ নয়; এটি ম্যান্টেলের একটি অর্ধগলিত ও দুর্বল স্তর, যার ওপর লিথোস্ফিয়ারের প্লেটগুলো ভাসে বা সরে যায়।",
+    "question_en": "Which sentence correctly describes the relationship between the lithosphere and the asthenosphere according to the given document?",
+    "options_en": [
+      "The asthenosphere is the lower part of the lithosphere where tectonic plates are formed.",
+      "The lithosphere consists of the crust and the entire upper mantle, located below the asthenosphere.",
+      "The lithosphere consists of the crust and the solid upper part of the mantle, and it moves over the semi-molten, weak asthenosphere.",
+      "Both the lithosphere and the asthenosphere are completely solid layers that together form tectonic plates."
+    ],
+    "explanation_en": "According to the document, the lithosphere is the solid top part consisting of the crust and the upper solid mantle (10 to 200 km thick). The asthenosphere is not part of the lithosphere; it is a semi-molten, weak region of the mantle over which the lithospheric plates float or move.",
+    "correctIndex": 2
+  },
+  {
+    "id": 3,
+    "question_bn": "পৃথিবীর কোর (Core) মোট আয়তনের মাত্র 15% হলেও এটি মোট ভরের 31% দখল করে। নথিতে উল্লেখিত এই অসামঞ্জস্যপূর্ণ ভর-আয়তন অনুপাতের প্রধান কারণ কী?",
+    "options_bn": [
+      "কোর অত্যন্ত চাপের মধ্যে থাকে যা সিলিকেট শিলাকে সংকুচিত করে দেয়।",
+      "কোর নিকেল এবং লোহার (NiFe) মতো অত্যন্ত ঘন ধাতব পদার্থ দিয়ে তৈরি।",
+      "আউটার কোরের তরল অবস্থা ইনার কোরের কঠিন অবস্থার তুলনায় এর ভর বাড়িয়ে দেয়।",
+      "মহাসাগরীয় ক্রাস্টের ক্রমাগত সাবডাকশন সরাসরি কোরে ঘন পদার্থ যুক্ত করে।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ করা হয়েছে যে, কোর আয়তনে মাত্র 15% হলেও ভরে 31% হওয়ার কারণ হলো এটি নিকেল এবং আয়রন (NiFe) নামক অত্যন্ত ঘন ধাতব পদার্থ দিয়ে তৈরি।",
+    "question_en": "Even though the Earth's core accounts for only 15% of the total volume, it occupies 31% of the total mass. What is the primary reason for this disproportionate mass-to-volume ratio mentioned in the document?",
+    "options_en": [
+      "The core is under extreme pressure which compresses silicate rocks.",
+      "The core is made of highly dense metallic materials like nickel and iron (NiFe).",
+      "The liquid state of the outer core increases its mass compared to the solid inner core.",
+      "Continuous subduction of oceanic crust directly adds dense materials to the core."
+    ],
+    "explanation_en": "The document explicitly states that the reason the core is only 15% in volume but 31% in mass is because it is made of highly dense metallic materials, specifically nickel and iron (NiFe).",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "পরীক্ষায় যদি পৃথিবীর ক্রাস্টে সবচেয়ে বেশি পরিমাণে থাকা ধাতু (Metal) কোনটি তা জানতে চাওয়া হয়, তবে নথি অনুযায়ী সঠিক উত্তর এবং তার শতকরা পরিমাণ কী হবে?",
+    "options_bn": [
+      "অক্সিজেন, 46.6%",
+      "সিলিকন, 27.7%",
+      "অ্যালুমিনিয়াম, 8.1%",
+      "আয়রন, 5.0%"
+    ],
+    "explanation_bn": "ক্রাস্টে সবচেয়ে বেশি পরিমাণে থাকা মৌল হলো অক্সিজেন (46.6%), কিন্তু অক্সিজেন একটি অধাতু। সবচেয়ে বেশি পরিমাণে থাকা ধাতু (Metal) হলো অ্যালুমিনিয়াম, যার পরিমাণ 8.1%।",
+    "question_en": "If an exam asks for the most abundant metal in the Earth's crust, what would be the correct answer and its percentage according to the document?",
+    "options_en": [
+      "Oxygen, 46.6%",
+      "Silicon, 27.7%",
+      "Aluminum, 8.1%",
+      "Iron, 5.0%"
+    ],
+    "explanation_en": "The most abundant element in the crust is oxygen (46.6%), but oxygen is a non-metal. The most abundant metal is aluminum, which accounts for 8.1%.",
+    "correctIndex": 2
+  },
+  {
+    "id": 5,
+    "question_bn": "বিজ্ঞানীরা কীভাবে S-তরঙ্গের আচরণ ব্যবহার করে নিশ্চিত হয়েছেন যে পৃথিবীর আউটার কোর (Outer Core) তরল?",
+    "options_bn": [
+      "S-তরঙ্গ অনুদৈর্ঘ্য এবং তরল মাধ্যমে এর গতি বৃদ্ধি পায়, যা 2900 কিমি গভীরতায় হঠাৎ গতি বৃদ্ধির মাধ্যমে প্রমাণিত হয়।",
+      "S-তরঙ্গ অনুপ্রস্থ তরঙ্গ হওয়ায় এটি তরল মাধ্যমে চলতে পারে না, যার ফলে 105 ডিগ্রির পর থেকে পৃথিবীর 40% এলাকাজুড়ে একটি বিশাল শ্যাডো জোন (Shadow Zone) তৈরি হয়।",
+      "তরল কোরের ঘনত্বের পার্থক্যের কারণে S-তরঙ্গ 105 থেকে 145 ডিগ্রির মধ্যে ক্রমাগত বাঁক নিতে থাকে।",
+      "গুটেনবার্গ বিরামরেখায় আঘাত করার পর S-তরঙ্গ L-তরঙ্গে রূপান্তরিত হয়।"
+    ],
+    "explanation_bn": "নথি এবং বৈজ্ঞানিক তথ্য অনুযায়ী, S-তরঙ্গ শুধুমাত্র কঠিন মাধ্যমে চলতে পারে। আউটার কোর তরল হওয়ায় S-তরঙ্গ সেখানে থেমে যায়, যার ফলে 105°-এর পর থেকে (প্রায় 105° থেকে 180° পর্যন্ত) পৃথিবীর পৃষ্ঠের 40% অঞ্চলে S-তরঙ্গ পৌঁছায় না। এ থেকেই বিজ্ঞানীরা নিশ্চিত হয়েছেন যে আউটার কোর তরল।",
+    "question_en": "How did scientists use the behavior of S-waves to confirm that the Earth's outer core is liquid?",
+    "options_en": [
+      "S-waves are longitudinal and their speed increases in liquid mediums, proven by a sudden speed increase at 2900 km depth.",
+      "S-waves are transverse waves and cannot travel through liquids, resulting in a massive shadow zone covering 40% of the Earth's area beyond 105 degrees.",
+      "Due to density differences in the liquid core, S-waves continuously refract between 105 and 145 degrees.",
+      "S-waves transform into L-waves after striking the Gutenberg discontinuity."
+    ],
+    "explanation_en": "According to the document and scientific facts, S-waves can only travel through solid mediums. Since the outer core is liquid, S-waves stop there, resulting in a shadow zone beyond 105° (roughly 105° to 180°) covering 40% of the Earth's surface. This confirmed to scientists that the outer core is liquid.",
+    "correctIndex": 1
+  },
+  {
+    "id": 6,
+    "question_bn": "ভূপৃষ্ঠ থেকে নিচের দিকে যাওয়া একটি ভূকম্পীয় তরঙ্গ 2900 কিমি গভীরতায় পৌঁছে হঠাৎ থেমে যায়। এটি কোন বিরামরেখায় পৌঁছেছে এবং তরঙ্গটি কোন ধরনের?",
+    "options_bn": [
+      "লেহমান বিরামরেখা; P-তরঙ্গ",
+      "মোহো বিরামরেখা; S-তরঙ্গ",
+      "গুটেনবার্গ বিরামরেখা; S-তরঙ্গ",
+      "রেপিটি বিরামরেখা; L-তরঙ্গ"
+    ],
+    "explanation_bn": "2900 কিমি গভীরতায় গুটেনবার্গ বিরামরেখা অবস্থিত, যা ম্যান্টেল এবং আউটার কোরকে আলাদা করে। আউটার কোর তরল হওয়ায় S-তরঙ্গ এই বিন্দুতে থেমে যায়।",
+    "question_en": "A seismic wave traveling downwards from the surface suddenly stops upon reaching a depth of 2900 km. Which discontinuity has it reached, and what type of wave is it?",
+    "options_en": [
+      "Lehmann Discontinuity; P-wave",
+      "Moho Discontinuity; S-wave",
+      "Gutenberg Discontinuity; S-wave",
+      "Repiti Discontinuity; L-wave"
+    ],
+    "explanation_en": "The Gutenberg discontinuity is located at a depth of 2900 km, separating the mantle and the outer core. Because the outer core is liquid, S-waves stop exactly at this point.",
+    "correctIndex": 2
+  },
+  {
+    "id": 7,
+    "question_bn": "প্রদত্ত নথি অনুযায়ী ভূমিকম্প পরিমাপের স্কেলগুলি সম্পর্কে নিচের কোন বক্তব্যটি সঠিক?",
+    "options_bn": [
+      "রিখটার স্কেল 1 থেকে 12 পর্যন্ত তীব্রতা (Intensity) পরিমাপ করে, আর মার্কালি স্কেল শক্তি (Magnitude) মাপে।",
+      "মার্কালি স্কেল সীমাহীনভাবে শক্তি মাপে, আর রিখটার স্কেল তীব্রতা মাপে।",
+      "রিখটার স্কেল শক্তি (Magnitude) পরিমাপ করে এবং এটি একটি সীমাহীন স্কেল, অন্যদিকে মার্কালি স্কেল 1 থেকে 12 পর্যন্ত প্রভাব বা তীব্রতা (Intensity) পরিমাপ করে।",
+      "উভয় স্কেলই হাইপোসেন্টার থেকে নির্গত মোট শক্তি 0 থেকে 10 স্কেলে পরিমাপ করে।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, রিখটার স্কেল ভূমিকম্পের শক্তি (Magnitude) মাপে এবং এটি একটি সীমাহীন (Limitless) স্কেল (সাধারণত 0 থেকে 10 বলা হলেও)। মার্কালি স্কেল ভূমিকম্পের প্রভাব বা তীব্রতা (Intensity) মাপে, যার মান 1 থেকে 12 পর্যন্ত।",
+    "question_en": "Which of the following statements regarding earthquake measurement scales is correct according to the provided document?",
+    "options_en": [
+      "The Richter scale measures intensity from 1 to 12, while the Mercalli scale measures magnitude.",
+      "The Mercalli scale limitlessly measures magnitude, while the Richter scale measures intensity.",
+      "The Richter scale measures magnitude and is a limitless scale, whereas the Mercalli scale measures effect or intensity from 1 to 12.",
+      "Both scales measure the total energy released from the hypocenter on a scale of 0 to 10."
+    ],
+    "explanation_en": "The document states that the Richter scale measures the magnitude of an earthquake and is a limitless scale (though usually stated as 0 to 10). The Mercalli scale measures the effect or intensity of an earthquake, with values ranging from 1 to 12.",
+    "correctIndex": 2
+  },
+  {
+    "id": 8,
+    "question_bn": "ভূমিকম্পের সময় কোন তরঙ্গগুলি সর্বোচ্চ ক্ষয়ক্ষতি সাধন করে এবং এদের নির্দিষ্ট বৈশিষ্ট্য কী?",
+    "options_bn": [
+      "P-তরঙ্গ, কারণ এগুলো সবচেয়ে দ্রুত (7 থেকে 8 কিমি/সেকেন্ড) এবং সব মাধ্যমের ভেতর দিয়ে ভ্রমণ করে।",
+      "S-তরঙ্গ, কারণ এগুলো কঠিন ক্রাস্টের মধ্য দিয়ে জলের ঢেউয়ের মতো ক্রেস্ট এবং ট্রফ তৈরি করে।",
+      "L-তরঙ্গ, কারণ এগুলো পৃষ্ঠতরঙ্গ (Surface Wave) যা 4 থেকে 6 কিমি/সেকেন্ড বেগে চলে এবং পৃথিবীর অভ্যন্তরে প্রবেশ করে না।",
+      "P-তরঙ্গ, কারণ এগুলো ভূপৃষ্ঠে ক্রমাগত সংকোচন ও প্রসারণ তৈরি করে।"
+    ],
+    "explanation_bn": "L-তরঙ্গ বা সারফেস ওয়েভ শুধুমাত্র পৃথিবীর উপরিভাগ বরাবর চলে এবং ভেতরে প্রবেশ করে না। এদের গতিবেগ সবচেয়ে কম (4 থেকে 6 কিমি/সেকেন্ড) হলেও এরাই সর্বাধিক ক্ষয়ক্ষতি করে।",
+    "question_en": "Which waves cause the maximum destruction during an earthquake, and what are their specific characteristics?",
+    "options_en": [
+      "P-waves, because they are the fastest (7 to 8 km/sec) and travel through all mediums.",
+      "S-waves, because they create crests and troughs like water waves through the solid crust.",
+      "L-waves, because they are surface waves that travel at 4 to 6 km/sec and do not penetrate the Earth's interior.",
+      "P-waves, because they create continuous compression and rarefaction on the surface."
+    ],
+    "explanation_en": "L-waves, or Surface Waves, travel only along the surface of the Earth and do not enter the interior. Although they have the lowest velocity (4 to 6 km/sec), they cause the maximum damage.",
+    "correctIndex": 2
+  },
+  {
+    "id": 9,
+    "question_bn": "পৃথিবীর অভ্যন্তরীণ কাঠামোর সাথে মিল থাকা সত্ত্বেও কেন উল্কাপিণ্ডকে (Meteorites) পৃথিবীর অভ্যন্তর সম্পর্কে জানার একটি \"পরোক্ষ\" (Indirect) উৎস হিসেবে বিবেচনা করা হয়?",
+    "options_bn": [
+      "কারণ এগুলো সম্পূর্ণ ভিন্ন রাসায়নিক উপাদান দিয়ে তৈরি।",
+      "কারণ 4.5 বিলিয়ন বছর আগে একই উপাদান থেকে তৈরি হলেও এগুলো পৃথিবীর ভেতর থেকে নয়, বরং বাইরে থেকে আসে।",
+      "কারণ বায়ুমণ্ডলে প্রবেশের সময় এগুলো সম্পূর্ণ গলে গিয়ে তাদের মূল আকার হারিয়ে ফেলে।",
+      "কারণ এগুলো শুধুমাত্র পৃথিবীর ক্রাস্ট সম্পর্কে তথ্য দেয়, কোর সম্পর্কে নয়।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে, সৌরজগতের বস্তুগুলো প্রায় 4.5 বিলিয়ন বছর আগে একই উপাদান থেকে তৈরি হওয়ায় উল্কাপিণ্ডের গঠন পৃথিবীর মতোই। তবে উল্কাপিণ্ড পৃথিবীর বাইরে থেকে আসে, ভেতর থেকে নয়, তাই এটি পৃথিবীর অভ্যন্তর জানার একটি পরোক্ষ উৎস।",
+    "question_en": "Despite having a similar internal structure, why are meteorites considered an \"indirect\" source of information about Earth's interior?",
+    "options_en": [
+      "Because they are completely made of different chemical elements.",
+      "Because although they were formed from the same material 4.5 billion years ago, they come from outside the Earth, not from inside.",
+      "Because they melt completely and lose their original shape when entering the atmosphere.",
+      "Because they only provide information about the Earth's crust, not the core."
+    ],
+    "explanation_en": "The document mentions that since objects in our solar system were formed from the same material about 4.5 billion years ago, the structure of meteorites is similar to Earth's. However, since meteorites come from outside the Earth and not from its interior, they are considered an indirect source.",
+    "correctIndex": 1
+  },
+  {
+    "id": 10,
+    "question_bn": "কোন ধরনের টেকটোনিক প্লেট সীমানায় নতুন ক্রাস্ট তৈরি হয় এবং এর সাথে সাধারণত কোন ভৌগোলিক বৈশিষ্ট্য যুক্ত থাকে?",
+    "options_bn": [
+      "অভিসারী সীমানা (Convergent boundary); সাবডাকশন জোন এবং আগ্নেয়গিরি।",
+      "রূপান্তরী সীমানা (Transform boundary); ফল্ট লাইন এবং ভয়াবহ ভূমিকম্প।",
+      "বিচ্ছিন্ন সীমানা (Divergent boundary); মধ্য-সমুদ্রীয় পর্বতশ্রেণী (Mid-Ocean Ridge)।",
+      "সংরক্ষণমূলক সীমানা (Conservative boundary); মহাদেশীয় পর্বতমালা।"
+    ],
+    "explanation_bn": "বিচ্ছিন্ন সীমানায় (Divergent boundary) দুটো প্লেট পরস্পর থেকে দূরে সরে যায়, ফলে মাঝখানের ফাঁক দিয়ে অ্যাস্থেনোস্ফিয়ার থেকে ম্যাগমা উপরে উঠে এসে নতুন ক্রাস্ট তৈরি করে। সমুদ্রের তলদেশে এটি ঘটলে মধ্য-সমুদ্রীয় পর্বতশ্রেণী (Mid-Ocean Ridge) তৈরি হয়।",
+    "question_en": "At which type of tectonic plate boundary is new crust formed, and what geographical feature is typically associated with it?",
+    "options_en": [
+      "Convergent boundary; subduction zones and volcanoes.",
+      "Transform boundary; fault lines and severe earthquakes.",
+      "Divergent boundary; Mid-Ocean Ridge.",
+      "Conservative boundary; continental mountains."
+    ],
+    "explanation_en": "At a divergent boundary, two plates move away from each other, allowing magma from the asthenosphere to rise through the gap and form new crust. When this happens on the ocean floor, it forms a Mid-Ocean Ridge.",
+    "correctIndex": 2
+  },
+  {
+    "id": 11,
+    "question_bn": "2001 সালে গুজরাটের ভুজে (Bhuj) 7.7 মাত্রার একটি ভয়াবহ ভূমিকম্প হয়েছিল। নথি অনুযায়ী ভুজ কোন সিসমিক জোনে অবস্থিত এবং ভারতের কোন জোনটিতে সর্বোচ্চ ঝুঁকি রয়েছে?",
+    "options_bn": [
+      "ভুজ Zone 3-এ অবস্থিত; সর্বোচ্চ ঝুঁকি Zone 4-এ।",
+      "ভুজ Zone 4-এ অবস্থিত; সর্বোচ্চ ঝুঁকি Zone 5-এ।",
+      "ভুজ Zone 5-এ অবস্থিত; সর্বোচ্চ ঝুঁকি Zone 5-এ।",
+      "ভুজ Zone 2-এ অবস্থিত; সর্বোচ্চ ঝুঁকি Zone 4-এ।"
+    ],
+    "explanation_bn": "নথিতে বিশেষভাবে উল্লেখ করা হয়েছে যে 2001 সালের ভূমিকম্পের কেন্দ্রস্থল ভুজ Zone 4-এ অবস্থিত এবং ভারতের সর্বোচ্চ ঝুঁকিপূর্ণ অঞ্চল হলো Zone 5 (যেমন পুরো উত্তর-পূর্ব ভারত, আন্দামান-নিকোবর)।",
+    "question_en": "A devastating earthquake of 7.7 magnitude struck Bhuj, Gujarat in 2001. According to the document, in which seismic zone is Bhuj located, and which zone poses the highest risk in India?",
+    "options_en": [
+      "Bhuj is in Zone 3; the highest risk is in Zone 4.",
+      "Bhuj is in Zone 4; the highest risk is in Zone 5.",
+      "Bhuj is in Zone 5; the highest risk is in Zone 5.",
+      "Bhuj is in Zone 2; the highest risk is in Zone 4."
+    ],
+    "explanation_en": "The document specifically mentions that Bhuj, the epicenter of the 2001 earthquake, is located in Zone 4, and the region with the highest risk in India is Zone 5 (such as the entire Northeast India, Andaman and Nicobar).",
+    "correctIndex": 1
+  },
+  {
+    "id": 12,
+    "question_bn": "পৃথিবীর ইনার কোর (Inner Core) এবং আউটার কোর (Outer Core)-এর ভৌত অবস্থার মধ্যে কী বৈপরীত্য রয়েছে এবং নথিতে এর কী বৈজ্ঞানিক ব্যাখ্যা দেওয়া হয়েছে?",
+    "options_bn": [
+      "কেন্দ্রের দিকে তাপমাত্রা কম থাকায় ইনার কোর তরল এবং আউটার কোর কঠিন।",
+      "উভয় কোর NiFe দিয়ে তৈরি হলেও কম চাপের কারণে আউটার কোর কঠিন এবং ইনার কোর তরল।",
+      "আউটার কোর তরল হলেও প্রচণ্ড চাপের (Extreme Pressure) কারণে উচ্চ তাপমাত্রা সত্ত্বেও ইনার কোরের পদার্থ কঠিন অবস্থায় থাকে।",
+      "ইনার কোরে বেশি সিলিকন থাকায় এটি কঠিন, অন্যদিকে আউটার কোরে শুধু লোহা থাকায় তা তরল।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে, আউটার কোর তরল অবস্থায় থাকলেও পৃথিবীর একদম কেন্দ্রে ইনার কোরের ওপর এত বেশি চাপ থাকে যে, অত্যধিক তাপমাত্রা সত্ত্বেও সেখানকার পদার্থ তরল না হয়ে কঠিন অবস্থাতেই থেকে যায়।",
+    "question_en": "What is the contrast between the physical states of the Earth's Inner Core and Outer Core, and what scientific explanation is provided in the document?",
+    "options_en": [
+      "Due to lower temperatures towards the center, the inner core is liquid and the outer core is solid.",
+      "Although both cores are made of NiFe, lower pressure makes the outer core solid and the inner core liquid.",
+      "While the outer core is liquid, the materials in the inner core remain in a solid state despite high temperatures due to extreme pressure.",
+      "The inner core is solid because it contains more silicon, while the outer core is liquid because it only contains iron."
+    ],
+    "explanation_en": "The document states that although the outer core is in a liquid state, there is so much extreme pressure on the inner core at the exact center of the Earth that despite the high temperature, the material remains in a solid state rather than turning liquid.",
+    "correctIndex": 2
+  },
+  {
+    "id": 13,
+    "question_bn": "105 ডিগ্রি থেকে 145 ডিগ্রি কোণের মধ্যে P-তরঙ্গের শ্যাডো জোন (Shadow Zone) তৈরি হওয়ার কারণ কী?",
+    "options_bn": [
+      "তরল আউটার কোরে আঘাত করার পর P-তরঙ্গ সম্পূর্ণ থেমে যায়।",
+      "কঠিন ম্যান্টেল থেকে তরল আউটার কোরে প্রবেশের সময় P-তরঙ্গের গতি কমে যায় এবং এটি জোরালোভাবে বাঁক (Refract) নেয়।",
+      "গুটেনবার্গ বিরামরেখায় আঘাত করার পর P-তরঙ্গ ভূপৃষ্ঠের দিকে প্রতিফলিত হয়।",
+      "ইনার কোরের অত্যধিক ঘনত্ব P-তরঙ্গের সমস্ত শক্তি শোষণ করে নেয়।"
+    ],
+    "explanation_bn": "P-তরঙ্গ কঠিন ক্রাস্ট ও ম্যান্টেলে দ্রুত চলে, কিন্তু তরল আউটার কোরে প্রবেশ করলে এর গতি কমে যায় এবং তরঙ্গটি জোরালোভাবে বাঁক (Refract) নেয়। এই তীব্র প্রতিসরণের কারণেই 105° থেকে 145° অঞ্চলে একটি স্পষ্ট শ্যাডো জোন বা ছায়া অঞ্চল তৈরি হয়।",
+    "question_en": "What is the cause of the formation of the P-wave Shadow Zone between 105 degrees and 145 degrees?",
+    "options_en": [
+      "P-waves completely stop after striking the liquid outer core.",
+      "P-waves slow down and refract strongly when entering the liquid outer core from the solid mantle.",
+      "P-waves reflect back towards the surface after hitting the Gutenberg discontinuity.",
+      "The extreme density of the inner core absorbs all the energy of the P-waves."
+    ],
+    "explanation_en": "P-waves travel quickly through the solid crust and mantle, but when they enter the liquid outer core, their speed decreases and the waves refract (bend) strongly. This strong refraction creates a distinct shadow zone between 105° and 145°.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "প্রশান্ত মহাসাগরীয় অগ্নিবলয়ে (Pacific Ring of Fire) পৃথিবীর প্রায় 75% আগ্নেয়গিরি এবং 90% ভূমিকম্প হওয়ার কারণ কী?",
+    "options_bn": [
+      "এটি সম্পূর্ণভাবে একটি বিশাল বিচ্ছিন্ন (Divergent) প্লেট সীমানার ওপর অবস্থিত।",
+      "এই অঞ্চলে পৃথিবীর সবচেয়ে পাতলা মহাসাগরীয় ক্রাস্ট রয়েছে, যার ফলে ম্যাগমা সহজেই বেরিয়ে আসতে পারে।",
+      "প্রশান্ত মহাসাগরীয় প্লেটটি চারপাশে ছোট ছোট অনেক প্লেটের সাথে মিলিত হচ্ছে, যেখানে প্রচুর সাবডাকশন ঘটে।",
+      "এটি সরাসরি পৃথিবীর তরল আউটার কোরের ওপরে অবস্থিত।"
+    ],
+    "explanation_bn": "প্রশান্ত মহাসাগরীয় প্লেটের সীমানা বরাবর অনেকগুলো প্লেট পরস্পরের সাথে মিলিত হয়। এই মিলনস্থলগুলোতে প্রচুর সাবডাকশন (Subduction) ঘটে, যা পৃথিবীর বেশিরভাগ ভূমিকম্প এবং আগ্নেয়গিরির প্রধান কারণ।",
+    "question_en": "What is the reason that approximately 75% of the world's volcanoes and 90% of earthquakes occur in the Pacific Ring of Fire?",
+    "options_en": [
+      "It is located entirely on a massive divergent plate boundary.",
+      "This region has the thinnest oceanic crust on Earth, allowing magma to emerge easily.",
+      "The Pacific plate is converging with many smaller plates around it, where frequent subduction occurs.",
+      "It is located directly above the Earth's liquid outer core."
+    ],
+    "explanation_en": "Many plates meet along the boundaries of the Pacific plate. Abundant subduction occurs at these convergence points, which is the primary cause for the majority of the world's earthquakes and volcanoes.",
+    "correctIndex": 2
+  },
+  {
+    "id": 15,
+    "question_bn": "ফল্ট লাইন (Fault Line) বরাবর শক্তি নির্গত হওয়ার ফলে ভূমিকম্পের সৃষ্টি হয়। হাইপোসেন্টার (Hypocenter) এবং এপিসেন্টার (Epicenter)-এর মধ্যে পার্থক্য নির্দেশকারী কোন বক্তব্যটি সঠিক?",
+    "options_bn": [
+      "হাইপোসেন্টার ভূপৃষ্ঠে অবস্থিত যেখানে ক্ষয়ক্ষতি সবচেয়ে বেশি হয়, আর এপিসেন্টার মাটির গভীরে যেখানে শক্তির উৎপত্তি হয়।",
+      "হাইপোসেন্টার হলো পৃথিবীর ভেতরের সেই বিন্দু যেখান থেকে শক্তি মুক্ত হয়, আর এপিসেন্টার হলো ঠিক তার ওপরের ভূপৃষ্ঠের বিন্দু।",
+      "ভূমিকম্পের তরঙ্গ শুধুমাত্র এপিসেন্টার থেকে হাইপোসেন্টারের দিকে অগ্রসর হয়।",
+      "এপিসেন্টার হলো ম্যান্টেলের ভেতরের সেই বিন্দু যেখান থেকে L-তরঙ্গের উৎপত্তি হয়।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্ট বলা হয়েছে, পৃথিবীর ভেতরে যে বিন্দু থেকে সর্বপ্রথম শক্তি মুক্ত হয় সেটি হাইপোসেন্টার বা ফোকাস, আর এই হাইপোসেন্টারের ঠিক উপরে ভূপৃষ্ঠে অবস্থিত বিন্দুটিকে এপিসেন্টার বলা হয়।",
+    "question_en": "Earthquakes occur as a result of energy release along a Fault Line. Which statement correctly differentiates between the Hypocenter and the Epicenter?",
+    "options_en": [
+      "The hypocenter is located on the surface where damage is maximum, and the epicenter is deep underground where energy originates.",
+      "The hypocenter is the point inside the Earth from where the energy is released, and the epicenter is the point on the surface directly above it.",
+      "Seismic waves travel only from the epicenter towards the hypocenter.",
+      "The epicenter is the point inside the mantle from where L-waves originate."
+    ],
+    "explanation_en": "The document clearly states that the point inside the Earth from where the energy is first released is the hypocenter or focus, and the point located on the surface directly above this hypocenter is called the epicenter.",
+    "correctIndex": 1
+  },
+  {
+    "id": 16,
+    "question_bn": "পלט টেকটোনিক্স তত্ত্ব অনুযায়ী, টেকটোনিক প্লেটগুলো মানুষের নখ বাড়ার গতির সমান বেগে চলতে থাকে। এই অবিরাম নড়াচড়ার পেছনে কোন শক্তি কাজ করে?",
+    "options_bn": [
+      "পৃথিবীর ক্রাস্টের ওপর চাঁদ ও সূর্যের মহাকর্ষীয় টান।",
+      "তরল আউটার কোর দ্বারা সৃষ্ট চৌম্বকীয় ক্ষেত্র।",
+      "পৃথিবীর ভেতরের তাপে সৃষ্ট অ্যাস্থেনোস্ফিয়ারের ম্যাগমার পরিচলন স্রোত (Convection Currents)।",
+      "প্রশান্ত মহাসাগরীয় অগ্নিবলয়ে প্রতিনিয়ত আগ্নেয়গিরির অগ্ন্যুৎপাত যা প্লেটগুলোকে দূরে সরিয়ে দেয়।"
+    ],
+    "explanation_bn": "পৃথিবীর ভেতর থেকে আসা তাপে অ্যাস্থেনোস্ফিয়ারে ম্যাগমার যে ঘূর্ণায়মান প্রবাহ বা পরিচলন স্রোত তৈরি হয়, তার প্রভাবেই লিথোস্ফিয়ারের প্লেটগুলো স্রোতের টানে এদিক-ওদিক সরতে থাকে।",
+    "question_en": "According to plate tectonics theory, tectonic plates keep moving at a speed similar to human nail growth. Which force operates behind this continuous movement?",
+    "options_en": [
+      "The gravitational pull of the moon and sun on the Earth's crust.",
+      "The magnetic field created by the liquid outer core.",
+      "The convection currents of magma in the asthenosphere, generated by the heat from inside the Earth.",
+      "Continuous volcanic eruptions in the Pacific Ring of Fire that push the plates apart."
+    ],
+    "explanation_en": "Due to the heat coming from inside the Earth, a swirling flow or convection current of magma is created in the asthenosphere. Under the influence of this current, the lithospheric plates move around being pulled by the flow.",
+    "correctIndex": 2
+  },
+  {
+    "id": 17,
+    "question_bn": "কোন বিরামরেখাটি (Discontinuity) পৃথিবীর ক্রাস্ট এবং ম্যান্টেলকে আলাদা করে?",
+    "options_bn": [
+      "কনরাড বিরামরেখা (Conrad)",
+      "মোহো বিরামরেখা (Moho)",
+      "রেপিটি বিরামরেখা (Repiti)",
+      "লেহমান বিরামরেখা (Lehmann)"
+    ],
+    "explanation_bn": "মোহো বা মোহোরোভিচিচ বিরামরেখা পৃথিবীর ক্রাস্ট এবং আপার ম্যান্টেলকে আলাদা করে। (নোট: নথিতে সরলীকরণের জন্য এর গভীরতা 100 কিমি বলা হলেও, বাস্তবে এই গভীরতা পরিবর্তনশীল; মহাসাগরীয় ক্রাস্টে এটি প্রায় 5-10 কিমি এবং মহাদেশীয় ক্রাস্টে প্রায় 30-70 কিমি হয়ে থাকে)।",
+    "question_en": "Which discontinuity separates the Earth's crust and mantle?",
+    "options_en": [
+      "Conrad discontinuity",
+      "Moho discontinuity",
+      "Repiti discontinuity",
+      "Lehmann discontinuity"
+    ],
+    "explanation_en": "The Moho or Mohorovičić discontinuity separates the crust and the upper mantle. (Note: While the document simplified its depth to 100 km, in geographical reality, this depth varies from ~5-10 km under oceanic crust to ~30-70 km under continental crust).",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "একটি রূপান্তরী প্লেট সীমানাকে (Transform boundary) কেন \"সংরক্ষণমূলক\" (Conservative) সীমানাও বলা হয়?",
+    "options_bn": [
+      "কারণ এটি ম্যাগমাকে অ্যাস্থেনোস্ফিয়ারের ভেতরেই সংরক্ষণ করে এবং অগ্ন্যুৎপাত হতে দেয় না।",
+      "কারণ প্লেটগুলো শুধু একে অপরের দিকে আসে, যা পৃথিবীর মোট পৃষ্ঠতলকে সংরক্ষণ করে।",
+      "কারণ এখানে প্লেটগুলো একে অপরের পাশ দিয়ে ঘষে যায়, ফলে নতুন কোনো ক্রাস্ট তৈরি বা ধ্বংস হয় না।",
+      "কারণ এটি ভূমিকম্পের শক্তি শোষণ করে ভূমিকম্প হওয়া প্রতিরোধ করে।"
+    ],
+    "explanation_bn": "রূপান্তরী সীমানায় দুটো প্লেট পাশাপাশি ঘষা খায়। এখানে সাবডাকশনের মতো ক্রাস্ট ধ্বংস হয় না বা ডাইভারজেন্টের মতো নতুন ক্রাস্ট তৈরি হয় নিয়োগ না, তাই একে রূপান্তরী বা সংরক্ষণমূলক (Conservative) সীমানা বলে।",
+    "question_en": "Why is a transform plate boundary also called a \"conservative\" boundary?",
+    "options_en": [
+      "Because it conserves magma within the asthenosphere and prevents volcanic eruptions.",
+      "Because plates only move towards each other, which conserves the Earth's total surface area.",
+      "Because plates slide past each other here, resulting in neither the creation nor the destruction of crust.",
+      "Because it absorbs earthquake energy and prevents earthquakes from happening."
+    ],
+    "explanation_en": "At a transform boundary, two plates slide past each other. Crust is neither destroyed like in subduction, nor is new crust created like in divergent boundaries, hence it is called a conservative boundary.",
+    "correctIndex": 2
+  },
+  {
+    "id": 19,
+    "question_bn": "নথিতে উল্লেখ করা হয়েছে যে মাউন্ট এভারেস্টের নিচে ক্রাস্ট সবচেয়ে বেশি পুরু। পাহাড়ের উপরের উচ্চতার সাথে সামঞ্জস্য রেখে নিচের দিকে ক্রাস্টের এই গভীর বিস্তৃতির ঘটনাকে ভূগোলে কী বলা হয়?",
+    "options_bn": [
+      "গ্র্যাভিটি অ্যানোমালি (Gravity Anomaly)",
+      "সাবডাকশন (Subduction)",
+      "আইসোস্ট্যাসি (Isostasy)",
+      "পরিচলন স্রোত (Convection Current)"
+    ],
+    "explanation_bn": "মাউন্ট এভারেস্টের নিচে ক্রাস্ট সবচেয়ে বেশি পুরু, কারণ ভূপৃষ্ঠের উপরে পাহাড় যতটা উঁচু, ভারসম্য রক্ষার জন্য নিচেও ততটাই গভীর পর্যন্ত ক্রাস্ট বিস্তৃত। নথিতে এই ঘটনাকে আইসোস্ট্যাসি (Isostasy) বলা হয়েছে।",
+    "question_en": "The document mentions that the crust is thickest under Mount Everest. What is this phenomenon called in geography, where the crust extends deeply downwards in proportion to the mountain's height above?",
+    "options_en": [
+      "Gravity Anomaly",
+      "Subduction",
+      "Isostasy",
+      "Convection Current"
+    ],
+    "explanation_en": "The crust is thickest under Mount Everest because just as the mountain is high above the surface, the crust extends equally deep below to maintain balance. The document refers to this phenomenon as Isostasy.",
+    "correctIndex": 2
+  },
+  {
+    "id": 20,
+    "question_bn": "ভারতের কোয়না (Koyna) বাঁধটি নথিতে উল্লেখিত কোন নির্দিষ্ট ধরনের ভূমিকম্পের উদাহরণ হিসেবে ব্যবহৃত হয়েছে?",
+    "options_bn": [
+      "টেকটোনিক ভূমিকম্প (Tectonic Earthquake)",
+      "জলাধার-প্রণোদিত ভূমিকম্প (Reservoir Induced Earthquake)",
+      "কোলাপস ভূমিকম্প (Collapse Earthquake)",
+      "বিস্ফোরণ ভূমিকম্প (Explosion Earthquake)"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে বড় বাঁধ তৈরির ফলে সৃষ্ট ভূমিকম্পকে জলাধার-প্রণোদিত বা Reservoir Induced Earthquake বলে। ভারতে কোয়না বাঁধ তৈরির পর এ ধরনের ভূমিকম্প দেখা দিয়েছিল।",
+    "question_en": "The Koyna dam in India is used as an example of which specific type of earthquake mentioned in the document?",
+    "options_en": [
+      "Tectonic Earthquake",
+      "Reservoir Induced Earthquake",
+      "Collapse Earthquake",
+      "Explosion Earthquake"
+    ],
+    "explanation_en": "The document mentions that an earthquake caused by the construction of large dams is called a Reservoir Induced Earthquake. Such an earthquake was observed in India after the construction of the Koyna dam",
+    "correctIndex": 1
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
