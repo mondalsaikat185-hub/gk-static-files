@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "হিমাচল প্রদেশের 'ছপেলি' এবং 'শান্ড/শাবু' নৃত্যের মধ্যে ধর্মীয় প্রেক্ষাপটের ভিত্তিতে কী মিল রয়েছে?",
+    "options_bn": [
+      "উভয়ই হিন্দু ধর্মীয় নৃত্য যা ভগবান কৃষ্ণের রাসলীলাকে কেন্দ্র করে পরিবেশিত হয়।",
+      "শান্ড/শাবু বৌদ্ধ মঠে পরিবেশিত হয় এবং ছপেলিও বৌদ্ধ ধর্মাবলম্বীদের দ্বারা অশুভ শক্তি তাড়াতে পরিবেশিত হয়।",
+      "ছপেলি বৌদ্ধদের নৃত্য হলেও শান্ড/শাবু শুধুমাত্র দশেরা উৎসবে পরিবেশিত হয়।",
+      "উভয় নৃত্যই সিরমৌর জেলায় জন্ম নেওয়া ইসলামী লোকনৃত্য।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ করা হয়েছে যে 'শান্ড বা শাবু' নৃত্য বৌদ্ধ মঠ বা গুম্ফায় পরিবেশিত হয় এবং 'ছপেলি' নৃত্যটিও বৌদ্ধ ধর্মাবলম্বীরা অশুভ আত্মা বা শক্তিকে দূর করতে পরিবেশন করেন।",
+    "question_en": "What is the similarity between Himachal Pradesh's 'Chapeli' and 'Shand/Shabu' dances based on their religious context?",
+    "options_en": [
+      "Both are Hindu religious dances centered around Lord Krishna's Rasleela.",
+      "Shand/Shabu is performed in Buddhist monasteries, and Chapeli is also performed by Buddhists to ward off evil spirits.",
+      "Although Chapeli is a Buddhist dance, Shand/Shabu is performed only during the Dussehra festival.",
+      "Both are Islamic folk dances originating in the Sirmour district."
+    ],
+    "explanation_en": "The document explicitly states that the 'Shand or Shabu' dance is performed in Buddhist monasteries, and the 'Chapeli' dance is also performed by Buddhists to dispel evil spirits or negative energies.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "ঝারখণ্ডের লোকনৃত্য এবং সংশ্লিষ্ট সম্প্রদায়ের ভিত্তিতে নিচের কোন জোড়াটি ভুল?",
+    "options_bn": [
+      "ডোমকাচ — সদান সম্প্রদায়",
+      "মুন্ডারি — মুন্ডা উপজাতি",
+      "পাইকা — সাঁওতাল উপজাতি",
+      "সান্তালি — সাঁওতাল উপজাতি"
+    ],
+    "explanation_bn": "নথি অনুসারে, পাইকা নৃত্য মুন্ডা উপজাতি এবং সদান সম্প্রদায় পরিবেশন করেন, সাঁওতাল উপজাতি নয়। তাই এই জোড়াটি ভুল।",
+    "question_en": "Based on the folk dances of Jharkhand and their associated communities, which of the following pairs is incorrect?",
+    "options_en": [
+      "Domkach — Sadan community",
+      "Mundari — Munda tribe",
+      "Paika — Santhal tribe",
+      "Santhali — Santhal tribe"
+    ],
+    "explanation_en": "According to the document, the Paika dance is performed by the Munda tribe and the Sadan community, not the Santhal tribe. Therefore, this pair is incorrect.",
+    "correctIndex": 2
+  },
+  {
+    "id": 3,
+    "question_bn": "হরিয়ানার 'ধমাল' এবং 'গুগগা' নৃত্যের মধ্যে একটি সাধারণ বৈশিষ্ট্য (common feature) কী?",
+    "options_bn": [
+      "উভয় নৃত্যই মহাভারতের যুগ থেকে উদ্ভূত।",
+      "উভয় নৃত্যই হোলি বা ফাগুন মাসে পরিবেশিত হয়।",
+      "উভয় নৃত্যই শুধুমাত্র পুরুষদের দ্বারা পরিবেশিত হয়।",
+      "উভয় নৃত্যই মূলত থিয়েটার বা নাটকীয় নৃত্য।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে ধমাল নৃত্যে শুধুমাত্র পুরুষরা অংশগ্রহণ করেন (মহিলারা অংশ নেন না) এবং গুগগা নৃত্যটিও একটি ধর্মীয় লোকনৃত্য যা শুধুমাত্র পুরুষরা পরিবেশন করেন।",
+    "question_en": "What is a common feature between Haryana's 'Dhamal' and 'Gugga' dances?",
+    "options_en": [
+      "Both dances originated from the era of the Mahabharata.",
+      "Both dances are performed during Holi or the month of Fagun.",
+      "Both dances are performed exclusively by men.",
+      "Both are essentially theatrical or dramatic dances."
+    ],
+    "explanation_en": "The document mentions that only men participate in the Dhamal dance (women do not take part), and the Gugga dance is also a religious folk dance performed exclusively by men.",
+    "correctIndex": 2
+  },
+  {
+    "id": 4,
+    "question_bn": "কর্ণাটকের 'করগা' এবং 'বীরগাসে' নৃত্যের মধ্যে মূল যোগসূত্র কোনটি?",
+    "options_bn": [
+      "উভয় নৃত্যেই মাথায় পিতলের পাত্র বহন করা হয়।",
+      "উভয় নৃত্যই কুরুবা সম্প্রদায় দ্বারা পরিবেশিত হয়।",
+      "উভয় নৃত্যই বীরভদ্র সম্প্রদায়ের সাথে সম্পর্কিত।",
+      "উভয় নৃত্যই কর্ণাটকের উপকূলীয় অঞ্চলে দুর্গাপূজায় পরিবেশিত হয়।"
+    ],
+    "explanation_bn": "নথি অনুসারে, করগা নৃত্যটি কর্ণাটকের বীরভদ্র সম্প্রদায়ের ভক্তরা পরিবেশন করেন এবং বীরগাসে নৃত্যটিও আন্ধ্রা-কর্ণাটক সীমান্ত অঞ্চলের বীরভদ্র সম্প্রদায়ের নৃত্য।",
+    "question_en": "What is the main connection between Karnataka's 'Karga' and 'Veergase' dances?",
+    "options_en": [
+      "In both dances, a brass pot is carried on the head.",
+      "Both dances are performed by the Kuruba community.",
+      "Both dances are associated with the Virabhadra community.",
+      "Both dances are performed in the coastal regions of Karnataka during Durga Puja."
+    ],
+    "explanation_en": "According to the document, the Karga dance is performed by devotees of Karnataka's Virabhadra community, and the Veergase dance is also a dance of the Virabhadra community from the Andhra-Karnataka border region.",
+    "correctIndex": 2
+  },
+  {
+    "id": 5,
+    "question_bn": "জম্মু ও কাশ্মীরের লোকনৃত্যগুলির পরিবেশনার সময়কাল বা প্রেক্ষাপট অনুযায়ী নিচের কোন তথ্যটি সঠিকভাবে মেলানো হয়েছে?",
+    "options_bn": [
+      "হিকত — রাতে পরিবেশিত হয়।",
+      "রউফ — শরৎকালে পরিবেশিত হয়।",
+      "কুদ — লোক দেবতাদের সম্মান জানাতে রাতে পরিবেশিত হয়।",
+      "ধুমাল — ঈদ ও রমজানের সময় পরিবেশিত হয়।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে যে 'কুদ নৃত্য' একটি রাতের নৃত্য (performed at night) যা জম্মুর পার্বত্য অঞ্চলে স্থানীয় দেবতাদের (লোক দেবতা) সম্মান জানাতে পরিবেশিত হয়।",
+    "question_en": "Based on the timing or context of performance of the folk dances of Jammu and Kashmir, which of the following information is correctly matched?",
+    "options_en": [
+      "Hikat — Performed at night.",
+      "Rouf — Performed in the autumn season.",
+      "Kud — Performed at night to honor the Lok Devtas.",
+      "Dhumhal — Performed during Eid and Ramzan."
+    ],
+    "explanation_en": "The document clearly states that the 'Kud Dance' is a night dance (performed at night) dedicated to honoring local deities (Lok Devtas) in the hilly regions of Jammu.",
+    "correctIndex": 2
+  },
+  {
+    "id": 6,
+    "question_bn": "ঝারখণ্ডের 'নাগপুরি লোকনৃত্য' ধারায় কোন দুটি নৃত্য অন্তর্ভুক্ত বলে নথিতে উল্লেখ করা হয়েছে এবং কারা তা পরিবেশন করে?",
+    "options_bn": [
+      "ডোমকাচ ও ঝুমাইর, উভয়ই সদান সম্প্রদায় পরিবেশন করে।",
+      "পাইকা ও ফগুয়া, উভয়ই মুন্ডা উপজাতি পরিবেশন করে।",
+      "কর্মা ও হুন্টা, উভয়ই সাঁওতাল সম্প্রদায় পরিবেশন করে।",
+      "ডোমকাচ ও ছপেলি, উভয়ই আদিবাসী সম্প্রদায় পরিবেশন করে।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ আছে যে ডোমকাচ এবং ঝুমাইর উভয়ই নাগপুরি লোকনৃত্য হিসেবে বিবেচিত, এবং এই দুটি নৃত্যই সদান সম্প্রদায় পরিবেশন করে।",
+    "question_en": "Which two dances are mentioned in the document as belonging to the 'Nagpuri folk dance' genre of Jharkhand, and who performs them?",
+    "options_en": [
+      "Domkach and Jhumaer, both performed by the Sadan community.",
+      "Paika and Phagua, both performed by the Munda tribe.",
+      "Karma and Hunta, both performed by the Santhal community.",
+      "Domkach and Chapeli, both performed by the tribal communities."
+    ],
+    "explanation_en": "The document mentions that both Domkach and Jhumaer are considered Nagpuri folk dances, and both are performed by the Sadan community.",
+    "correctIndex": 0
+  },
+  {
+    "id": 7,
+    "question_bn": "হিমাচল প্রদেশের 'নাটি নৃত্যে' ব্যবহৃত ঐতিহ্যবাহী বাদ্যযন্ত্রগুলির সঠিক তালিকা কোনটি?",
+    "options_bn": [
+      "ডফ, মাঞ্জিরা, ঢোল এবং নাগাড়া।",
+      "ঢোল, করনাল, শাহনাই এবং রণসিঙা।",
+      "ডোলু, কংসালে এবং করনাল।",
+      "ঢোল, ডফলি এবং রণসিঙা।"
+    ],
+    "explanation_bn": "নথিতে নাটি নৃত্যের বর্ণনায় বলা হয়েছে যে অংশগ্রহণকারীরা ঢোল, করনাল (একটি লম্বা তুরী), শাহনাই এবং রণসিঙা বাদ্যযন্ত্রের তালে নৃত্য করেন।",
+    "question_en": "Which is the correct list of traditional musical instruments used in the 'Nati Dance' of Himachal Pradesh?",
+    "options_en": [
+      "Daff, Manjira, Dhol, and Nagada.",
+      "Dhol, Karnal, Shahnai, and Ransingha.",
+      "Dollu, Kamsale, and Karnal.",
+      "Dhol, Dafli, and Ransingha."
+    ],
+    "explanation_en": "In the description of the Nati dance, the document states that participants perform to the rhythm of the Dhol, Karnal (a long trumpet), Shahnai, and Ransingha musical instruments.",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_bn": "কর্ণাটকের উপকূলীয় অঞ্চলে (Coastal Karnataka) পরিবেশিত লোকনৃত্য হিসেবে নথিতে কোন দুটির উল্লেখ আছে?",
+    "options_bn": [
+      "যক্ষগান এবং ভূত আরাধনে।",
+      "ডোলু কুনিথা এবং করগা।",
+      "বীরগাসে এবং নাগমণ্ডল।",
+      "কংসালে এবং যক্ষগান।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে যে 'যক্ষগান' উপকূলীয় কর্ণাটকে (বিশেষত দক্ষিণ কন্নড়, উডুপি) পরিবেশিত হয় এবং 'ভূত আরাধনে' নৃত্যটিও কর্ণাটকের উপকূলীয় অঞ্চলের একটি বিশেষ নৃত্য।",
+    "question_en": "Which two folk dances are mentioned in the document as being performed in the coastal regions (Coastal Karnataka) of Karnataka?",
+    "options_en": [
+      "Yakshagana and Bhootha Aradhne.",
+      "Dollu Kunitha and Karga.",
+      "Veergase and Nagamandala.",
+      "Kamsale and Yakshagana."
+    ],
+    "explanation_en": "The document states that 'Yakshagana' is performed in coastal Karnataka (specifically Dakshina Kannada, Udupi) and 'Bhootha Aradhne' is also a special dance of the coastal regions of Karnataka.",
+    "correctIndex": 0
+  },
+  {
+    "id": 9,
+    "question_bn": "নথিতে উল্লেখিত বিভিন্ন রাজ্যের নাম-বিভ্রান্তিকর নৃত্যগুলির ক্ষেত্রে কোনটি সঠিক?",
+    "options_bn": [
+      "ঝুমার (আসাম), ঝুমাইর (হরিয়ানা), করগা (তামিলনাড়ু)।",
+      "ঝুমার (হরিয়ানা), ঝুমুর (আসাম), করগা (কর্ণাটক)।",
+      "ঝুমাইর (হরিয়ানা), ঝুমুর (ঝারখণ্ড), করগম (কর্ণাটক)।",
+      "ফাগ (ঝারখণ্ড), ফগুয়া (হরিয়ানা), করগা (তামিলনাড়ু)।"
+    ],
+    "explanation_bn": "নথিতে সতর্ক করা হয়েছে যে 'ঝুমার' হরিয়ানার, 'ঝুমুর' আসামের এবং 'ঝুমাইর' ঝারখণ্ডের নৃত্য। এছাড়া 'করগা' কর্ণাটকের এবং 'করগম' তামিলনাড়ুর নৃত্য।",
+    "question_en": "Regarding the name-confusing dances of different states mentioned in the document, which one is correct?",
+    "options_en": [
+      "Jhumar (Assam), Jhumaer (Haryana), Karga (Tamil Nadu).",
+      "Jhumar (Haryana), Jhumur (Assam), Karga (Karnataka).",
+      "Jhumaer (Haryana), Jhumur (Jharkhand), Karagam (Karnataka).",
+      "Phag (Jharkhand), Phagua (Haryana), Karga (Tamil Nadu)."
+    ],
+    "explanation_en": "The document warns that 'Jhumar' is from Haryana, 'Jhumur' is from Assam, and 'Jhumaer' is from Jharkhand. Additionally, 'Karga' is from Karnataka and 'Karagam' is from Tamil Nadu.",
+    "correctIndex": 1
+  },
+  {
+    "id": 10,
+    "question_bn": "হরিয়ানার 'লুর' এবং 'ডফ' নৃত্যের ভৌগোলিক বা মৌসুমী প্রেক্ষাপট সম্পর্কে কোন বিবৃতিটি সঠিক?",
+    "options_bn": [
+      "লুর নৃত্য মেওয়াত অঞ্চলে হয়, আর ডফ বসন্তের ফসল কাটার উৎসব।",
+      "লুর বাঙ্গার অঞ্চল থেকে উদ্ভূত, আর ডফ মার্চ-এপ্রিল মাসে রবি ফসল কাটার উদযাপন।",
+      "ডফ বাঙ্গার অঞ্চলে হোলির আগে হয়, লুর রবি ফসল কাটার পর হয়।",
+      "লুর এবং ডফ উভয়ই আহীর সম্প্রদায়ের পুরুষরা হোলির সময় করেন।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, লুর নৃত্য বাঙ্গার অঞ্চল থেকে উদ্ভূত এবং হোলির ঠিক আগে হয়। অন্যদিকে, ডফ নৃত্য বসন্ত মৌসুমের নৃত্য যা মার্চ-এপ্রিল মাসে রবি ফসলের কাটাই শুরু হলে উদযাপনের জন্য পরিবেশিত হয়।",
+    "question_en": "Which statement is correct regarding the geographical or seasonal context of Haryana's 'Loor' and 'Daff' dances?",
+    "options_en": [
+      "Loor dance takes place in the Mewat region, while Daff is a spring harvest festival.",
+      "Loor originates from the Bangar region, and Daff is a celebration of the Rabi crop harvest in March-April.",
+      "Daff is performed in the Bangar region before Holi, while Loor is performed after the Rabi crop harvest.",
+      "Both Loor and Daff are performed by men of the Ahir community during Holi."
+    ],
+    "explanation_en": "According to the document, the Loor dance originates from the Bangar region and is performed just before Holi. On the other hand, the Daff dance is a spring season dance performed to celebrate the start of the Rabi crop harvest in March-April.",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "জম্মু ও কাশ্মীরের 'রউফ' এবং 'হিকত' নৃত্যের মধ্যে একটি সাধারণ বৈশিষ্ট্য কী?",
+    "options_bn": [
+      "উভয় নৃত্যই ওয়াতাল উপজাতির পুরুষদের দ্বারা পরিবেশিত হয়।",
+      "উভয় নৃত্যেই হাস্যরসাত্মক অভিনয়ের মাধ্যমে সমাজ সমালোচনা করা হয়।",
+      "উভয়ই বসন্তকালীন নৃত্য।",
+      "উভয় নৃত্যই স্থানীয় লোক দেবতা বা 'Lok Devta'-কে সম্মান জানাতে রাতে হয়।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে রউফ একটি বসন্তকালীন নৃত্য (ঈদ ও রমজানে পরিবেশিত) এবং হিকত নৃত্যটিও কাশ্মীরের একটি বসন্তকালীন লোকনৃত্য যেখানে একে অপরের হাত ধরে নৃত্য করা হয়।",
+    "question_en": "What is a common feature between the 'Rouf' and 'Hikat' dances of Jammu and Kashmir?",
+    "options_en": [
+      "Both are performed by men of the Watal tribe.",
+      "Both dances involve social criticism through comedic acting.",
+      "Both are spring dances.",
+      "Both dances are performed at night to honor local deities or 'Lok Devtas'."
+    ],
+    "explanation_en": "The document states that Rouf is a spring dance (performed during Eid and Ramzan) and the Hikat dance is also a spring folk dance of Kashmir where performers hold each other's hands.",
+    "correctIndex": 2
+  },
+  {
+    "id": 12,
+    "question_bn": "কর্ণাটকের 'ডোলু কুনিথা' নৃত্যের পরিবেশনকারী 'কুরুবা' সম্প্রদায়ের মূল পেশা হিসেবে নথিতে কী উল্লেখ করা হয়েছে?",
+    "options_bn": [
+      "কৃষিকাজ",
+      "বাঘ শিকার",
+      "ভেড়া পালন",
+      "পুরোহিতগিরি"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ করা হয়েছে যে ডোলু কুনিথা নৃত্যটি কুরুবা সম্প্রদায় পরিবেশন করে এবং কুরুবা সম্প্রদায় মূলত 'ভেড়া পালনকারী' সম্প্রদায়।",
+    "question_en": "What is mentioned in the document as the primary occupation of the 'Kuruba' community that performs Karnataka's 'Dollu Kunitha' dance?",
+    "options_en": [
+      "Farming",
+      "Tiger hunting",
+      "Sheep rearing",
+      "Priesthood"
+    ],
+    "explanation_en": "The document clearly mentions that the Dollu Kunitha dance is performed by the Kuruba community, and the Kuruba community is primarily a 'sheep rearing' community.",
+    "correctIndex": 2
+  },
+  {
+    "id": 13,
+    "question_bn": "হিমাচল প্রদেশের 'রাক্ষস নৃত্য' এবং ঝারখণ্ডের 'হুন্টা নৃত্য'-এর মূল উদ্দেশ্যের মধ্যে পার্থক্য কী?",
+    "options_bn": [
+      "রাক্ষস নৃত্য বাঘ শিকারের জন্য, হুন্টা নৃত্য ফসল রক্ষার জন্য।",
+      "রাক্ষস নৃত্য ফসলকে অশুভ শক্তির হাত থেকে রক্ষার জন্য, হুন্টা নৃত্য শিকারের প্রস্তুতি চিত্রিত করার জন্য।",
+      "উভয়ই ভূত তাড়ানোর জন্য ব্যবহৃত হয়, তবে দুটি ভিন্ন রাজ্যে।",
+      "রাক্ষস নৃত্য দশেরার সময় হয়, আর হুন্টা দুর্গাপূজার সময় হয়।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, হিমাচলের রাক্ষস নৃত্য কৃষিকাজে ফসলের ক্ষতিকারক অশুভ শক্তিকে তাড়িয়ে দিতে পরিবেশিত হয়, আর ঝারখণ্ডের হুন্টা নৃত্য শিকারের প্রস্তুতির দৃশ্য চিত্রিত করে।",
+    "question_en": "What is the difference in the main objectives of Himachal Pradesh's 'Rakshasa Dance' and Jharkhand's 'Hunta Dance'?",
+    "options_en": [
+      "Rakshasa dance is for tiger hunting, Hunta dance is for protecting crops.",
+      "Rakshasa dance is to protect crops from evil forces, Hunta dance is to depict the preparation for hunting.",
+      "Both are used to ward off ghosts, but in two different states.",
+      "Rakshasa dance is performed during Dussehra, while Hunta is performed during Durga Puja."
+    ],
+    "explanation_en": "According to the document, Himachal's Rakshasa dance is performed to drive away crop-destroying evil forces in agriculture, whereas Jharkhand's Hunta dance depicts the scenes of preparation for hunting.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "ঝারখণ্ডের 'ছাউ নৃত্য' সম্পর্কে নিচের কোন তথ্যটি নথিতে দেওয়া হয়নি বা নথির তথ্যের পরিপন্থী?",
+    "options_bn": [
+      "এটি একটি মার্শাল আর্ট নৃত্য এবং ইউনেস্কোর তালিকায় স্থান পেয়েছে।",
+      "এটি তিনটি ভিন্ন রাজ্যে (ঝারখণ্ড, পশ্চিমবঙ্গ, ওড়িশা) পরিবেশিত হয়।",
+      "এই নৃত্যে শুধুমাত্র কাদাম গাছের পূজা করা হয়।",
+      "এতে পৌরাণিক কাহিনীর অভিনয় এবং মুখোশ পরিধান দেখা যায়।"
+    ],
+    "explanation_bn": "নথিতে কাদাম গাছের পূজার কথা 'কর্মা' বা 'করম' নৃত্যের ক্ষেত্রে বলা হয়েছে, ছাউ নৃত্যের ক্ষেত্রে নয়। ছাউ নৃত্যে মার্শাল আর্ট, মুখোশ পরিধান এবং পৌরাণিক কাহিনীর অভিনয় থাকে।",
+    "question_en": "Which of the following information regarding Jharkhand's 'Chhau Dance' is NOT given in the document or contradicts its facts?",
+    "options_en": [
+      "It is a martial art dance and has a place on the UNESCO list.",
+      "It is performed in three different states (Jharkhand, West Bengal, Odisha).",
+      "Only the Kadam tree is worshipped in this dance.",
+      "It involves acting out mythological stories and wearing masks."
+    ],
+    "explanation_en": "The document mentions the worship of the Kadam tree in the context of the 'Karma' or 'Karam' dance, not the Chhau dance. Chhau dance involves martial arts, mask-wearing, and the enactment of mythological stories.",
+    "correctIndex": 2
+  },
+  {
+    "id": 15,
+    "question_bn": "হরিয়ানার 'সাঙ্গ' (Saang) শিল্পকলা সম্পর্কে সবচেয়ে উপযুক্ত বর্ণনা কোনটি?",
+    "options_bn": [
+      "এটি আহীর সম্প্রদায়ের একটি বিশুদ্ধ মার্শাল আর্ট নৃত্য।",
+      "এটি নাটক, নৃত্য এবং সঙ্গীতের মিশ্রণে তৈরি একটি থিয়েটার নৃত্য, যেখানে পৌরাণিক বা সামাজিক কাহিনী অভিনীত হয়।",
+      "এটি তরুণ বিবাহিত মেয়েদের একটি নৃত্য যা ডফ বাদ্যযন্ত্রের তালে হয়।",
+      "এটি শুধুমাত্র সাধক গুগগার স্মরণে পরিবেশিত হয়।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে সাঙ্গ হলো হরিয়ানার একটি থিয়েটার নৃত্য যা নাটক, নৃত্য, এবং সঙ্গীতের মিশ্রণে তৈরি এবং এতে সাধারণত পৌরাণিক বা সামাজিক কাহিনী অভিনয়ের মাধ্যমে উপস্থাপন করা হয়।",
+    "question_en": "Which is the most appropriate description of Haryana's 'Saang' art form?",
+    "options_en": [
+      "It is a pure martial art dance of the Ahir community.",
+      "It is a theatrical dance created by blending drama, dance, and music, where mythological or social stories are enacted.",
+      "It is a dance of young married women performed to the rhythm of the Daff instrument.",
+      "It is performed solely in memory of Saint Gugga."
+    ],
+    "explanation_en": "The document states that Saang is a theatre dance of Haryana created with a mixture of drama, dance, and music, where usually mythological or social stories are presented through acting.",
+    "correctIndex": 1
+  },
+  {
+    "id": 16,
+    "question_bn": "কর্ণাটকের 'ভূত আরাধনে' নৃত্যে 'ভূত' শব্দটি কী অর্থে ব্যবহৃত হয়েছে?",
+    "options_bn": [
+      "মৃত ব্যক্তির অতৃপ্ত আত্মা।",
+      "অশুভ শক্তি বা রাক্ষস।",
+      "প্রকৃতির আত্মা বা দেবতা, যা মানুষ এবং প্রকৃতির মধ্যে সংযোগ বোঝায়।",
+      "প্রাচীনকালের ঐতিহাসিক বীর যোদ্ধা।"
+    ],
+    "explanation_bn": "নথিতে উল্লেখ করা হয়েছে যে এই নৃত্যে 'ভূত' ভূতপ্রেত অর্থে নয়, বরং প্রকৃতির আত্মা বা দেবতার অর্থে ব্যবহৃত হয়েছে, যার মাধ্যমে মানুষ, প্রকৃতি এবং ঐশ্বরিক আত্মার মধ্যে সংযোগ উদযাপিত হয়।",
+    "question_en": "In Karnataka's 'Bhootha Aradhne' dance, in what sense is the word 'Bhootha' used?",
+    "options_en": [
+      "The unsatisfied spirit of a dead person.",
+      "Evil spirit or demon.",
+      "The spirit of nature or deity, representing the connection between humans and nature.",
+      "Historical brave warriors of ancient times."
+    ],
+    "explanation_en": "The document mentions that in this dance, 'Bhootha' is not used in the sense of ghosts and evil spirits, but rather means the spirit of nature or deity, celebrating the connection between humans, nature, and divine spirits.",
+    "correctIndex": 2
+  },
+  {
+    "id": 17,
+    "question_bn": "হিমাচল প্রদেশের 'ধমান নৃত্য' সম্পর্কে কোন তথ্যটি সম্পূর্ণ সঠিক?",
+    "options_bn": [
+      "এটি কিন্নৌর উপত্যকায় পরিবেশিত হয় এবং এটি বাঘ শিকারের উদযাপন।",
+      "এটি কুল্লু অঞ্চলে দশেরা উৎসবের সময় পরিবেশিত হয় এবং এতে শুধু মহিলারা অংশগ্রহণ করেন।",
+      "এটি কুল্লু অঞ্চলে দশেরা উৎসবের সময় পরিবেশিত হয় এবং পুরো গ্রাম একত্রে অংশ নেয়।",
+      "এটি লাহৌল-স্পিতি উপত্যকায় ছ্যাং পানের পর পরিবেশিত হয়।"
+    ],
+    "explanation_bn": "নথি অনুসারে, ধমান নৃত্য কুল্লু অঞ্চলে দশেরার সময় হয়, এতে পুরুষ ও মহিলা উভয়ই অংশগ্রহণ করেন এবং ঐতিহ্যগতভাবে পুরো গ্রাম একত্রে অংশ নেয়।",
+    "question_en": "Which information about Himachal Pradesh's 'Dhaman Dance' is completely correct?",
+    "options_en": [
+      "It is performed in the Kinnaur valley and is a celebration of tiger hunting.",
+      "It is performed during the Dussehra festival in the Kullu region and only women participate in it.",
+      "It is performed during the Dussehra festival in the Kullu region and the whole village participates together.",
+      "It is performed in the Lahaul-Spiti valley after drinking Chhang."
+    ],
+    "explanation_en": "According to the document, the Dhaman dance takes place in the Kullu region during Dussehra, both men and women can participate in it, and traditionally the entire village takes part together.",
+    "correctIndex": 2
+  },
+  {
+    "id": 18,
+    "question_bn": "ঝারখণ্ডের কোন দুটি নৃত্য 'মার্শাল আর্ট' বা 'মার্শাল নৃত্য' হিসেবে নথিতে স্পষ্টভাবে উল্লিখিত হয়েছে?",
+    "options_bn": [
+      "কর্মা এবং ডোমকাচ",
+      "পাইকা এবং ফগুয়া",
+      "সান্তালি এবং মুন্ডারি",
+      "হুন্টা এবং ঝুমাইর"
+    ],
+    "explanation_bn": "নথিতে পাইকা নৃত্যকে 'মার্শাল আর্ট নৃত্য' এবং ফগুয়া নৃত্যকে 'মার্শাল নৃত্য' হিসেবে বর্ণনা করা হয়েছে।",
+    "question_en": "Which two dances of Jharkhand are explicitly mentioned in the document as 'martial arts' or 'martial dances'?",
+    "options_en": [
+      "Karma and Domkach",
+      "Paika and Phagua",
+      "Santhali and Mundari",
+      "Hunta and Jhumaer"
+    ],
+    "explanation_en": "The document describes the Paika dance as a 'martial art dance' and the Phagua dance as a 'martial dance'.",
+    "correctIndex": 1
+  },
+  {
+    "id": 19,
+    "question_bn": "জম্মু ও কাশ্মীরের 'ভাণ্ড পাথর' সম্পর্কে কোন ঐতিহাসিক তথ্যের উল্লেখ নথিতে আছে?",
+    "options_bn": [
+      "এটি মহাভারতের যুগ থেকে চলে আসছে।",
+      "এটি রাজা-বাদশাদের দরবারেও পরিবেশিত হতো।",
+      "এটি তিব্বতি বৌদ্ধ ধর্মের গভীর প্রভাব বহন করে।",
+      "এটি ইউনেস্কোর অস্পর্শনীয় সাংস্কৃতিক ঐতিহ্যের তালিকায় রয়েছে।"
+    ],
+    "explanation_bn": "নথিতে ভাণ্ড পাথর সম্পর্কে বলা হয়েছে যে এটি হাস্যরস এবং সমাজ সমালোচনার মাধ্যমে কাহিনী পরিবেশন করে এবং ঐতিহাসিকভাবে এটি রাজা-বাদশাদের দরবারেও পরিবেশিত হতো।",
+    "question_en": "What historical fact regarding Jammu and Kashmir's 'Bhand Pather' is mentioned in the document?",
+    "options_en": [
+      "It has been continuing since the era of the Mahabharata.",
+      "It was historically performed in the courts of kings and emperors.",
+      "It carries the deep influence of Tibetan Buddhism.",
+      "It is on the UNESCO list of intangible cultural heritage."
+    ],
+    "explanation_en": "The document states that Bhand Pather presents stories through humor and social criticism, and historically, it was also performed in the courts of kings and emperors.",
+    "correctIndex": 1
+  },
+  {
+    "id": 20,
+    "question_bn": "কর্ণাটকের 'নাগমণ্ডল' নৃত্যে দুজন পুরোহিতের ভূমিকা কীভাবে নির্দিষ্ট করা হয়েছে?",
+    "options_bn": [
+      "একজন সাপ এবং অপরজন শিকারীর ভূমিকা পালন করেন।",
+      "দুজনেই ভগবান মহাদেশ্বরের ভক্তের ভূমিকা পালন করেন।",
+      "একজন পুরুষ সাপ এবং অপরজন স্ত্রী সাপ চরিত্র রূপায়িত করেন।",
+      "একজন স্বর্গীয় সত্তা এবং অপরজন বিদূষকের চরিত্র রূপায়িত করেন।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে বলা হয়েছে যে নাগমণ্ডল একটি সর্পনৃত্য যেখানে দুজন পুরোহিত অংশ নেন—একজন পুরুষ সাপ (male snake) এবং অপরজন স্ত্রী সাপ (female snake) চরিত্র রূপায়িত করেন।",
+    "question_en": "How are the roles of the two priests specified in Karnataka's 'Nagamandala' dance?",
+    "options_en": [
+      "One plays the role of a snake and the other a hunter.",
+      "Both play the roles of devotees of Lord Mahadeshwara.",
+      "One portrays a male snake and the other a female snake.",
+      "One portrays a celestial being and the other a jester."
+    ],
+    "explanation_en": "The document explicitly states that Nagamandala is a snake dance where two priests participate—one portrays a male snake and the other a female snake.",
+    "correctIndex": 2
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
