@@ -200,7 +200,6 @@ mark{background:rgba(124,106,247,0.3);color:var(--accent-primary);border-radius:
   .menu-toggle{display:flex;}
   .logo-text{display:none;}
   .header-search{max-width:none;}
-  .header-actions .btn-icon:not(.menu-toggle){display:none;}
   .content-view{padding:16px;}
   .welcome-screen{padding:20px;}
   .welcome-title{font-size:22px;}
@@ -5076,13 +5075,22 @@ let newSW = null;
 // ─────────────────────────────────────────────────
 // STORAGE & AUTH
 // ─────────────────────────────────────────────────
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCXn_D3YsbrUzPxEn51n4FwhACbX9uBp9o",
+  authDomain: "prompt-master-86106.firebaseapp.com",
+  projectId: "prompt-master-86106",
+  storageBucket: "prompt-master-86106.firebasestorage.app",
+  messagingSenderId: "873076720224",
+  appId: "1:873076720224:web:fbdef40c48f04df2bcb905"
+};
+
 async function initStorage() {
-  const config = localStorage.getItem('firebase_config');
-  if (config) {
-    try { await initFirebase(JSON.parse(config)); }
-    catch(e) { useLocalStorage(); }
+  const customConfig = localStorage.getItem('firebase_config');
+  if (customConfig) {
+    try { await initFirebase(JSON.parse(customConfig)); }
+    catch(e) { await initFirebase(DEFAULT_FIREBASE_CONFIG); }
   } else {
-    useLocalStorage();
+    await initFirebase(DEFAULT_FIREBASE_CONFIG);
   }
 }
 
