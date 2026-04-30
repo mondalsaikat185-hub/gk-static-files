@@ -3,30 +3,21 @@
 // Network-first strategy with instant update support
 // ─────────────────────────────────────────────────
 
-const CACHE_NAME = 'prompt-master-v4';
+const CACHE_NAME = 'prompt-master-v5';
 
 // Files to pre-cache on install
 const PRECACHE_URLS = [
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png',
-  'https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600;700&display=swap'
+  './icon-512.png'
 ];
 
 // ── Install: pre-cache app shell ──────────────────
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(PRECACHE_URLS).catch(err => {
-        // Don't fail install if external resources (fonts) fail
-        console.warn('[SW] Pre-cache partial failure (ok):', err);
-        // At minimum cache the core app files
-        return cache.addAll(['./index.html', './manifest.json', './icon-192.png', './icon-512.png']);
-      });
-    })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS))
   );
-  // Activate immediately — don't wait for old SW to finish
   self.skipWaiting();
 });
 
@@ -35,48 +26,47 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => {
-          console.log('[SW] Deleting old cache:', key);
-          return caches.delete(key);
-        })
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
       )
     ).then(() => self.clients.claim())
   );
 });
 
-// ── Fetch: Network-first, fall back to cache ──────
+// ── Fetch: Optimized Strategy ─────────────────────
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Skip non-GET requests and cross-origin Chrome extension requests
   if (event.request.method !== 'GET') return;
   if (url.protocol === 'chrome-extension:') return;
 
-  // For navigation requests (page loads) — network first, then cache
+  // 1. Navigation (HTML): Network-first, Cache fallback
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
-        .then(networkResponse => {
-          // Update cache with fresh content
-          const clone = networkResponse.clone();
+        .then(res => {
+          const clone = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-          return networkResponse;
+          return res;
         })
-        .catch(() => {
-          // Offline: serve from cache
-          return caches.match('./index.html');
-        })
+        .catch(() => caches.match('./index.html'))
     );
     return;
   }
 
-  // For app assets (icon, manifest) — cache first, then network
-  if (url.pathname.endsWith('.png') || url.pathname.endsWith('.json')) {
+  // 2. Firebase Libraries & Google Fonts: Cache-first, Background update
+  const isExternalAsset = 
+    url.hostname.includes('gstatic.com') || 
+    url.hostname.includes('googleapis.com');
+
+  if (isExternalAsset || url.pathname.endsWith('.png') || url.pathname.endsWith('.json')) {
     event.respondWith(
       caches.match(event.request).then(cached => {
-        const fetchPromise = fetch(event.request).then(networkResponse => {
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, networkResponse.clone()));
-          return networkResponse;
+        const fetchPromise = fetch(event.request).then(res => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return res;
         });
         return cached || fetchPromise;
       })
@@ -84,16 +74,15 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // For everything else — network first, cache fallback
+  // 3. Everything else: Network-first, Cache fallback
   event.respondWith(
     fetch(event.request)
-      .then(networkResponse => {
-        // Only cache successful responses from same origin
-        if (networkResponse.ok && url.origin === self.location.origin) {
-          const clone = networkResponse.clone();
+      .then(res => {
+        if (res.ok && url.origin === self.location.origin) {
+          const clone = res.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
-        return networkResponse;
+        return res;
       })
       .catch(() => caches.match(event.request))
   );

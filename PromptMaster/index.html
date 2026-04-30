@@ -55,9 +55,12 @@ body{font-family:'Sora','Noto Sans Bengali',sans-serif;background:var(--bg-prima
 .btn-primary:hover{background:#8f7fff;transform:translateY(-1px);box-shadow:0 4px 12px rgba(124,106,247,0.4);}
 .menu-toggle{display:none;}
 /* STATUS */
-.status-dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted);transition:background .3s;}
-.status-dot.connected{background:var(--accent-green);}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted);transition:all .3s;}
+.status-dot.connected{background:var(--accent-green);box-shadow:0 0 8px var(--accent-green);}
+.status-dot.syncing{background:#FFC107;animation:pulse 1s infinite;}
+.status-dot.local{background:#9E9E9E;}
 .status-dot.error{background:var(--accent-red);}
+@keyframes pulse{0%{opacity:0.4;}50%{opacity:1;}100%{opacity:0.4;}}
 /* AUTH */
 .auth-container{display:flex;align-items:center;gap:8px;margin-right:8px;border-right:1px solid var(--border);padding-right:12px;}
 .btn-auth{height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--border-bright);background:var(--bg-card);color:var(--text-primary);font-family:'Noto Sans Bengali',sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .2s;white-space:nowrap;}
@@ -5085,6 +5088,17 @@ const DEFAULT_FIREBASE_CONFIG = {
 };
 
 async function initStorage() {
+  // 1. Immediate Load from LocalStorage (Stale-while-revalidate)
+  const saved = localStorage.getItem('prompt_data_cache');
+  if (saved) {
+    try { 
+      const parsed = JSON.parse(saved);
+      allData = parsed;
+      renderAll();
+    } catch(e) {}
+  }
+
+  // 2. Initialize Firebase
   const customConfig = localStorage.getItem('firebase_config');
   if (customConfig) {
     try { await initFirebase(JSON.parse(customConfig)); }
@@ -5157,24 +5171,33 @@ async function signOutUser() {
 function startLiveSync(collection, onSnapshot, doc, setDoc) {
   if (!currentUser || !db) return;
   const uid = currentUser.uid;
+  setStatus('syncing', 'Syncing Data...');
   
   // Real-time listener for Categories
   unsubCats = onSnapshot(collection(db, `users/${uid}/categories`), async (snap) => {
     const cats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    allData.categories = cats;
-    if (cats.length === 0) { await seedFirebase(doc, setDoc); }
-    else { renderAll(); }
+    if (cats.length === 0) { 
+      await seedFirebase(doc, setDoc); 
+    } else {
+      allData.categories = cats;
+      localStorage.setItem('prompt_data_cache', JSON.stringify(allData));
+      renderAll();
+    }
   });
 
   // Real-time listener for Prompts
   unsubPrompts = onSnapshot(collection(db, `users/${uid}/prompts`), (snap) => {
-    allData.prompts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const prompts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    allData.prompts = prompts;
+    localStorage.setItem('prompt_data_cache', JSON.stringify(allData));
     renderAll();
-    // If viewing a prompt that was edited on another device, update the view live
+    setStatus('connected', 'Sync Active');
+    
     if (currentPrompt) {
       const updated = allData.prompts.find(p => p.id === currentPrompt.id);
       if (updated && updated.text !== document.getElementById('promptDisplay').textContent) {
-         openPrompt(currentPrompt.id);
+         document.getElementById('promptDisplay').textContent = updated.text;
+         currentPrompt.text = updated.text;
       } else if (!updated) {
          closePrompt();
       }
