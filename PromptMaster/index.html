@@ -5088,8 +5088,8 @@ const DEFAULT_FIREBASE_CONFIG = {
 };
 
 async function initStorage() {
-  // 1. Immediate Load from LocalStorage (Stale-while-revalidate)
-  const saved = localStorage.getItem('prompt_data_cache');
+  // 1. Immediate Load from LocalStorage (Single source of truth)
+  const saved = localStorage.getItem('prompt_data');
   if (saved) {
     try { 
       const parsed = JSON.parse(saved);
@@ -5121,6 +5121,7 @@ async function initFirebase(config) {
     
     // Auth Listener
     onAuthStateChanged(auth, (user) => {
+      console.log("[Firebase] Auth state changed:", user ? user.uid : "null");
       if (user) {
         currentUser = user;
         setStatus('connected', 'Firebase Sync Active');
@@ -5172,24 +5173,37 @@ function startLiveSync(collection, onSnapshot, doc, setDoc) {
   if (!currentUser || !db) return;
   const uid = currentUser.uid;
   setStatus('syncing', 'Syncing Data...');
+  console.log("[Firebase] Starting listeners for:", uid);
   
   // Real-time listener for Categories
   unsubCats = onSnapshot(collection(db, `users/${uid}/categories`), async (snap) => {
     const cats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    if (cats.length === 0) { 
-      await seedFirebase(doc, setDoc); 
-    } else {
-      allData.categories = cats;
-      localStorage.setItem('prompt_data_cache', JSON.stringify(allData));
-      renderAll();
+    console.log("[Firebase] Categories received:", cats.length);
+    
+    // Only seed if we are SURE it's a fresh account (no categories AND no prompts)
+    if (cats.length === 0) {
+       // We'll check prompts first before seeding
+       return;
     }
+
+    allData.categories = cats;
+    saveLocal();
+    renderAll();
   });
 
   // Real-time listener for Prompts
-  unsubPrompts = onSnapshot(collection(db, `users/${uid}/prompts`), (snap) => {
+  unsubPrompts = onSnapshot(collection(db, `users/${uid}/prompts`), async (snap) => {
     const prompts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log("[Firebase] Prompts received:", prompts.length);
+
+    if (prompts.length === 0 && allData.categories.length === 0) {
+       console.log("[Firebase] Account empty. Seeding defaults...");
+       await seedFirebase(doc, setDoc);
+       return;
+    }
+
     allData.prompts = prompts;
-    localStorage.setItem('prompt_data_cache', JSON.stringify(allData));
+    saveLocal();
     renderAll();
     setStatus('connected', 'Sync Active');
     
