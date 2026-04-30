@@ -5502,13 +5502,34 @@ async function saveEdit() {
   if (!currentPrompt) return;
   const newText = document.getElementById('editorTextarea').value.trim();
   if (!newText) { showToast('প্রম্পট খালি রাখা যাবে না!', 'error'); return; }
+  
+  // 1. Update Global State
   currentPrompt.text = newText;
   const idx = allData.prompts.findIndex(p => p.id === currentPrompt.id);
   if (idx !== -1) allData.prompts[idx].text = newText;
+  
+  // 2. Update UI
   document.getElementById('promptDisplay').textContent = newText;
-  if (useFirebase) {
-    await saveToFirebase('prompts', currentPrompt.id, { name: currentPrompt.name, category: currentPrompt.category, subcategory: currentPrompt.subcategory || '', text: newText });
-  } else { saveLocal(); }
+  
+  // 3. Always Save Locally (Instant Backup & Guest Mode)
+  saveLocal();
+  
+  // 4. Sync to Firebase if Logged In
+  if (useFirebase && currentUser) {
+    try {
+      await saveToFirebase('prompts', currentPrompt.id, { 
+        name: currentPrompt.name, 
+        category: currentPrompt.category, 
+        subcategory: currentPrompt.subcategory || '', 
+        text: newText 
+      });
+      console.log("[Firebase] Changes synced successfully.");
+    } catch(e) {
+      console.error("[Firebase] Sync failed:", e);
+      showToast('⚠️ Cloud sync failed (saved locally)', 'warning');
+    }
+  }
+  
   cancelEdit();
   showToast('💾 Saved!', 'success');
 }
@@ -5534,8 +5555,8 @@ async function confirmDeleteAction() {
   if (idx !== -1) {
     const name = allData.prompts[idx].name;
     allData.prompts.splice(idx, 1);
-    if (useFirebase) { await deleteFromFirebase('prompts', pendingDeleteId); }
-    else { saveLocal(); }
+    saveLocal();
+    if (useFirebase && currentUser) { await deleteFromFirebase('prompts', pendingDeleteId); }
     closeConfirm();
     currentPrompt = null;
     renderAll();
@@ -5655,8 +5676,8 @@ async function saveNewPrompt() {
   const id = 'u' + Date.now();
   const prompt = { id, name, category: cat, subcategory: subcat, text };
   allData.prompts.push(prompt);
-  if (useFirebase) { await saveToFirebase('prompts', id, { name, category: cat, subcategory: subcat, text }); }
-  else { saveLocal(); }
+  saveLocal();
+  if (useFirebase && currentUser) { await saveToFirebase('prompts', id, { name, category: cat, subcategory: subcat, text }); }
   renderAll();
   closeModal('addModal');
   document.getElementById('newPromptName').value = '';
@@ -5673,8 +5694,8 @@ async function saveNewCategory() {
   const id = 'c' + Date.now();
   const cat = { id, name, icon };
   allData.categories.push(cat);
-  if (useFirebase) { await saveToFirebase('categories', id, { name, icon }); }
-  else { saveLocal(); }
+  saveLocal();
+  if (useFirebase && currentUser) { await saveToFirebase('categories', id, { name, icon }); }
   renderAll();
   closeModal('addCategoryModal');
   document.getElementById('newCatName').value = '';
