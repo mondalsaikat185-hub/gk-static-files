@@ -5198,16 +5198,32 @@ function startLiveSync(collection, onSnapshot, doc, setDoc) {
 
   // Real-time listener for Prompts
   unsubPrompts = onSnapshot(collection(db, `users/${uid}/prompts`), async (snap) => {
-    const prompts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    console.log("[Firebase] Prompts received:", prompts.length);
+    const cloudPrompts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log("[Firebase] Prompts received:", cloudPrompts.length);
 
-    if (prompts.length === 0 && allData.categories.length === 0) {
-       console.log("[Firebase] Account empty. Seeding defaults...");
+    // CRITICAL: Prevent data loss if cloud is empty but local has data
+    if (cloudPrompts.length === 0 && allData.prompts.length > 0) {
+       console.log("[Firebase] Cloud is empty, but local has data. Syncing local to cloud...");
+       // Upload local data to cloud
+       for (const p of allData.prompts) {
+         await saveToFirebase('prompts', p.id, p);
+       }
+       for (const c of allData.categories) {
+         await saveToFirebase('categories', c.id, c);
+       }
+       setStatus('connected', 'Sync Active (Uploaded)');
+       return;
+    }
+
+    // If both are empty, seed defaults
+    if (cloudPrompts.length === 0 && allData.categories.length === 0) {
+       console.log("[Firebase] Entire account empty. Seeding defaults...");
        await seedFirebase(doc, setDoc);
        return;
     }
 
-    allData.prompts = prompts;
+    // Normal sync: Update local with cloud data
+    allData.prompts = cloudPrompts;
     saveLocal();
     renderAll();
     setStatus('connected', 'Sync Active');
