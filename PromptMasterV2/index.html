@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prompt Master</title>
+  <meta name="theme-color" content="#1e1b4b">
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Variables ── */
+    :root {
+      --bg:        #0f0e1a;
+      --surface:   #1a1929;
+      --surface2:  #232236;
+      --border:    #2e2d4a;
+      --accent:    #7c3aed;
+      --accent2:   #6d28d9;
+      --text:      #e2e0f0;
+      --text2:     #9490b5;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --yellow:    #f59e0b;
+      --radius:    12px;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: #a78bfa;
+      letter-spacing: -0.3px;
+    }
+    .logo span { color: var(--text2); font-weight: 400; font-size: 13px; margin-left: 6px; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .btn-signin {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-signin:hover { background: var(--accent2); }
+
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+    .sidebar-header {
+      padding: 14px 16px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      border-bottom: 1px solid var(--border);
+    }
+    .cat-list { padding: 8px 0; flex: 1; }
+    .cat-item {
+      padding: 9px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 0;
+      transition: background .15s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .cat-item:hover { background: var(--surface2); }
+    .cat-item.active { background: var(--surface2); color: #a78bfa; font-weight: 600; }
+    .cat-item .cat-count {
+      background: var(--border);
+      color: var(--text2);
+      font-size: 11px;
+      padding: 1px 7px;
+      border-radius: 20px;
+      min-width: 22px;
+      text-align: center;
+    }
+    .cat-item.active .cat-count { background: var(--accent); color: white; }
+    .sidebar-footer { padding: 12px; border-top: 1px solid var(--border); }
+    .btn-add-cat {
+      width: 100%;
+      background: transparent;
+      border: 1px dashed var(--border);
+      color: var(--text2);
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .btn-add-cat:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .main-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .main-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .main-actions { display: flex; gap: 8px; align-items: center; }
+    .search-input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: var(--text);
+      width: 200px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--text2); }
+    .btn-add-prompt {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-add-prompt:hover { background: var(--accent2); }
+
+    /* ── Prompt Cards ── */
+    .prompt-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .prompt-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .prompt-card:hover { border-color: var(--accent); background: var(--surface2); }
+    .prompt-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .prompt-name {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .prompt-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+    .prompt-card:hover .prompt-actions { opacity: 1; }
+    .icon-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text2);
+      border-radius: 6px;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all .15s;
+    }
+    .icon-btn:hover { background: var(--accent); border-color: var(--accent); color: white; }
+    .icon-btn.danger:hover { background: var(--red); border-color: var(--red); color: white; }
+    .prompt-subcat {
+      font-size: 11px;
+      color: var(--accent);
+      background: rgba(124,58,237,.15);
+      padding: 2px 8px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+    .prompt-preview {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .prompt-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--text2);
+    }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text2);
+    }
+    .empty .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty p { font-size: 15px; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--green); color: white;
+      padding: 10px 22px; border-radius: 20px;
+      font-size: 14px; font-weight: 600;
+      opacity: 0; transition: opacity .3s;
+      pointer-events: none; z-index: 999;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+    .toast.error { background: var(--red); }
+
+    /* ── Mobile ── */
+    @media (max-width: 640px) {
+      .sidebar { display: none; }
+      .sidebar.open { display: flex; position: fixed; top: 56px; left: 0; bottom: 0; z-index: 99; width: 260px; }
+      .search-input { width: 130px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">⚡ Prompt Master <span>v2</span></div>
+  <div class="header-right">
+    <button class="btn-signin" id="signInBtn">Sign in with Google</button>
+  </div>
+</header>
+
+<!-- Layout -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">Categories</div>
+    <div class="cat-list" id="catList">
+      <!-- populated by JS -->
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-add-cat" id="addCatBtn">+ Add Category</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="main-header">
+      <div class="main-title" id="mainTitle">All Prompts</div>
+      <div class="main-actions">
+        <input class="search-input" id="searchInput" type="text" placeholder="Search prompts…" />
+        <button class="btn-add-prompt" id="addPromptBtn">+ Add Prompt</button>
+      </div>
+    </div>
+    <div class="prompt-grid" id="promptGrid">
+      <!-- populated by JS -->
+    </div>
+  </main>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Demo data (Step 1 — no Firebase yet) ──────────────────────────────────────
+const DEMO_CATEGORIES = [
+  { id: 'c1', name: 'Writing' },
+  { id: 'c2', name: 'Video Creator' },
+];
+
+const DEMO_PROMPTS = [
+  {
+    id: 'p1',
+    categoryId: 'c1',
+    name: 'Blog Post Writer',
+    subcategory: 'Content Writing',
+    text: 'Write a detailed blog post about [TOPIC]. Include an introduction, 3 main sections with subheadings, and a conclusion. Use a friendly, conversational tone.',
+  },
+  {
+    id: 'p2',
+    categoryId: 'c2',
+    name: 'YouTube Script Writer',
+    subcategory: 'Scripts',
+    text: 'Write a YouTube script for a 10-minute video about [TOPIC]. Include a hook in the first 30 seconds, main content in 3 segments, and a strong call-to-action at the end.',
+  },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let activeCat = 'all';
+let searchQuery = '';
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type === 'error' ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 2500);
+}
+
+// ── Render categories ─────────────────────────────────────────────────────────
+function renderCategories() {
+  const list = document.getElementById('catList');
+  const allCount = DEMO_PROMPTS.length;
+
+  let html = `<div class="cat-item ${activeCat === 'all' ? 'active' : ''}" onclick="selectCat('all')">
+    <span>All Prompts</span>
+    <span class="cat-count">${allCount}</span>
+  </div>`;
+
+  DEMO_CATEGORIES.forEach(cat => {
+    const count = DEMO_PROMPTS.filter(p => p.categoryId === cat.id).length;
+    html += `<div class="cat-item ${activeCat === cat.id ? 'active' : ''}" onclick="selectCat('${cat.id}')">
+      <span>${cat.name}</span>
+      <span class="cat-count">${count}</span>
+    </div>`;
+  });
+
+  list.innerHTML = html;
+}
+
+// ── Render prompts ────────────────────────────────────────────────────────────
+function renderPrompts() {
+  const grid = document.getElementById('promptGrid');
+  const title = document.getElementById('mainTitle');
+
+  let filtered = DEMO_PROMPTS;
+  if (activeCat !== 'all') {
+    filtered = filtered.filter(p => p.categoryId === activeCat);
+  }
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    filtered = filtered.filter(p =>
+      p.name.toLowerCase().includes(q) || p.text.toLowerCase().includes(q)
+    );
+  }
+
+  // Update title
+  if (activeCat === 'all') {
+    title.textContent = 'All Prompts';
+  } else {
+    const cat = DEMO_CATEGORIES.find(c => c.id === activeCat);
+    title.textContent = cat ? cat.name : 'Prompts';
+  }
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty"><div class="icon">📭</div><p>No prompts found.</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(p => `
+    <div class="prompt-card" onclick="copyPrompt('${p.id}')">
+      <div class="prompt-card-top">
+        <div class="prompt-name">${p.name}</div>
+        <div class="prompt-actions" onclick="event.stopPropagation()">
+          <div class="icon-btn" title="Copy" onclick="copyPrompt('${p.id}')">📋</div>
+          <div class="icon-btn" title="Edit" onclick="editPrompt('${p.id}')">✏️</div>
+          <div class="icon-btn danger" title="Delete" onclick="deletePrompt('${p.id}')">🗑️</div>
+        </div>
+      </div>
+      ${p.subcategory ? `<div class="prompt-subcat">${p.subcategory}</div>` : ''}
+      <div class="prompt-preview">${p.text}</div>
+    </div>
+  `).join('');
+}
+
+// ── Actions ───────────────────────────────────────────────────────────────────
+function selectCat(id) {
+  activeCat = id;
+  renderCategories();
+  renderPrompts();
+}
+
+function copyPrompt(id) {
+  const p = DEMO_PROMPTS.find(x => x.id === id);
+  if (!p) return;
+  navigator.clipboard.writeText(p.text).then(() => {
+    showToast('✓ Copied to clipboard!');
+  }).catch(() => {
+    showToast('✗ Copy failed', 'error');
+  });
+}
+
+function editPrompt(id) {
+  showToast('Edit — coming in Step 3', 'success');
+}
+
+function deletePrompt(id) {
+  showToast('Delete — coming in Step 3', 'success');
+}
+
+document.getElementById('addCatBtn').onclick = () => showToast('Add Category — coming in Step 3');
+document.getElementById('addPromptBtn').onclick = () => showToast('Add Prompt — coming in Step 3');
+document.getElementById('signInBtn').onclick = () => showToast('Sign In — coming in Step 2');
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  renderPrompts();
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderCategories();
+renderPrompts();
+</script>
+</body>
+</html>
