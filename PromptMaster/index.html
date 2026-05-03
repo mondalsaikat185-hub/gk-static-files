@@ -244,7 +244,7 @@ mark{background:rgba(124,106,247,0.3);color:var(--accent-primary);border-radius:
         Sign In
       </button>
     </div>
-    <div class="status-dot" id="statusDot" title="Storage status"></div>
+    <div class="status-dot" id="statusDot" title="Tap to sync from cloud" onclick="forceRefreshFromCloud()" style="cursor:pointer"></div>
     <button class="btn-icon" onclick="openAddCategoryModal()" title="Add Category">＋📁</button>
     <button class="btn-primary" onclick="openAddModal()">＋ New Prompt</button>
     <button class="btn-icon" onclick="openSettingsModal()" title="Settings">⚙</button>
@@ -5108,10 +5108,46 @@ async function initStorage() {
   }
 }
 
+// ── Force-fetch fresh data from Firestore server ──────────────────────────────
+// Used on visibilitychange (app resume from background) and manual tap on status dot.
+// This bypasses the WebSocket listener which can silently die on mobile.
+async function forceRefreshFromCloud() {
+  if (!currentUser || !db || !useFirebase) return;
+  const col = window._fsCollection;
+  const getDocs = window._fsGetDocs;
+  if (!col || !getDocs) return;
+  setStatus('syncing', 'Refreshing...');
+  try {
+    const uid = currentUser.uid;
+    const [cSnap, pSnap] = await Promise.all([
+      getDocs(col(db, `users/${uid}/categories`)),
+      getDocs(col(db, `users/${uid}/prompts`))
+    ]);
+    const cats    = cSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const prompts = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (cats.length > 0)    allData.categories = cats;
+    if (prompts.length > 0) allData.prompts    = prompts;
+    saveLocal();
+    renderAll();
+    setStatus('connected', '✓ Synced');
+    showToast('✓ Refreshed from cloud', 'success');
+  } catch(e) {
+    console.error('[Sync] Force refresh failed:', e);
+    setStatus('error', 'Refresh failed');
+  }
+}
+
+// On mobile, WebSocket connections die when app is backgrounded.
+// When user returns to the app, force-fetch from server to get latest data.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) forceRefreshFromCloud();
+});
+
 async function initFirebase(config) {
   try {
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js');
-    const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    window._fsCollection = collection; window._fsGetDocs = getDocs;
     const { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
     
     const app = initializeApp(config);
