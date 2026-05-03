@@ -244,7 +244,7 @@ mark{background:rgba(124,106,247,0.3);color:var(--accent-primary);border-radius:
         Sign In
       </button>
     </div>
-    <div class="status-dot" id="statusDot" title="Tap to sync from cloud" onclick="forceRefreshFromCloud()" style="cursor:pointer"></div>
+    <div class="status-dot" id="statusDot" title="Tap to sync from cloud" onclick="forceRefreshFromCloud()" style="cursor:pointer"></div><span id="uidLabel" style="font-size:9px;opacity:0.45;letter-spacing:0.5px;font-family:monospace;margin-left:2px;"></span>
     <button class="btn-icon" onclick="openAddCategoryModal()" title="Add Category">＋📁</button>
     <button class="btn-primary" onclick="openAddModal()">＋ New Prompt</button>
     <button class="btn-icon" onclick="openSettingsModal()" title="Settings">⚙</button>
@@ -5112,16 +5112,17 @@ async function initStorage() {
 // Used on visibilitychange (app resume from background) and manual tap on status dot.
 // This bypasses the WebSocket listener which can silently die on mobile.
 async function forceRefreshFromCloud() {
-  if (!currentUser || !db || !useFirebase) return;
-  const col = window._fsCollection;
-  const getDocs = window._fsGetDocs;
-  if (!col || !getDocs) return;
+  if (!currentUser || !db || !useFirebase) {
+    showToast('⚠️ Not signed in — cannot sync', 'error');
+    return;
+  }
   setStatus('syncing', 'Refreshing...');
   try {
+    const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
     const uid = currentUser.uid;
     const [cSnap, pSnap] = await Promise.all([
-      getDocs(col(db, `users/${uid}/categories`)),
-      getDocs(col(db, `users/${uid}/prompts`))
+      getDocs(collection(db, `users/${uid}/categories`)),
+      getDocs(collection(db, `users/${uid}/prompts`))
     ]);
     const cats    = cSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const prompts = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -5130,10 +5131,11 @@ async function forceRefreshFromCloud() {
     saveLocal();
     renderAll();
     setStatus('connected', '✓ Synced');
-    showToast('✓ Refreshed from cloud', 'success');
+    showToast(`✓ Cloud: ${prompts.length} prompts · UID ${uid.slice(0,8)}`, 'success');
   } catch(e) {
     console.error('[Sync] Force refresh failed:', e);
     setStatus('error', 'Refresh failed');
+    showToast(`⚠️ Sync error: ${e.code || e.message}`, 'error');
   }
 }
 
@@ -5169,6 +5171,9 @@ async function initFirebase(config) {
         setStatus('connected', 'Firebase Sync Active');
         document.getElementById('loginBtn').innerHTML = `<img src="${user.photoURL}" class="auth-avatar" title="${user.email}"> Sign Out`;
         document.getElementById('loginBtn').onclick = signOutUser;
+        document.getElementById('statusDot').title = `UID: ${user.uid.slice(0,8)} — Tap to sync`;
+        const uidLabel = document.getElementById('uidLabel');
+        if (uidLabel) uidLabel.textContent = user.uid.slice(0,8);
         startLiveSync(collection, onSnapshot, doc, setDoc);
       } else {
         currentUser = null;
@@ -5620,7 +5625,19 @@ async function saveEdit() {
       });
       console.log("[Firebase] Edit synced to cloud successfully.");
       setStatus('connected', '✓ Synced');
-      showToast('☁️ Saved to Cloud!', 'success');
+      // Verify the write actually landed in Firestore by reading back from server
+      try {
+        const { getDocFromServer, doc: docFn2 } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+        const ref = docFn2(db, `users/${currentUser.uid}/prompts`, currentPrompt.id);
+        const snap = await getDocFromServer(ref);
+        if (snap.exists() && snap.data().text === newText) {
+          showToast(`☁️ Confirmed in Firestore! (${currentUser.uid.slice(0,6)})`, 'success');
+        } else {
+          showToast(`⚠️ Write NOT found in Firestore! exists=${snap.exists()}`, 'error');
+        }
+      } catch(ve) {
+        showToast(`☁️ Saved (verify failed: ${ve.code||ve.message})`, 'success');
+      }
     } catch(e) {
       console.error("[Firebase] Cloud sync failed:", e);
       setStatus('error', 'Cloud sync failed');
