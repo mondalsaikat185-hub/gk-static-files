@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sync Test</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f1a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+    h1 { font-size: 22px; font-weight: 700; color: #818cf8; margin-bottom: 6px; }
+    .subtitle { font-size: 13px; color: #64748b; margin-bottom: 28px; }
+
+    .status-bar {
+      width: 100%;
+      max-width: 500px;
+      background: #1e1e2e;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #64748b;
+      flex-shrink: 0;
+    }
+    .dot.green { background: #22c55e; }
+    .dot.red { background: #ef4444; }
+    .dot.yellow { background: #eab308; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .input-row {
+      width: 100%; max-width: 500px;
+      display: flex; gap: 10px;
+      margin-bottom: 24px;
+    }
+    input[type="text"] {
+      flex: 1;
+      background: #1e1e2e;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 15px;
+      color: #e2e8f0;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input[type="text"]:focus { border-color: #818cf8; }
+    button.send-btn {
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    button.send-btn:hover { background: #4338ca; }
+    button.send-btn:disabled { background: #334155; cursor: not-allowed; }
+
+    .messages-title {
+      width: 100%; max-width: 500px;
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 10px;
+    }
+    .messages {
+      width: 100%; max-width: 500px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .msg {
+      background: #1e1e2e;
+      border-radius: 10px;
+      padding: 14px 16px;
+      border-left: 3px solid #4f46e5;
+      animation: fadein .3s ease;
+    }
+    @keyframes fadein { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+    .msg .text { font-size: 16px; font-weight: 500; word-break: break-word; }
+    .msg .meta {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 5px;
+    }
+    .empty {
+      width: 100%; max-width: 500px;
+      text-align: center;
+      color: #334155;
+      font-size: 14px;
+      padding: 40px 0;
+    }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #22c55e; color: white;
+      padding: 10px 20px; border-radius: 20px;
+      font-size: 14px; font-weight: 600;
+      opacity: 0; transition: opacity .3s;
+      pointer-events: none; z-index: 999;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+    .toast.error { background: #ef4444; }
+  </style>
+</head>
+<body>
+  <h1>⚡ Sync Test</h1>
+  <p class="subtitle">Real-time cross-device sync · Firebase</p>
+
+  <div class="status-bar">
+    <div class="dot yellow" id="dot"></div>
+    <span id="statusText">Connecting to Firebase...</span>
+  </div>
+
+  <div class="input-row">
+    <input type="text" id="msgInput" placeholder='Type "hi" or your name...' maxlength="200" />
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+  </div>
+
+  <div class="messages-title">Messages (live · newest first)</div>
+  <div class="messages" id="messageList">
+    <div class="empty">Waiting for messages...</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      onSnapshot,
+      query,
+      orderBy,
+      serverTimestamp
+    } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCXn_D3YsbrUzPxEn51n4FwhACbX9uBp9o",
+      authDomain: "prompt-master-86106.firebaseapp.com",
+      projectId: "prompt-master-86106",
+      storageBucket: "prompt-master-86106.firebasestorage.app",
+      messagingSenderId: "873076720224",
+      appId: "1:873076720224:web:fbdef40c48f04df2bcb905"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const dot = document.getElementById('dot');
+    const statusText = document.getElementById('statusText');
+    const sendBtn = document.getElementById('sendBtn');
+    const msgInput = document.getElementById('msgInput');
+    const messageList = document.getElementById('messageList');
+    const toast = document.getElementById('toast');
+
+    function showToast(msg, isError = false) {
+      toast.textContent = msg;
+      toast.className = 'toast show' + (isError ? ' error' : '');
+      setTimeout(() => toast.className = 'toast', 3000);
+    }
+
+    function setStatus(state, text) {
+      statusText.textContent = text;
+      dot.className = 'dot ' + (state === 'ok' ? 'green' : state === 'error' ? 'red' : 'yellow');
+    }
+
+    // Listen to messages in real-time
+    const q = query(collection(db, 'synctest'), orderBy('ts', 'desc'));
+    onSnapshot(q,
+      (snapshot) => {
+        setStatus('ok', `✓ Connected · ${snapshot.docs.length} message(s)`);
+        sendBtn.disabled = false;
+
+        if (snapshot.empty) {
+          messageList.innerHTML = '<div class="empty">No messages yet. Send one!</div>';
+          return;
+        }
+
+        messageList.innerHTML = snapshot.docs.map(doc => {
+          const d = doc.data();
+          const ts = d.ts ? new Date(d.ts.toDate()).toLocaleString() : 'just now';
+          const device = d.device || 'Unknown device';
+          return `<div class="msg">
+            <div class="text">${escapeHtml(d.text)}</div>
+            <div class="meta">${ts} · ${escapeHtml(device)}</div>
+          </div>`;
+        }).join('');
+      },
+      (err) => {
+        setStatus('error', `✗ Error: ${err.code || err.message}`);
+        showToast('Connection failed: ' + err.message, true);
+      }
+    );
+
+    // Send message
+    window.sendMessage = async function() {
+      const text = msgInput.value.trim();
+      if (!text) return;
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = '...';
+
+      // Detect device type
+      const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+      const device = isMobile ? '📱 Mobile' : '💻 Desktop';
+
+      try {
+        await addDoc(collection(db, 'synctest'), {
+          text: text,
+          device: device,
+          ts: serverTimestamp(),
+          userAgent: navigator.userAgent.slice(0, 80)
+        });
+        msgInput.value = '';
+        showToast('✓ Sent to Firebase!');
+      } catch (e) {
+        showToast('✗ Send failed: ' + (e.code || e.message), true);
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send';
+      }
+    };
+
+    // Allow Enter key
+    msgInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') window.sendMessage();
+    });
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Register service worker for PWA install
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
