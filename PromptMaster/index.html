@@ -5197,9 +5197,12 @@ function startLiveSync(collection, onSnapshot, doc, setDoc) {
   setStatus('syncing', 'Syncing...');
   console.log("[Sync] Starting for UID:", uid);
 
+  // ── Always clean up old listeners before starting fresh ──────────────────
+  if (unsubCats)    { unsubCats();    unsubCats    = null; }
+  if (unsubPrompts) { unsubPrompts(); unsubPrompts = null; }
+
   let catsSnap = null, promptsSnap = null, seeded = false;
   let seedCheckTimer = null;
-  let lastDataSig = '';
 
   function onBothLoaded() {
     if (catsSnap === null || promptsSnap === null) return;
@@ -5207,48 +5210,37 @@ function startLiveSync(collection, onSnapshot, doc, setDoc) {
     const cats    = catsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const prompts = promptsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // Only re-render if actual data changed (avoid re-render on every Firestore heartbeat)
-    const sig = cats.length + '|' + prompts.map(p => {
-      const t = p.text || '';
-      return p.id + ':' + t.length + ':' + (t.slice(0, 12) + t.slice(-8));
-    }).join(',');
-    if (sig !== lastDataSig) {
-      lastDataSig = sig;
-      if (cats.length > 0)    allData.categories = cats;
-      if (prompts.length > 0) allData.prompts    = prompts;
-      saveLocal();
-      renderAll();
+    // Always apply Firestore data — no sig check.
+    // onSnapshot (without includeMetadataChanges) only fires on real data changes.
+    allData.categories = cats.length > 0 ? cats : allData.categories;
+    allData.prompts    = prompts.length > 0 ? prompts : allData.prompts;
+    saveLocal();
+    renderAll();
 
-      // Refresh currently-open prompt if its text changed on another device
-      if (currentPrompt) {
-        const updated = allData.prompts.find(p => p.id === currentPrompt.id);
-        if (updated) {
-          if (updated.text !== currentPrompt.text) {
-            document.getElementById('promptDisplay').textContent = updated.text;
-            currentPrompt.text = updated.text;
-          }
-        } else {
-          currentPrompt = null;
-          document.getElementById('contentView').classList.remove('active');
-          document.getElementById('welcomeScreen').style.display = 'flex';
+    // Refresh currently-open prompt if its text changed on another device
+    if (currentPrompt) {
+      const updated = allData.prompts.find(p => p.id === currentPrompt.id);
+      if (updated) {
+        if (updated.text !== currentPrompt.text) {
+          document.getElementById('promptDisplay').textContent = updated.text;
+          currentPrompt.text = updated.text;
         }
+      } else {
+        currentPrompt = null;
+        document.getElementById('contentView').classList.remove('active');
+        document.getElementById('welcomeScreen').style.display = 'flex';
       }
     }
 
     setStatus('connected', '✓ Synced');
 
-    // Safe seeding with 3-second delay:
-    // Wait before seeding to give Firestore time to return real server data.
-    // This prevents overwriting cloud edits when IndexedDB is empty on fresh install.
     if (cats.length === 0 && prompts.length === 0 && !seeded) {
       if (!seedCheckTimer) {
-        console.log("[Sync] Cloud appears empty — waiting 3s to confirm before seeding...");
         seedCheckTimer = setTimeout(async () => {
           const c = catsSnap ? catsSnap.docs.length : 0;
           const p = promptsSnap ? promptsSnap.docs.length : 0;
           if (c === 0 && p === 0 && !seeded) {
             seeded = true;
-            console.log("[Sync] Confirmed empty — seeding new account...");
             setStatus('syncing', 'Setting up your account...');
             await seedFirebase(doc, setDoc);
           }
@@ -5262,13 +5254,13 @@ function startLiveSync(collection, onSnapshot, doc, setDoc) {
   unsubCats = onSnapshot(
     collection(db, `users/${uid}/categories`),
     (snap) => { catsSnap = snap; onBothLoaded(); },
-    (err) => console.error("[Sync] Categories error:", err)
+    (err) => { console.error("[Sync] Categories error:", err); setStatus('error', 'Sync error'); }
   );
 
   unsubPrompts = onSnapshot(
     collection(db, `users/${uid}/prompts`),
     (snap) => { promptsSnap = snap; onBothLoaded(); },
-    (err) => console.error("[Sync] Prompts error:", err)
+    (err) => { console.error("[Sync] Prompts error:", err); setStatus('error', 'Sync error'); }
   );
 }
 
@@ -5625,13 +5617,22 @@ async function confirmDeleteAction() {
     const name = allData.prompts[idx].name;
     allData.prompts.splice(idx, 1);
     saveLocal();
-    if (useFirebase && currentUser) { await deleteFromFirebase('prompts', pendingDeleteId); }
     closeConfirm();
     currentPrompt = null;
     renderAll();
     document.getElementById('contentView').classList.remove('active');
     document.getElementById('welcomeScreen').style.display = 'flex';
-    showToast(`🗑️ "${name}" deleted`, 'info');
+    if (useFirebase && currentUser) {
+      try {
+        await deleteFromFirebase('prompts', pendingDeleteId);
+        showToast(`🗑️ "${name}" deleted from cloud`, 'info');
+      } catch(e) {
+        console.error("[Firebase] Delete failed:", e);
+        showToast(`⚠️ Deleted locally — cloud sync failed. Changes may reappear after refresh.`, 'error');
+      }
+    } else {
+      showToast(`🗑️ "${name}" deleted`, 'info');
+    }
   }
 }
 
