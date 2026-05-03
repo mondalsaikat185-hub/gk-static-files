@@ -5383,7 +5383,7 @@ function renderAll() {
       <div class="subcategory-list">
         ${Object.entries(subGroups).map(([sub, ps]) => ps.map(p => {
           const cx = getComplexity(p);
-          const words = Math.round(p.text.split(/\s+/).length / 100) * 100;
+          const words = Math.round(p.text.length / 550) * 100; // fast estimate (no split)
           return `
           <div class="subcategory-item" onclick="openPrompt('${p.id}')" id="item-${p.id}">
             <div class="sub-dot"></div>
@@ -5472,7 +5472,7 @@ function openPrompt(promptId) {
     badge.className = 'prompt-length-badge';
     document.querySelector('.prompt-card').appendChild(badge);
   }
-  const words = prompt.text.split(/\s+/).length;
+  const words = Math.round(prompt.text.length / 5.5);
   badge.textContent = `${prompt.text.length.toLocaleString()} chars · ~${words.toLocaleString()} words`;
 
   // Highlight active item
