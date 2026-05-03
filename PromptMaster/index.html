@@ -5204,60 +5204,67 @@ function startLiveSync(collection, onSnapshot, doc, setDoc) {
   console.log("[Sync] Starting for UID:", uid);
 
   let catsSnap = null, promptsSnap = null, seeded = false;
+  // Track last-seen data to avoid re-rendering on metadata-only changes
+  let lastDataSig = '';
 
   async function onBothLoaded() {
     if (catsSnap === null || promptsSnap === null) return; // wait for both
 
-    // Determine if we're still reading from local cache vs live server
     const isFromCache = catsSnap.metadata.fromCache || promptsSnap.metadata.fromCache;
     const cats    = catsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const prompts = promptsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    console.log(`[Sync] onBothLoaded — fromCache: ${isFromCache}, cats: ${cats.length}, prompts: ${prompts.length}`);
+    // Build a lightweight signature of the actual data content.
+    // If only metadata changed (hasPendingWrites, fromCache) but data is identical,
+    // we skip renderAll() to prevent continuous DOM rebuilds that freeze the UI.
+    const sig = cats.length + '|' + prompts.map(p => p.id + ':' + (p.text || '').length).join(',');
+    const dataChanged = sig !== lastDataSig;
 
-    // Always update UI with whatever data we have (cache or server)
-    if (cats.length > 0)    allData.categories = cats;
-    if (prompts.length > 0) allData.prompts    = prompts;
+    if (dataChanged) {
+      lastDataSig = sig;
+      console.log(`[Sync] Data changed — fromCache:${isFromCache} cats:${cats.length} prompts:${prompts.length}`);
 
-    saveLocal();
-    renderAll();
+      if (cats.length > 0)    allData.categories = cats;
+      if (prompts.length > 0) allData.prompts    = prompts;
 
-    // ── Seeding / uploading logic ONLY runs on confirmed server data ──
-    // This prevents overwriting cloud edits with stale local/default data
-    // during the brief window before the server snapshot arrives.
+      saveLocal();
+      renderAll();
+
+      // Refresh currently-open prompt if its text changed on another device
+      if (currentPrompt) {
+        const updated = allData.prompts.find(p => p.id === currentPrompt.id);
+        if (updated) {
+          if (updated.text !== currentPrompt.text) {
+            document.getElementById('promptDisplay').textContent = updated.text;
+            currentPrompt.text = updated.text;
+          }
+        } else {
+          // Prompt was deleted on another device
+          currentPrompt = null;
+          document.getElementById('contentView').classList.remove('active');
+          document.getElementById('welcomeScreen').style.display = 'flex';
+        }
+      }
+    }
+
+    // ── Seeding logic ONLY runs on confirmed server data ──
+    // Prevents overwriting cloud edits with stale/default local data.
     if (!isFromCache) {
       if (cats.length === 0 && prompts.length === 0 && !seeded) {
-        // Truly new account — seed with defaults
         seeded = true;
         console.log("[Sync] New account (server-confirmed) — seeding defaults...");
         setStatus('syncing', 'Setting up your account...');
         await seedFirebase(doc, setDoc);
         return;
       }
-    }
-
-    setStatus('connected', '✓ Synced');
-
-    // Refresh currently-open prompt if it changed on another device
-    if (currentPrompt) {
-      const updated = allData.prompts.find(p => p.id === currentPrompt.id);
-      if (updated) {
-        if (updated.text !== document.getElementById('promptDisplay').textContent) {
-          document.getElementById('promptDisplay').textContent = updated.text;
-          currentPrompt.text = updated.text;
-        }
-      } else {
-        // Prompt was deleted on another device
-        currentPrompt = null;
-        document.getElementById('contentView').classList.remove('active');
-        document.getElementById('welcomeScreen').style.display = 'flex';
-      }
+      setStatus('connected', '✓ Synced');
     }
   }
 
-  // includeMetadataChanges: true ensures the callback fires TWICE:
-  // 1st time → fromCache: true  (local IndexedDB, may be stale)
-  // 2nd time → fromCache: false (live server data, authoritative)
+  // includeMetadataChanges: true fires the callback twice per write:
+  // 1st: fromCache:true (local IndexedDB — may be stale on fresh install)
+  // 2nd: fromCache:false (live server — authoritative)
+  // The data-signature check above ensures renderAll() only runs when data changes.
   unsubCats = onSnapshot(
     collection(db, `users/${uid}/categories`),
     { includeMetadataChanges: true },
