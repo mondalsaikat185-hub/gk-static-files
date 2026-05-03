@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+<!DOCTYPE html><!-- build:1777824930 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Prompt Master</title>
 <meta name="theme-color" content="#1e1b4b">
 <style>
@@ -14,10 +15,12 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .logo span{color:var(--text2);font-weight:400;font-size:12px;margin-left:6px}
 .btn-signin{background:var(--accent);color:white;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer}
 .btn-signin:hover{background:var(--accent2)}
+/* Mobile category tabs */
 .mobile-cats{display:none;overflow-x:auto;white-space:nowrap;padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .mobile-cats::-webkit-scrollbar{display:none}
 .mob-btn{display:inline-block;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;margin-right:6px;transition:all .15s}
 .mob-btn.active{background:var(--accent);border-color:var(--accent);color:white;font-weight:600}
+/* Layout */
 .layout{display:flex;flex:1;overflow:hidden;min-height:0}
 .sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
 .sidebar-hdr{padding:14px 16px 10px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -30,6 +33,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .sidebar-footer{padding:12px;border-top:1px solid var(--border);flex-shrink:0}
 .btn-add-cat{width:100%;background:transparent;border:1px dashed var(--border);color:var(--text2);border-radius:8px;padding:8px;font-size:13px;cursor:pointer;transition:all .15s}
 .btn-add-cat:hover{border-color:var(--accent);color:var(--accent)}
+/* Main */
 .main{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .main-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .main-title{font-size:17px;font-weight:700}
@@ -39,6 +43,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .search-input::placeholder{color:var(--text2)}
 .btn-add-prompt{background:var(--accent);color:white;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
 .btn-add-prompt:hover{background:var(--accent2)}
+/* Cards */
 .prompt-grid{display:flex;flex-direction:column;gap:10px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:border-color .15s,background .15s}
 .card:hover{border-color:var(--accent);background:var(--surface2)}
@@ -50,10 +55,30 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .ibtn.danger:hover{background:var(--red);border-color:var(--red)}
 .subcat{font-size:11px;color:#a78bfa;background:rgba(124,58,237,.15);padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px}
 .preview{font-size:13px;color:var(--text2);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tap-hint{font-size:11px;color:var(--border);margin-top:8px;text-align:right}
 .empty{text-align:center;padding:60px 20px;color:var(--text2)}
 .empty .icon{font-size:40px;margin-bottom:12px}
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:20px}
+/* Overlay base */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:flex-end;justify-content:center;padding:0}
 .overlay.open{display:flex}
+/* View modal (full prompt) */
+.view-modal{background:var(--surface);border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;animation:slideup .25s ease}
+@keyframes slideup{from{transform:translateY(60px);opacity:0}to{transform:none;opacity:1}}
+.view-modal-hdr{padding:18px 20px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.view-modal-name{font-size:18px;font-weight:700;margin-bottom:4px}
+.view-modal-sub{font-size:12px;color:#a78bfa;background:rgba(124,58,237,.15);padding:2px 10px;border-radius:20px;display:inline-block}
+.view-modal-body{padding:16px 20px;overflow-y:auto;flex:1}
+.view-modal-text{font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap;word-break:break-word}
+.view-modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0}
+.view-modal-footer button{flex:1;padding:12px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s}
+.view-modal-footer button:hover{opacity:.85}
+.btn-view-copy{background:var(--accent);color:white}
+.btn-view-edit{background:var(--surface2);color:var(--text);border:1px solid var(--border)!important}
+.btn-view-close{background:transparent;color:var(--text2);font-size:20px;position:absolute;top:14px;right:16px;border:none;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px}
+.btn-view-close:hover{background:var(--surface2)}
+/* Delete dialog */
+.del-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;align-items:center;justify-content:center;padding:20px}
+.del-overlay.open{display:flex}
 .dialog{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:100%;max-width:360px;animation:pop .2s ease}
 @keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
 .dialog-icon{font-size:32px;text-align:center;margin-bottom:12px}
@@ -64,10 +89,17 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .dialog-btns button{flex:1;padding:11px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none}
 .btn-cancel{background:var(--surface2);color:var(--text)}
 .btn-del{background:var(--red);color:white}
+/* Toast */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 22px;border-radius:20px;font-size:14px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap}
 .toast.show{opacity:1}
 .toast.err{background:var(--red)}
-@media(max-width:640px){.sidebar{display:none}.mobile-cats{display:block}.search-input{width:120px}.main{padding:12px}}
+@media(max-width:640px){
+  .sidebar{display:none}
+  .mobile-cats{display:block}
+  .search-input{width:120px}
+  .main{padding:12px}
+  .view-modal{max-height:92vh}
+}
 </style>
 </head>
 <body>
@@ -95,7 +127,29 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
     <div class="prompt-grid" id="promptGrid"></div>
   </main>
 </div>
-<div class="overlay" id="delOverlay">
+
+<!-- View / Detail Modal -->
+<div class="overlay" id="viewOverlay" style="position:fixed">
+  <div class="view-modal" id="viewModal">
+    <div style="position:relative">
+      <button class="btn-view-close" id="viewClose">&#10005;</button>
+    </div>
+    <div class="view-modal-hdr">
+      <div class="view-modal-name" id="viewName"></div>
+      <div id="viewSub"></div>
+    </div>
+    <div class="view-modal-body">
+      <div class="view-modal-text" id="viewText"></div>
+    </div>
+    <div class="view-modal-footer">
+      <button class="btn-view-copy" id="viewCopyBtn">&#128203; Copy Prompt</button>
+      <button class="btn-view-edit" id="viewEditBtn">&#9999; Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Dialog -->
+<div class="del-overlay" id="delOverlay">
   <div class="dialog">
     <div class="dialog-icon">&#128465;</div>
     <div class="dialog-title">Delete Prompt?</div>
@@ -106,7 +160,9 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
     </div>
   </div>
 </div>
+
 <div class="toast" id="toast"></div>
+
 <script>
 var CATS=[{id:"c1",name:"Writing"},{id:"c2",name:"Video Creator"}];
 var PROMPTS=[
@@ -114,49 +170,124 @@ var PROMPTS=[
   {id:"p2",catId:"c2",name:"YouTube Script Writer",sub:"Scripts",text:"Write a YouTube script for a 10-minute video about [TOPIC]. Include a hook in the first 30 seconds, main content in 3 segments, and a strong call-to-action at the end."},
   {id:"p3",catId:"c2",name:"Video Editing Guide",sub:"Editing",text:"Create a step-by-step video editing guide for [SOFTWARE]. Cover importing footage, basic cuts, transitions, color grading, and exporting for YouTube."}
 ];
-var activeCat="all",searchQ="",pendingDelId=null;
+var activeCat="all", searchQ="", pendingDelId=null, viewingId=null;
+
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
-function toast(msg,type){var t=document.getElementById("toast");t.textContent=msg;t.className="toast show"+(type==="err"?" err":"");setTimeout(function(){t.className="toast"},2500)}
+
+function toast(msg,type){
+  var t=document.getElementById("toast");
+  t.textContent=msg; t.className="toast show"+(type==="err"?" err":"");
+  setTimeout(function(){t.className="toast"},2500);
+}
+
 function renderCats(){
-  var list=document.getElementById("catList"),mob=document.getElementById("mobileCats"),allN=PROMPTS.length;
-  var s="",m="";
+  var list=document.getElementById("catList"), mob=document.getElementById("mobileCats");
+  var allN=PROMPTS.length, s="", m="";
   var items=[{id:"all",name:"All Prompts",n:allN}];
-  for(var i=0;i<CATS.length;i++){var n=PROMPTS.filter(function(p){return p.catId===CATS[i].id}).length;items.push({id:CATS[i].id,name:CATS[i].name,n:n})}
+  for(var i=0;i<CATS.length;i++){
+    var n=PROMPTS.filter(function(p){return p.catId===CATS[i].id}).length;
+    items.push({id:CATS[i].id,name:CATS[i].name,n:n});
+  }
   for(var i=0;i<items.length;i++){
-    var it=items[i],act=activeCat===it.id;
+    var it=items[i], act=activeCat===it.id;
     s+="<div class='cat-item"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='selCat(this.dataset.catid)'><span>"+esc(it.name)+"</span><span class='cat-count'>"+it.n+"</span></div>";
     m+="<span class='mob-btn"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='selCat(this.dataset.catid)'>"+esc(it.name)+" ("+it.n+")</span>";
   }
-  list.innerHTML=s;mob.innerHTML=m;
+  list.innerHTML=s; mob.innerHTML=m;
 }
+
 function renderPrompts(){
-  var grid=document.getElementById("promptGrid"),title=document.getElementById("mainTitle");
+  var grid=document.getElementById("promptGrid"), title=document.getElementById("mainTitle");
   var list=PROMPTS.slice();
-  if(activeCat!=="all")list=list.filter(function(p){return p.catId===activeCat});
-  if(searchQ){var q=searchQ.toLowerCase();list=list.filter(function(p){return p.name.toLowerCase().indexOf(q)>=0||p.text.toLowerCase().indexOf(q)>=0})}
-  if(activeCat==="all"){title.textContent="All Prompts"}else{for(var i=0;i<CATS.length;i++){if(CATS[i].id===activeCat){title.textContent=CATS[i].name;break}}}
-  if(list.length===0){grid.innerHTML="<div class='empty'><div class='icon'>&#128235;</div><p>No prompts found.</p></div>";return}
+  if(activeCat!=="all") list=list.filter(function(p){return p.catId===activeCat});
+  if(searchQ){var q=searchQ.toLowerCase(); list=list.filter(function(p){return p.name.toLowerCase().indexOf(q)>=0||p.text.toLowerCase().indexOf(q)>=0});}
+  if(activeCat==="all"){title.textContent="All Prompts";}
+  else{for(var i=0;i<CATS.length;i++){if(CATS[i].id===activeCat){title.textContent=CATS[i].name;break;}}}
+  if(list.length===0){grid.innerHTML="<div class='empty'><div class='icon'>&#128235;</div><p>No prompts found.</p></div>";return;}
   var html="";
   for(var i=0;i<list.length;i++){
     var p=list[i];
-    html+="<div class='card' data-pid='"+p.id+"' onclick='copyP(this.dataset.pid)'><div class='card-top'><div class='card-name'>"+esc(p.name)+"</div><div class='card-btns' onclick='event.stopPropagation()'><div class='ibtn' data-pid='"+p.id+"' onclick='copyP(this.dataset.pid)' title='Copy'>&#128203;</div><div class='ibtn' data-pid='"+p.id+"' onclick='editP(this.dataset.pid)' title='Edit'>&#9999;</div><div class='ibtn danger' data-pid='"+p.id+"' onclick='askDel(this.dataset.pid)' title='Delete'>&#128465;</div></div></div>"+(p.sub?"<div class='subcat'>"+esc(p.sub)+"</div>":"")+"<div class='preview'>"+esc(p.text)+"</div></div>";
+    html+="<div class='card' data-pid='"+p.id+"' onclick='openView(this.dataset.pid)'>"
+      +"<div class='card-top'>"
+        +"<div class='card-name'>"+esc(p.name)+"</div>"
+        +"<div class='card-btns' onclick='event.stopPropagation()'>"
+          +"<div class='ibtn' data-pid='"+p.id+"' onclick='quickCopy(this.dataset.pid)' title='Quick Copy'>&#128203;</div>"
+          +"<div class='ibtn danger' data-pid='"+p.id+"' onclick='askDel(this.dataset.pid)' title='Delete'>&#128465;</div>"
+        +"</div>"
+      +"</div>"
+      +(p.sub?"<div class='subcat'>"+esc(p.sub)+"</div>":"")
+      +"<div class='preview'>"+esc(p.text)+"</div>"
+      +"<div class='tap-hint'>Tap to open full prompt</div>"
+    +"</div>";
   }
   grid.innerHTML=html;
 }
-function renderAll(){renderCats();renderPrompts()}
-function selCat(id){activeCat=id;renderAll()}
-function copyP(id){var p=null;for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break}}if(!p)return;navigator.clipboard.writeText(p.text).then(function(){toast("Copied!")}).catch(function(){toast("Copy failed","err")})}
-function editP(id){toast("Edit - coming in Step 3")}
-function askDel(id){var p=null;for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break}}if(!p)return;pendingDelId=id;document.getElementById("delName").textContent=p.name;document.getElementById("delOverlay").classList.add("open")}
-function closeDel(){pendingDelId=null;document.getElementById("delOverlay").classList.remove("open")}
-function confirmDel(){if(!pendingDelId)return;PROMPTS=PROMPTS.filter(function(p){return p.id!==pendingDelId});closeDel();renderAll();toast("Prompt deleted")}
+
+function renderAll(){renderCats();renderPrompts();}
+function selCat(id){activeCat=id;renderAll();}
+
+/* Open full view modal */
+function openView(id){
+  var p=null;
+  for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break;}}
+  if(!p) return;
+  viewingId=id;
+  document.getElementById("viewName").textContent=p.name;
+  document.getElementById("viewSub").innerHTML=p.sub?"<div class='view-modal-sub'>"+esc(p.sub)+"</div>":"";
+  document.getElementById("viewText").textContent=p.text;
+  document.getElementById("viewOverlay").classList.add("open");
+}
+
+function closeView(){
+  viewingId=null;
+  document.getElementById("viewOverlay").classList.remove("open");
+}
+
+/* Quick copy from card (small button) */
+function quickCopy(id){
+  var p=null;
+  for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break;}}
+  if(!p) return;
+  navigator.clipboard.writeText(p.text).then(function(){toast("Copied!");}).catch(function(){toast("Copy failed","err");});
+}
+
+/* Copy from view modal */
+document.getElementById("viewCopyBtn").onclick=function(){
+  if(!viewingId) return;
+  var p=null;
+  for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===viewingId){p=PROMPTS[i];break;}}
+  if(!p) return;
+  navigator.clipboard.writeText(p.text).then(function(){toast("Copied!");closeView();}).catch(function(){toast("Copy failed","err");});
+};
+
+document.getElementById("viewEditBtn").onclick=function(){toast("Edit - coming in Step 3");};
+document.getElementById("viewClose").onclick=closeView;
+document.getElementById("viewOverlay").onclick=function(e){if(e.target===this)closeView();};
+
+/* Delete */
+function askDel(id){
+  var p=null;
+  for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break;}}
+  if(!p) return;
+  pendingDelId=id;
+  document.getElementById("delName").textContent=p.name;
+  document.getElementById("delOverlay").classList.add("open");
+}
+function closeDel(){pendingDelId=null;document.getElementById("delOverlay").classList.remove("open");}
+function confirmDel(){
+  if(!pendingDelId) return;
+  PROMPTS=PROMPTS.filter(function(p){return p.id!==pendingDelId;});
+  closeDel(); renderAll(); toast("Prompt deleted");
+}
 document.getElementById("delCancel").onclick=closeDel;
 document.getElementById("delConfirm").onclick=confirmDel;
-document.getElementById("delOverlay").onclick=function(e){if(e.target===this)closeDel()};
-document.getElementById("addCatBtn").onclick=function(){toast("Add Category - coming in Step 3")};
-document.getElementById("addPromptBtn").onclick=function(){toast("Add Prompt - coming in Step 3")};
-document.getElementById("signInBtn").onclick=function(){toast("Sign In - coming in Step 2")};
-document.getElementById("searchInput").oninput=function(){searchQ=this.value;renderPrompts()};
+document.getElementById("delOverlay").onclick=function(e){if(e.target===this)closeDel();};
+
+document.getElementById("addCatBtn").onclick=function(){toast("Add Category - coming in Step 3");};
+document.getElementById("addPromptBtn").onclick=function(){toast("Add Prompt - coming in Step 3");};
+document.getElementById("signInBtn").onclick=function(){toast("Sign In - coming in Step 2");};
+document.getElementById("searchInput").oninput=function(){searchQ=this.value;renderPrompts();};
+
 renderAll();
 </script>
 </body>
