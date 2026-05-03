@@ -5111,19 +5111,26 @@ async function initStorage() {
 async function initFirebase(config) {
   try {
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js');
-    const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, enableIndexedDbPersistence } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
     const { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
     
     const app = initializeApp(config);
-    db = getFirestore(app);
+    try {
+      db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+    } catch(e) {
+      db = getFirestore(app); // fallback if already initialized
+    }
     auth = getAuth(app);
     useFirebase = true;
 
-    // Enable Offline Persistence
-    enableIndexedDbPersistence(db).catch((err) => {
-      console.warn("[Firebase] Persistence warning:", err.code);
-    });
+    // Offline persistence enabled via persistentLocalCache above
     
+    // Handle redirect result (mobile sign-in)
+    const { getRedirectResult } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
+    getRedirectResult(auth).then(result => {
+      if (result && result.user) showToast('✅ Signed in via redirect!', 'success');
+    }).catch(err => console.warn('[Auth] Redirect result:', err));
+
     // Auth Listener
     onAuthStateChanged(auth, (user) => {
       console.log("[Firebase] Auth state changed:", user ? user.uid : "null");
@@ -5151,15 +5158,31 @@ async function initFirebase(config) {
 }
 
 async function signInWithGoogle() {
-  if (!auth) return showToast('Please add Firebase config in Settings first.', 'error');
+  if (!auth) return showToast('Firebase is loading — please wait a moment and try again.', 'info');
   try {
-    const { GoogleAuthProvider, signInWithPopup } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
+    const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-    showToast('Signed in successfully!', 'success');
+    provider.setCustomParameters({ prompt: 'select_account' });
+    // Try popup first; fall back to redirect on mobile/blocked popups
+    try {
+      await signInWithPopup(auth, provider);
+      showToast('✅ Signed in! Syncing your prompts...', 'success');
+    } catch (popupErr) {
+      if (popupErr.code === 'auth/popup-blocked' || popupErr.code === 'auth/popup-closed-by-user') {
+        console.log('[Auth] Popup blocked, trying redirect...');
+        await signInWithRedirect(auth, provider);
+      } else {
+        throw popupErr;
+      }
+    }
   } catch (error) {
     console.error("Sign-in error:", error);
-    showToast('Sign-in failed. Ensure Google Auth is enabled in Firebase Console.', 'error');
+    const msg = error.code === 'auth/unauthorized-domain'
+      ? '⚠️ Domain not authorized. Add this domain to Firebase Console → Authentication → Authorized domains.'
+      : error.code === 'auth/operation-not-allowed'
+      ? '⚠️ Google Sign-In not enabled. Enable it in Firebase Console → Authentication → Sign-in method.'
+      : 'Sign-in failed: ' + (error.message || error.code);
+    showToast(msg, 'error');
   }
 }
 
@@ -5177,67 +5200,69 @@ async function signOutUser() {
 function startLiveSync(collection, onSnapshot, doc, setDoc) {
   if (!currentUser || !db) return;
   const uid = currentUser.uid;
-  setStatus('syncing', 'Syncing Data...');
-  console.log("[Firebase] Starting listeners for:", uid);
-  
-  // Real-time listener for Categories
-  unsubCats = onSnapshot(collection(db, `users/${uid}/categories`), async (snap) => {
-    const cats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    console.log("[Firebase] Categories received:", cats.length);
-    
-    // Only seed if we are SURE it's a fresh account (no categories AND no prompts)
-    if (cats.length === 0) {
-       // We'll check prompts first before seeding
-       return;
+  setStatus('syncing', 'Syncing...');
+  console.log("[Sync] Starting for UID:", uid);
+
+  let catsSnap = null, promptsSnap = null, seeded = false;
+
+  async function onBothLoaded() {
+    if (catsSnap === null || promptsSnap === null) return; // wait for both
+    const cats    = catsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const prompts = promptsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // First time this account has used the app — seed defaults
+    if (cats.length === 0 && prompts.length === 0 && !seeded) {
+      seeded = true;
+      console.log("[Sync] New account — seeding defaults...");
+      setStatus('syncing', 'Setting up your account...');
+      await seedFirebase(doc, setDoc);
+      return;
     }
 
-    allData.categories = cats;
+    // Cloud has data — update local
+    if (cats.length > 0)    allData.categories = cats;
+    if (prompts.length > 0) allData.prompts    = prompts;
+
+    // If cloud is empty but local has data — upload local to cloud
+    if (prompts.length === 0 && allData.prompts.length > 0 && !seeded) {
+      seeded = true;
+      console.log("[Sync] Cloud empty, uploading local data...");
+      for (const p of allData.prompts)    await saveToFirebase('prompts',    p.id, p);
+      for (const c of allData.categories) await saveToFirebase('categories', c.id, c);
+    }
+
     saveLocal();
     renderAll();
-  });
+    setStatus('connected', '✓ Synced');
 
-  // Real-time listener for Prompts
-  unsubPrompts = onSnapshot(collection(db, `users/${uid}/prompts`), async (snap) => {
-    const cloudPrompts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    console.log("[Firebase] Prompts received:", cloudPrompts.length);
-
-    // CRITICAL: Prevent data loss if cloud is empty but local has data
-    if (cloudPrompts.length === 0 && allData.prompts.length > 0) {
-       console.log("[Firebase] Cloud is empty, but local has data. Syncing local to cloud...");
-       // Upload local data to cloud
-       for (const p of allData.prompts) {
-         await saveToFirebase('prompts', p.id, p);
-       }
-       for (const c of allData.categories) {
-         await saveToFirebase('categories', c.id, c);
-       }
-       setStatus('connected', 'Sync Active (Uploaded)');
-       return;
-    }
-
-    // If both are empty, seed defaults
-    if (cloudPrompts.length === 0 && allData.categories.length === 0) {
-       console.log("[Firebase] Entire account empty. Seeding defaults...");
-       await seedFirebase(doc, setDoc);
-       return;
-    }
-
-    // Normal sync: Update local with cloud data
-    allData.prompts = cloudPrompts;
-    saveLocal();
-    renderAll();
-    setStatus('connected', 'Sync Active');
-    
+    // Refresh current view if open
     if (currentPrompt) {
       const updated = allData.prompts.find(p => p.id === currentPrompt.id);
-      if (updated && updated.text !== document.getElementById('promptDisplay').textContent) {
-         document.getElementById('promptDisplay').textContent = updated.text;
-         currentPrompt.text = updated.text;
-      } else if (!updated) {
-         closePrompt();
+      if (updated) {
+        if (updated.text !== document.getElementById('promptDisplay').textContent) {
+          document.getElementById('promptDisplay').textContent = updated.text;
+          currentPrompt.text = updated.text;
+        }
+      } else {
+        // Prompt was deleted on another device
+        currentPrompt = null;
+        document.getElementById('contentView').classList.remove('active');
+        document.getElementById('welcomeScreen').style.display = 'flex';
       }
     }
-  });
+  }
+
+  // Listen to categories
+  unsubCats = onSnapshot(collection(db, `users/${uid}/categories`), (snap) => {
+    catsSnap = snap;
+    onBothLoaded();
+  }, (err) => console.error("[Sync] Categories error:", err));
+
+  // Listen to prompts
+  unsubPrompts = onSnapshot(collection(db, `users/${uid}/prompts`), (snap) => {
+    promptsSnap = snap;
+    onBothLoaded();
+  }, (err) => console.error("[Sync] Prompts error:", err));
 }
 
 async function seedFirebase(doc, setDoc) {
@@ -5360,6 +5385,12 @@ function renderAll() {
     `;
     sidebar.appendChild(group);
   });
+
+  // Version Info
+  const vInfo = document.createElement('div');
+  vInfo.style.cssText = 'padding:16px;font-size:10px;color:var(--text-muted);text-align:center;font-family:monospace;opacity:0.6;';
+  vInfo.textContent = 'PROMPT MASTER — V12.23 (DATA RECOVERY READY)';
+  sidebar.appendChild(vInfo);
 }
 
 function toggleCategory(header) {
@@ -5372,6 +5403,13 @@ function toggleCategory(header) {
 // ─────────────────────────────────────────────────
 // OPEN PROMPT
 // ─────────────────────────────────────────────────
+function closePrompt() {
+  currentPrompt = null;
+  document.getElementById('contentView').classList.remove('active');
+  document.getElementById('welcomeScreen').style.display = 'flex';
+  document.querySelectorAll('.subcategory-item').forEach(el => el.classList.remove('active'));
+}
+
 function openPrompt(promptId) {
   const prompt = allData.prompts.find(p => p.id === promptId);
   if (!prompt) return;
