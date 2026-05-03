@@ -3,7 +3,7 @@
 // Network-first strategy with instant update support
 // ─────────────────────────────────────────────────
 
-const CACHE_NAME = 'prompt-master-v13';
+const CACHE_NAME = 'prompt-master-v14';
 
 // Files to pre-cache on install
 const PRECACHE_URLS = [
