@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- build:1777825268 -->
+<!DOCTYPE html><!-- build:1777825669 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -22,7 +22,10 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .user-name{font-size:13px;font-weight:600;color:var(--text);max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .btn-signout{background:transparent;color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;transition:all .15s}
 .btn-signout:hover{border-color:var(--red);color:var(--red)}
-.auth-status{font-size:11px;color:var(--text2);padding:2px 8px;border-radius:10px;background:var(--surface2)}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0}
+.sync-dot.ok{background:var(--green)}
+.sync-dot.syncing{background:var(--yellow,#eab308);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 .mobile-cats{display:none;overflow-x:auto;white-space:nowrap;padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .mobile-cats::-webkit-scrollbar{display:none}
 .mob-btn{display:inline-block;background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;margin-right:6px;transition:all .15s}
@@ -62,6 +65,8 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .tap-hint{font-size:11px;color:var(--border);margin-top:8px;text-align:right}
 .empty{text-align:center;padding:60px 20px;color:var(--text2)}
 .empty .icon{font-size:40px;margin-bottom:12px}
+.empty p{margin-bottom:12px}
+/* Modals */
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:flex-end;justify-content:center;padding:0}
 .overlay.open{display:flex}
 .view-modal{background:var(--surface);border-radius:16px 16px 0 0;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;animation:slideup .25s ease}
@@ -78,10 +83,27 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .btn-view-edit{background:var(--surface2);color:var(--text);border:1px solid var(--border)!important}
 .btn-view-close{background:transparent;color:var(--text2);font-size:20px;position:absolute;top:14px;right:16px;border:none;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px}
 .btn-view-close:hover{background:var(--surface2)}
+/* Form modals */
+.form-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:center;justify-content:center;padding:20px}
+.form-overlay.open{display:flex}
+.form-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:100%;max-width:500px;animation:pop .2s ease;max-height:90vh;overflow-y:auto}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.form-title{font-size:17px;font-weight:700;margin-bottom:20px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:block}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;font-family:inherit}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent)}
+.form-textarea{min-height:140px;resize:vertical;line-height:1.6}
+.form-select option{background:var(--surface2)}
+.form-actions{display:flex;gap:10px;margin-top:20px}
+.form-actions button{flex:1;padding:11px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s}
+.form-actions button:hover{opacity:.85}
+.btn-save{background:var(--accent);color:white}
+.btn-form-cancel{background:var(--surface2);color:var(--text)}
+/* Delete dialog */
 .del-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;align-items:center;justify-content:center;padding:20px}
 .del-overlay.open{display:flex}
 .dialog{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:100%;max-width:360px;animation:pop .2s ease}
-@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
 .dialog-icon{font-size:32px;text-align:center;margin-bottom:12px}
 .dialog-title{font-size:17px;font-weight:700;text-align:center;margin-bottom:8px}
 .dialog-msg{font-size:14px;color:var(--text2);text-align:center;margin-bottom:20px;line-height:1.5}
@@ -106,9 +128,8 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 <header>
   <div class="logo">&#9889; Prompt Master <span>v2</span></div>
   <div class="header-right">
-    <div id="authArea">
-      <button class="btn-signin" id="signInBtn">Sign in with Google</button>
-    </div>
+    <div class="sync-dot" id="syncDot"></div>
+    <div id="authArea"><button class="btn-signin" id="signInBtn">Sign in with Google</button></div>
   </div>
 </header>
 <div class="mobile-cats" id="mobileCats"></div>
@@ -134,18 +155,58 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 
 <!-- View Modal -->
 <div class="overlay" id="viewOverlay" style="position:fixed">
-  <div class="view-modal" id="viewModal">
+  <div class="view-modal">
     <div class="view-modal-hdr">
       <button class="btn-view-close" id="viewClose">&#10005;</button>
       <div class="view-modal-name" id="viewName"></div>
       <div id="viewSub"></div>
     </div>
-    <div class="view-modal-body">
-      <div class="view-modal-text" id="viewText"></div>
-    </div>
+    <div class="view-modal-body"><div class="view-modal-text" id="viewText"></div></div>
     <div class="view-modal-footer">
       <button class="btn-view-copy" id="viewCopyBtn">&#128203; Copy Prompt</button>
       <button class="btn-view-edit" id="viewEditBtn">&#9999; Edit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Prompt Modal -->
+<div class="form-overlay" id="promptFormOverlay">
+  <div class="form-modal">
+    <div class="form-title" id="promptFormTitle">Add Prompt</div>
+    <div class="form-group">
+      <label class="form-label">Prompt Name *</label>
+      <input class="form-input" id="fName" type="text" placeholder="e.g. Blog Post Writer">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category *</label>
+      <select class="form-select" id="fCat"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Subcategory (optional)</label>
+      <input class="form-input" id="fSub" type="text" placeholder="e.g. Content Writing">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Prompt Text *</label>
+      <textarea class="form-textarea" id="fText" placeholder="Write your prompt here..."></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn-form-cancel" id="promptFormCancel">Cancel</button>
+      <button class="btn-save" id="promptFormSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="form-overlay" id="catFormOverlay">
+  <div class="form-modal">
+    <div class="form-title">Add Category</div>
+    <div class="form-group">
+      <label class="form-label">Category Name *</label>
+      <input class="form-input" id="fCatName" type="text" placeholder="e.g. Marketing">
+    </div>
+    <div class="form-actions">
+      <button class="btn-form-cancel" id="catFormCancel">Cancel</button>
+      <button class="btn-save" id="catFormSave">Save</button>
     </div>
   </div>
 </div>
@@ -169,6 +230,8 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy }
+  from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 var FIREBASE_CONFIG = {
   apiKey: "AIzaSyCXn_D3YsbrUzPxEn51n4FwhACbX9uBp9o",
@@ -181,68 +244,85 @@ var FIREBASE_CONFIG = {
 
 var app  = initializeApp(FIREBASE_CONFIG);
 var auth = getAuth(app);
+var db   = getFirestore(app);
 var provider = new GoogleAuthProvider();
 
-// ── Demo data ─────────────────────────────────────────────────────────────────
-var CATS=[{id:"c1",name:"Writing"},{id:"c2",name:"Video Creator"}];
-var PROMPTS=[
-  {id:"p1",catId:"c1",name:"Blog Post Writer",sub:"Content Writing",
-   text:"Write a detailed blog post about [TOPIC]. Include an introduction, 3 main sections with subheadings, and a conclusion. Use a friendly, conversational tone."},
-  {id:"p2",catId:"c2",name:"YouTube Script Writer",sub:"Scripts",
-   text:"Write a YouTube script for a 10-minute video about [TOPIC]. Include a hook in the first 30 seconds, main content in 3 segments, and a strong call-to-action at the end."},
-  {id:"p3",catId:"c2",name:"Video Editing Guide",sub:"Editing",
-   text:"Create a step-by-step video editing guide for [SOFTWARE]. Cover importing footage, basic cuts, transitions, color grading, and exporting for YouTube."}
-];
-var activeCat="all", searchQ="", pendingDelId=null, viewingId=null;
-var currentUser=null;
+// ── State ─────────────────────────────────────────────────────────────────────
+var CATS    = [];
+var PROMPTS = [];
+var activeCat = "all", searchQ = "", viewingId = null, editingId = null, pendingDelId = null;
+var currentUser = null;
+var unsubCats = null, unsubPrompts = null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function toast(msg,type){
   var t=document.getElementById("toast");
   t.textContent=msg; t.className="toast show"+(type==="err"?" err":"");
-  setTimeout(function(){t.className="toast";},2500);
+  setTimeout(function(){t.className="toast";},3000);
+}
+function setSyncDot(state){
+  var d=document.getElementById("syncDot");
+  d.className="sync-dot"+(state==="ok"?" ok":state==="syncing"?" syncing":"");
 }
 
-// ── Auth UI ───────────────────────────────────────────────────────────────────
-function updateAuthUI(user) {
-  var area = document.getElementById("authArea");
-  if (user) {
-    var photoHTML = user.photoURL
-      ? "<img class='user-avatar' src='"+user.photoURL+"' alt='avatar'>"
-      : "<div class='user-avatar' style='background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;color:white'>"+user.displayName.charAt(0).toUpperCase()+"</div>";
-    area.innerHTML =
-      "<div class='user-info'>"+
-        photoHTML+
-        "<span class='user-name'>"+esc(user.displayName)+"</span>"+
-        "<button class='btn-signout' id='signOutBtn'>Sign Out</button>"+
-      "</div>";
-    document.getElementById("signOutBtn").onclick = function() {
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function updateAuthUI(user){
+  var area=document.getElementById("authArea");
+  if(user){
+    var photo=user.photoURL
+      ? "<img class='user-avatar' src='"+user.photoURL+"' alt=''>"
+      : "<div class='user-avatar' style='background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:14px'>"+user.displayName.charAt(0).toUpperCase()+"</div>";
+    area.innerHTML="<div class='user-info'>"+photo+"<span class='user-name'>"+esc(user.displayName)+"</span><button class='btn-signout' id='signOutBtn'>Sign Out</button></div>";
+    document.getElementById("signOutBtn").onclick=function(){
       signOut(auth).then(function(){toast("Signed out");}).catch(function(e){toast(e.message,"err");});
     };
   } else {
-    area.innerHTML = "<button class='btn-signin' id='signInBtn'>Sign in with Google</button>";
-    document.getElementById("signInBtn").onclick = doSignIn;
+    area.innerHTML="<button class='btn-signin' id='signInBtn'>Sign in with Google</button>";
+    document.getElementById("signInBtn").onclick=doSignIn;
   }
 }
 
-function doSignIn() {
-  var btn = document.getElementById("signInBtn");
-  if(btn){ btn.disabled=true; btn.textContent="Signing in..."; }
-  signInWithPopup(auth, provider)
-    .then(function(result){
-      toast("Welcome, "+result.user.displayName+"!");
-    })
-    .catch(function(e){
-      toast(e.message,"err");
-      updateAuthUI(null);
-    });
+function doSignIn(){
+  var btn=document.getElementById("signInBtn");
+  if(btn){btn.disabled=true;btn.textContent="Signing in...";}
+  signInWithPopup(auth,provider)
+    .then(function(r){toast("Welcome, "+r.user.displayName+"!");})
+    .catch(function(e){toast(e.message,"err");updateAuthUI(null);});
 }
 
-// ── Auth state listener ───────────────────────────────────────────────────────
-onAuthStateChanged(auth, function(user){
-  currentUser = user;
+// ── Firestore Listeners ───────────────────────────────────────────────────────
+function startSync(uid){
+  setSyncDot("syncing");
+  if(unsubCats){unsubCats();unsubCats=null;}
+  if(unsubPrompts){unsubPrompts();unsubPrompts=null;}
+
+  var catsRef    = collection(db,"users/"+uid+"/categories");
+  var promptsRef = collection(db,"users/"+uid+"/prompts");
+
+  unsubCats = onSnapshot(catsRef, function(snap){
+    CATS = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    renderAll();
+  }, function(e){ toast("Sync error: "+e.message,"err"); setSyncDot(""); });
+
+  unsubPrompts = onSnapshot(promptsRef, function(snap){
+    PROMPTS = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    setSyncDot("ok");
+    renderAll();
+  }, function(e){ toast("Sync error: "+e.message,"err"); setSyncDot(""); });
+}
+
+function stopSync(){
+  if(unsubCats){unsubCats();unsubCats=null;}
+  if(unsubPrompts){unsubPrompts();unsubPrompts=null;}
+  CATS=[]; PROMPTS=[]; renderAll(); setSyncDot("");
+}
+
+onAuthStateChanged(auth,function(user){
+  currentUser=user;
   updateAuthUI(user);
+  if(user){ startSync(user.uid); }
+  else { stopSync(); }
 });
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -255,7 +335,7 @@ function renderCats(){
     items.push({id:CATS[i].id,name:CATS[i].name,n:n});
   }
   for(var i=0;i<items.length;i++){
-    var it=items[i], act=activeCat===it.id;
+    var it=items[i],act=activeCat===it.id;
     s+="<div class='cat-item"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='window.selCat(this.dataset.catid)'><span>"+esc(it.name)+"</span><span class='cat-count'>"+it.n+"</span></div>";
     m+="<span class='mob-btn"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='window.selCat(this.dataset.catid)'>"+esc(it.name)+" ("+it.n+")</span>";
   }
@@ -263,13 +343,20 @@ function renderCats(){
 }
 
 function renderPrompts(){
-  var grid=document.getElementById("promptGrid"), title=document.getElementById("mainTitle");
+  var grid=document.getElementById("promptGrid"),title=document.getElementById("mainTitle");
   var list=PROMPTS.slice();
   if(activeCat!=="all") list=list.filter(function(p){return p.catId===activeCat;});
-  if(searchQ){var q=searchQ.toLowerCase(); list=list.filter(function(p){return p.name.toLowerCase().indexOf(q)>=0||p.text.toLowerCase().indexOf(q)>=0;});}
+  if(searchQ){var q=searchQ.toLowerCase();list=list.filter(function(p){return p.name.toLowerCase().indexOf(q)>=0||p.text.toLowerCase().indexOf(q)>=0;});}
   if(activeCat==="all"){title.textContent="All Prompts";}
   else{for(var i=0;i<CATS.length;i++){if(CATS[i].id===activeCat){title.textContent=CATS[i].name;break;}}}
-  if(list.length===0){grid.innerHTML="<div class='empty'><div class='icon'>&#128235;</div><p>No prompts found.</p></div>";return;}
+  if(!currentUser){
+    grid.innerHTML="<div class='empty'><div class='icon'>&#128274;</div><p>Sign in to view and manage your prompts.</p></div>";
+    return;
+  }
+  if(list.length===0){
+    grid.innerHTML="<div class='empty'><div class='icon'>&#128235;</div><p>No prompts yet.</p><p style='font-size:13px;color:var(--text2)'>Click <b>+ Add Prompt</b> to create one.</p></div>";
+    return;
+  }
   var html="";
   for(var i=0;i<list.length;i++){
     var p=list[i];
@@ -277,6 +364,7 @@ function renderPrompts(){
       +"<div class='card-top'><div class='card-name'>"+esc(p.name)+"</div>"
       +"<div class='card-btns' onclick='event.stopPropagation()'>"
         +"<div class='ibtn' data-pid='"+p.id+"' onclick='window.quickCopy(this.dataset.pid)' title='Quick Copy'>&#128203;</div>"
+        +"<div class='ibtn' data-pid='"+p.id+"' onclick='window.openEdit(this.dataset.pid)' title='Edit'>&#9999;</div>"
         +"<div class='ibtn danger' data-pid='"+p.id+"' onclick='window.askDel(this.dataset.pid)' title='Delete'>&#128465;</div>"
       +"</div></div>"
       +(p.sub?"<div class='subcat'>"+esc(p.sub)+"</div>":"")
@@ -289,53 +377,152 @@ function renderPrompts(){
 
 function renderAll(){renderCats();renderPrompts();}
 
-// ── Expose to inline onclick ──────────────────────────────────────────────────
+// ── Category select dropdown ──────────────────────────────────────────────────
+function populateCatSelect(){
+  var sel=document.getElementById("fCat");
+  sel.innerHTML="";
+  for(var i=0;i<CATS.length;i++){
+    var o=document.createElement("option");
+    o.value=CATS[i].id; o.textContent=CATS[i].name;
+    sel.appendChild(o);
+  }
+}
+
+// ── Inline onclick handlers ───────────────────────────────────────────────────
 window.selCat=function(id){activeCat=id;renderAll();};
+
 window.openView=function(id){
-  var p=null; for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break;}}
-  if(!p) return;
+  var p=null;for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break;}}
+  if(!p)return;
   viewingId=id;
   document.getElementById("viewName").textContent=p.name;
   document.getElementById("viewSub").innerHTML=p.sub?"<div class='view-modal-sub'>"+esc(p.sub)+"</div>":"";
   document.getElementById("viewText").textContent=p.text;
   document.getElementById("viewOverlay").classList.add("open");
 };
+
 window.quickCopy=function(id){
-  var p=null; for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break;}}
-  if(!p) return;
+  var p=null;for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break;}}
+  if(!p)return;
   navigator.clipboard.writeText(p.text).then(function(){toast("Copied!");}).catch(function(){toast("Copy failed","err");});
 };
+
+window.openEdit=function(id){
+  var p=null;for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break;}}
+  if(!p)return;
+  editingId=id;
+  document.getElementById("promptFormTitle").textContent="Edit Prompt";
+  populateCatSelect();
+  document.getElementById("fName").value=p.name;
+  document.getElementById("fCat").value=p.catId;
+  document.getElementById("fSub").value=p.sub||"";
+  document.getElementById("fText").value=p.text;
+  closeView();
+  document.getElementById("promptFormOverlay").classList.add("open");
+};
+
 window.askDel=function(id){
-  var p=null; for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break;}}
-  if(!p) return;
+  var p=null;for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===id){p=PROMPTS[i];break;}}
+  if(!p)return;
   pendingDelId=id;
   document.getElementById("delName").textContent=p.name;
   document.getElementById("delOverlay").classList.add("open");
 };
 
+// ── View modal ────────────────────────────────────────────────────────────────
 function closeView(){viewingId=null;document.getElementById("viewOverlay").classList.remove("open");}
-function closeDel(){pendingDelId=null;document.getElementById("delOverlay").classList.remove("open");}
-
 document.getElementById("viewCopyBtn").onclick=function(){
-  if(!viewingId) return;
-  var p=null; for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===viewingId){p=PROMPTS[i];break;}}
-  if(!p) return;
+  if(!viewingId)return;
+  var p=null;for(var i=0;i<PROMPTS.length;i++){if(PROMPTS[i].id===viewingId){p=PROMPTS[i];break;}}
+  if(!p)return;
   navigator.clipboard.writeText(p.text).then(function(){toast("Copied!");closeView();}).catch(function(){toast("Copy failed","err");});
 };
-document.getElementById("viewEditBtn").onclick=function(){toast("Edit - coming in Step 3");};
+document.getElementById("viewEditBtn").onclick=function(){if(viewingId)window.openEdit(viewingId);};
 document.getElementById("viewClose").onclick=closeView;
 document.getElementById("viewOverlay").onclick=function(e){if(e.target===this)closeView();};
-document.getElementById("delCancel").onclick=closeDel;
-document.getElementById("delConfirm").onclick=function(){
-  if(!pendingDelId) return;
-  PROMPTS=PROMPTS.filter(function(p){return p.id!==pendingDelId;});
-  closeDel(); renderAll(); toast("Prompt deleted");
+
+// ── Prompt form (Add/Edit) ────────────────────────────────────────────────────
+function closePromptForm(){editingId=null;document.getElementById("promptFormOverlay").classList.remove("open");}
+document.getElementById("promptFormCancel").onclick=closePromptForm;
+document.getElementById("promptFormOverlay").onclick=function(e){if(e.target===this)closePromptForm();};
+
+document.getElementById("addPromptBtn").onclick=function(){
+  if(!currentUser){toast("Please sign in first","err");return;}
+  if(CATS.length===0){toast("Add a category first","err");return;}
+  editingId=null;
+  document.getElementById("promptFormTitle").textContent="Add Prompt";
+  populateCatSelect();
+  document.getElementById("fName").value="";
+  document.getElementById("fSub").value="";
+  document.getElementById("fText").value="";
+  document.getElementById("promptFormOverlay").classList.add("open");
+  setTimeout(function(){document.getElementById("fName").focus();},100);
 };
+
+document.getElementById("promptFormSave").onclick=async function(){
+  var name=document.getElementById("fName").value.trim();
+  var catId=document.getElementById("fCat").value;
+  var sub=document.getElementById("fSub").value.trim();
+  var text=document.getElementById("fText").value.trim();
+  if(!name||!catId||!text){toast("Name, Category and Text are required","err");return;}
+  var btn=document.getElementById("promptFormSave");
+  btn.disabled=true; btn.textContent="Saving...";
+  try{
+    var uid=currentUser.uid;
+    var data={name:name,catId:catId,sub:sub,text:text,updatedAt:serverTimestamp()};
+    if(editingId){
+      await setDoc(doc(db,"users/"+uid+"/prompts/"+editingId),data,{merge:true});
+      toast("Prompt updated!");
+    } else {
+      data.createdAt=serverTimestamp();
+      await addDoc(collection(db,"users/"+uid+"/prompts"),data);
+      toast("Prompt saved to cloud!");
+    }
+    closePromptForm();
+  }catch(e){toast("Save failed: "+e.message,"err");}
+  finally{btn.disabled=false;btn.textContent="Save";}
+};
+
+// ── Category form ─────────────────────────────────────────────────────────────
+function closeCatForm(){document.getElementById("catFormOverlay").classList.remove("open");}
+document.getElementById("addCatBtn").onclick=function(){
+  if(!currentUser){toast("Please sign in first","err");return;}
+  document.getElementById("fCatName").value="";
+  document.getElementById("catFormOverlay").classList.add("open");
+  setTimeout(function(){document.getElementById("fCatName").focus();},100);
+};
+document.getElementById("catFormCancel").onclick=closeCatForm;
+document.getElementById("catFormOverlay").onclick=function(e){if(e.target===this)closeCatForm();};
+document.getElementById("catFormSave").onclick=async function(){
+  var name=document.getElementById("fCatName").value.trim();
+  if(!name){toast("Category name is required","err");return;}
+  var btn=document.getElementById("catFormSave");
+  btn.disabled=true; btn.textContent="Saving...";
+  try{
+    await addDoc(collection(db,"users/"+currentUser.uid+"/categories"),{name:name,createdAt:serverTimestamp()});
+    toast("Category added!");
+    closeCatForm();
+  }catch(e){toast("Failed: "+e.message,"err");}
+  finally{btn.disabled=false;btn.textContent="Save";}
+};
+
+// ── Delete ────────────────────────────────────────────────────────────────────
+function closeDel(){pendingDelId=null;document.getElementById("delOverlay").classList.remove("open");}
+document.getElementById("delCancel").onclick=closeDel;
 document.getElementById("delOverlay").onclick=function(e){if(e.target===this)closeDel();};
-document.getElementById("addCatBtn").onclick=function(){toast("Add Category - coming in Step 3");};
-document.getElementById("addPromptBtn").onclick=function(){toast("Add Prompt - coming in Step 3");};
+document.getElementById("delConfirm").onclick=async function(){
+  if(!pendingDelId)return;
+  var id=pendingDelId; closeDel();
+  try{
+    await deleteDoc(doc(db,"users/"+currentUser.uid+"/prompts/"+id));
+    toast("Prompt deleted");
+  }catch(e){toast("Delete failed: "+e.message,"err");}
+};
+
+// ── Search ────────────────────────────────────────────────────────────────────
 document.getElementById("searchInput").oninput=function(){searchQ=this.value;renderPrompts();};
 
+// ── Init ──────────────────────────────────────────────────────────────────────
 renderAll();
 </script>
 </body>
