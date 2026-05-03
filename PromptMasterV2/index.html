@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- build:20260503155305 -->
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -124,8 +124,8 @@ function renderCats(){
   for(var i=0;i<CATS.length;i++){var n=PROMPTS.filter(function(p){return p.catId===CATS[i].id}).length;items.push({id:CATS[i].id,name:CATS[i].name,n:n})}
   for(var i=0;i<items.length;i++){
     var it=items[i],act=activeCat===it.id;
-    s+="<div class='cat-item"+(act?" active":"")+"' onclick='selCat(""+it.id+"")'><span>"+esc(it.name)+"</span><span class='cat-count'>"+it.n+"</span></div>";
-    m+="<span class='mob-btn"+(act?" active":"")+"' onclick='selCat(""+it.id+"")'>"+esc(it.name)+" ("+it.n+")</span>";
+    s+="<div class='cat-item"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='selCat(this.dataset.catid)'><span>"+esc(it.name)+"</span><span class='cat-count'>"+it.n+"</span></div>";
+    m+="<span class='mob-btn"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='selCat(this.dataset.catid)'>"+esc(it.name)+" ("+it.n+")</span>";
   }
   list.innerHTML=s;mob.innerHTML=m;
 }
@@ -139,7 +139,7 @@ function renderPrompts(){
   var html="";
   for(var i=0;i<list.length;i++){
     var p=list[i];
-    html+="<div class='card' onclick='copyP(""+p.id+"")'><div class='card-top'><div class='card-name'>"+esc(p.name)+"</div><div class='card-btns' onclick='event.stopPropagation()'><div class='ibtn' onclick='copyP(""+p.id+"")' title='Copy'>&#128203;</div><div class='ibtn' onclick='editP(""+p.id+"")' title='Edit'>&#9999;</div><div class='ibtn danger' onclick='askDel(""+p.id+"")' title='Delete'>&#128465;</div></div></div>"+(p.sub?"<div class='subcat'>"+esc(p.sub)+"</div>":"")+"<div class='preview'>"+esc(p.text)+"</div></div>";
+    html+="<div class='card' data-pid='"+p.id+"' onclick='copyP(this.dataset.pid)'><div class='card-top'><div class='card-name'>"+esc(p.name)+"</div><div class='card-btns' onclick='event.stopPropagation()'><div class='ibtn' data-pid='"+p.id+"' onclick='copyP(this.dataset.pid)' title='Copy'>&#128203;</div><div class='ibtn' data-pid='"+p.id+"' onclick='editP(this.dataset.pid)' title='Edit'>&#9999;</div><div class='ibtn danger' data-pid='"+p.id+"' onclick='askDel(this.dataset.pid)' title='Delete'>&#128465;</div></div></div>"+(p.sub?"<div class='subcat'>"+esc(p.sub)+"</div>":"")+"<div class='preview'>"+esc(p.text)+"</div></div>";
   }
   grid.innerHTML=html;
 }
