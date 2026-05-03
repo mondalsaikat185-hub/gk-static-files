@@ -5207,35 +5207,38 @@ function startLiveSync(collection, onSnapshot, doc, setDoc) {
 
   async function onBothLoaded() {
     if (catsSnap === null || promptsSnap === null) return; // wait for both
+
+    // Determine if we're still reading from local cache vs live server
+    const isFromCache = catsSnap.metadata.fromCache || promptsSnap.metadata.fromCache;
     const cats    = catsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const prompts = promptsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    // First time this account has used the app — seed defaults
-    if (cats.length === 0 && prompts.length === 0 && !seeded) {
-      seeded = true;
-      console.log("[Sync] New account — seeding defaults...");
-      setStatus('syncing', 'Setting up your account...');
-      await seedFirebase(doc, setDoc);
-      return;
-    }
+    console.log(`[Sync] onBothLoaded — fromCache: ${isFromCache}, cats: ${cats.length}, prompts: ${prompts.length}`);
 
-    // Cloud has data — update local
+    // Always update UI with whatever data we have (cache or server)
     if (cats.length > 0)    allData.categories = cats;
     if (prompts.length > 0) allData.prompts    = prompts;
 
-    // If cloud is empty but local has data — upload local to cloud
-    if (prompts.length === 0 && allData.prompts.length > 0 && !seeded) {
-      seeded = true;
-      console.log("[Sync] Cloud empty, uploading local data...");
-      for (const p of allData.prompts)    await saveToFirebase('prompts',    p.id, p);
-      for (const c of allData.categories) await saveToFirebase('categories', c.id, c);
-    }
-
     saveLocal();
     renderAll();
+
+    // ── Seeding / uploading logic ONLY runs on confirmed server data ──
+    // This prevents overwriting cloud edits with stale local/default data
+    // during the brief window before the server snapshot arrives.
+    if (!isFromCache) {
+      if (cats.length === 0 && prompts.length === 0 && !seeded) {
+        // Truly new account — seed with defaults
+        seeded = true;
+        console.log("[Sync] New account (server-confirmed) — seeding defaults...");
+        setStatus('syncing', 'Setting up your account...');
+        await seedFirebase(doc, setDoc);
+        return;
+      }
+    }
+
     setStatus('connected', '✓ Synced');
 
-    // Refresh current view if open
+    // Refresh currently-open prompt if it changed on another device
     if (currentPrompt) {
       const updated = allData.prompts.find(p => p.id === currentPrompt.id);
       if (updated) {
@@ -5252,17 +5255,22 @@ function startLiveSync(collection, onSnapshot, doc, setDoc) {
     }
   }
 
-  // Listen to categories
-  unsubCats = onSnapshot(collection(db, `users/${uid}/categories`), (snap) => {
-    catsSnap = snap;
-    onBothLoaded();
-  }, (err) => console.error("[Sync] Categories error:", err));
+  // includeMetadataChanges: true ensures the callback fires TWICE:
+  // 1st time → fromCache: true  (local IndexedDB, may be stale)
+  // 2nd time → fromCache: false (live server data, authoritative)
+  unsubCats = onSnapshot(
+    collection(db, `users/${uid}/categories`),
+    { includeMetadataChanges: true },
+    (snap) => { catsSnap = snap; onBothLoaded(); },
+    (err) => console.error("[Sync] Categories error:", err)
+  );
 
-  // Listen to prompts
-  unsubPrompts = onSnapshot(collection(db, `users/${uid}/prompts`), (snap) => {
-    promptsSnap = snap;
-    onBothLoaded();
-  }, (err) => console.error("[Sync] Prompts error:", err));
+  unsubPrompts = onSnapshot(
+    collection(db, `users/${uid}/prompts`),
+    { includeMetadataChanges: true },
+    (snap) => { promptsSnap = snap; onBothLoaded(); },
+    (err) => console.error("[Sync] Prompts error:", err)
+  );
 }
 
 async function seedFirebase(doc, setDoc) {
@@ -5561,36 +5569,38 @@ async function saveEdit() {
   if (!currentPrompt) return;
   const newText = document.getElementById('editorTextarea').value.trim();
   if (!newText) { showToast('প্রম্পট খালি রাখা যাবে না!', 'error'); return; }
-  
-  // 1. Update Global State
+
+  // 1. Update global state + UI immediately
   currentPrompt.text = newText;
   const idx = allData.prompts.findIndex(p => p.id === currentPrompt.id);
   if (idx !== -1) allData.prompts[idx].text = newText;
-  
-  // 2. Update UI
   document.getElementById('promptDisplay').textContent = newText;
-  
-  // 3. Always Save Locally (Instant Backup & Guest Mode)
+
+  // 2. Always save locally first (instant backup + offline support)
   saveLocal();
-  
-  // 4. Sync to Firebase if Logged In
-  if (useFirebase && currentUser) {
-    try {
-      await saveToFirebase('prompts', currentPrompt.id, { 
-        name: currentPrompt.name, 
-        category: currentPrompt.category, 
-        subcategory: currentPrompt.subcategory || '', 
-        text: newText 
-      });
-      console.log("[Firebase] Changes synced successfully.");
-    } catch(e) {
-      console.error("[Firebase] Sync failed:", e);
-      showToast('⚠️ Cloud sync failed (saved locally)', 'warning');
-    }
-  }
-  
   cancelEdit();
-  showToast('💾 Saved!', 'success');
+
+  // 3. Sync to Firebase if logged in
+  if (useFirebase && currentUser) {
+    setStatus('syncing', 'Saving to cloud...');
+    try {
+      await saveToFirebase('prompts', currentPrompt.id, {
+        name: currentPrompt.name,
+        category: currentPrompt.category,
+        subcategory: currentPrompt.subcategory || '',
+        text: newText
+      });
+      console.log("[Firebase] Edit synced to cloud successfully.");
+      setStatus('connected', '✓ Synced');
+      showToast('☁️ Saved to Cloud!', 'success');
+    } catch(e) {
+      console.error("[Firebase] Cloud sync failed:", e);
+      setStatus('error', 'Cloud sync failed');
+      showToast('⚠️ Cloud sync failed — only saved locally. Check your internet connection.', 'error');
+    }
+  } else {
+    showToast('💾 Saved locally!', 'success');
+  }
 }
 
 // ─────────────────────────────────────────────────
@@ -5879,21 +5889,4 @@ function applyUpdate() {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').then(reg => {
     reg.addEventListener('updatefound', () => {
-      newSW = reg.installing;
-      newSW.addEventListener('statechange', () => {
-        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-          document.getElementById('updateBanner').style.display = 'block';
-        }
-      });
-    });
-  });
-  navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
-}
-
-// ─────────────────────────────────────────────────
-// INIT
-// ─────────────────────────────────────────────────
-initStorage();
-</script>
-</body>
-</html>
+      newSW = 
