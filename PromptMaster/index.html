@@ -5111,19 +5111,13 @@ async function initStorage() {
 async function initFirebase(config) {
   try {
     const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js');
-    const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    const { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
     const { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
     
     const app = initializeApp(config);
-    try {
-      db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
-    } catch(e) {
-      db = getFirestore(app); // fallback if already initialized
-    }
+    db = getFirestore(app);
     auth = getAuth(app);
     useFirebase = true;
-
-    // Offline persistence enabled via persistentLocalCache above
     
     // Handle redirect result (mobile sign-in)
     const { getRedirectResult } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
@@ -5214,7 +5208,10 @@ function startLiveSync(collection, onSnapshot, doc, setDoc) {
     const prompts = promptsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     // Only re-render if actual data changed (avoid re-render on every Firestore heartbeat)
-    const sig = cats.length + '|' + prompts.map(p => p.id + ':' + String((p.text||'').length)).join(',');
+    const sig = cats.length + '|' + prompts.map(p => {
+      const t = p.text || '';
+      return p.id + ':' + t.length + ':' + (t.slice(0, 12) + t.slice(-8));
+    }).join(',');
     if (sig !== lastDataSig) {
       lastDataSig = sig;
       if (cats.length > 0)    allData.categories = cats;
