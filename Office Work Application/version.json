@@ -1,7 +1,7 @@
 {
-  "version": 14,
-  "uploaded_at": "2026-05-04T15:43:14",
-  "timestamp": 1777909394,
+  "version": 15,
+  "uploaded_at": "2026-05-04T15:59:37",
+  "timestamp": 1777910377,
   "folder": "Office Work Application",
-  "changes": "Revert to signInWithPopup with proper error handling and Bengali messages"
+  "changes": "GIS sign-in: bypass Firebase popup handler, use Google Identity Services directly"
 }
