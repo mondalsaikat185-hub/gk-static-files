@@ -362,6 +362,24 @@ select option{background:var(--card);color:var(--text);}
 .wf-card .wf-icon{font-size:28px;margin-bottom:6px;}
 .wf-card .wf-name{font-size:12px;font-weight:600;color:var(--text1);}
 .wf-card .wf-desc{font-size:10px;color:var(--text2);margin-top:4px;}
+/* Smart Reply Chat */
+.sr-panel{position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);}
+.sr-box{background:var(--card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:640px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;}
+.sr-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.sr-header h3{margin:0;font-size:15px;color:var(--text1);}
+.sr-chat{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
+.sr-msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;}
+.sr-msg.ai{background:rgba(91,143,249,.12);color:var(--text1);align-self:flex-start;border:1px solid rgba(91,143,249,.2);}
+.sr-msg.user{background:var(--primary);color:#fff;align-self:flex-end;}
+.sr-msg.system{background:rgba(54,179,126,.1);color:var(--text1);align-self:center;text-align:center;font-size:11px;border:1px solid rgba(54,179,126,.2);}
+.sr-input-row{padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;}
+.sr-input-row input{flex:1;padding:10px 14px;background:var(--glass);border:1px solid var(--border);border-radius:10px;color:var(--text1);font-size:13px;}
+.sr-input-row button{padding:10px 18px;background:var(--gradient);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;}
+.sr-suggestions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.sr-sug{padding:6px 12px;background:var(--glass);border:1px solid var(--border);border-radius:8px;font-size:11px;cursor:pointer;color:var(--text2);transition:all .2s;}
+.sr-sug:hover{border-color:var(--primary);color:var(--primary);}
+.sr-loading{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);}
+.sr-loading .spinner{width:16px;height:16px;}
 </style>
 </head>
 <body>
@@ -2519,7 +2537,7 @@ function loadInboxList() {
       <div class="card-body"><div class="card-title">${escapeHtml(i.note || '(no note)')}</div><div class="card-meta">${fmtDateTime(i.createdAt)} ${i.remindOn ? '• 📅 '+fmtDate(i.remindOn) : ''}</div></div>
     </div>
     <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-      ${i.photo ? `<button class="btn btn-secondary btn-xs" onclick="ocrInboxItem('${i.id}')">📖 OCR</button>` : ''}
+      ${i.photo ? `<button class="btn btn-secondary btn-xs" onclick="ocrInboxItem('${i.id}')">📖 OCR</button><button class="btn btn-primary btn-xs" onclick="smartReply('${i.id}')" style="background:var(--gradient);color:#fff;">🤖 Smart Reply</button>` : ''}
       <button class="btn btn-secondary btn-xs" onclick="snoozeInboxItem('${i.id}')">⏰ Snooze</button>
       <button class="btn btn-success btn-xs" onclick="completeInboxItem('${i.id}')">✓ Done</button>
       <button class="btn btn-danger btn-xs" onclick="deleteInboxItem('${i.id}')">🗑️</button>
@@ -3189,6 +3207,261 @@ async function clearAppCacheAndReload() {
     document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0e1a;color:#ef4444;font-family:sans-serif;text-align:center;padding:20px;"><div><h2>App Code Error Detected</h2><p style="color:#8899b0;">The application file may be corrupted.</p><button onclick="location.href=\'reset.html\'" style="margin-top:20px;padding:12px 24px;background:#5b8ff9;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">Reset &amp; Reload</button></div></div>';
   }
 })();
+
+
+// ============================================================
+//  SMART REPLY — Auto-scan → AI Analyze → Chat Q&A → Draft
+// ============================================================
+const SmartReply = {
+  chatHistory: [],
+  originalText: '',
+  inboxItemId: null,
+  analysis: null,
+  
+  async start(itemId) {
+    this.chatHistory = [];
+    this.inboxItemId = itemId;
+    this.originalText = '';
+    this.analysis = null;
+    
+    const item = State.inbox.find(x => x.id === itemId);
+    if(!item?.photo) { toast('No photo/document found', 'error'); return; }
+    
+    this.openPanel();
+    this.addMessage('system', 'Smart Reply শুরু হচ্ছে...');
+    
+    // Step 1: Auto-OCR
+    this.addMessage('system', '📖 ধাপ ১: ডকুমেন্ট স্ক্যান করা হচ্ছে...');
+    this.showLoading(true);
+    
+    try {
+      const base64Data = item.photo.split(',')[1];
+      const mimeType = item.photo.match(/^data:(.+?);/)?.[1] || 'image/jpeg';
+      const apiKey = State.apiKeys[State.currentKeyIndex || 0]?.key;
+      if(!apiKey) { this.addMessage('ai', 'API key সেট করা নেই। Setup > API Keys-এ Gemini key যোগ করুন।'); this.showLoading(false); return; }
+      
+      // OCR call
+      const ocrUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
+      const ocrBody = {contents:[{parts:[
+        {text:'Extract ALL text from this image. Preserve line breaks, formatting, and structure. Output ONLY the extracted text.'},
+        {inline_data:{mime_type:mimeType, data:base64Data}}
+      ]}]};
+      
+      const ocrRes = await fetch(ocrUrl, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(ocrBody)});
+      const ocrJson = await ocrRes.json();
+      if(ocrJson.error) throw new Error(ocrJson.error.message);
+      
+      this.originalText = ocrJson.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if(!this.originalText.trim()) { this.addMessage('ai', 'টেক্সট extract করা যায়নি। দয়া করে স্পষ্ট ছবি আপলোড করুন।'); this.showLoading(false); return; }
+      
+      this.addMessage('system', '✅ স্ক্যান সম্পূর্ণ — ' + this.originalText.length + ' অক্ষর পাওয়া গেছে');
+      
+      // Step 2: AI Analysis
+      this.addMessage('system', '🧠 ধাপ ২: AI বিশ্লেষণ চলছে...');
+      
+      const analysisPrompt = `You are an expert Indian Government office correspondence analyst. Analyze this scanned letter/document and provide:
+
+1. LETTER TYPE (e.g., SCN, Order, Circular, D.O. Letter, Reminder, RTI, Audit Query etc.)
+2. SENDER (name, designation, office)
+3. SUBJECT
+4. KEY POINTS (numbered, max 5)
+5. WHAT ACTION IS NEEDED (Reply required? Forward? File? Report?)
+6. SUGGESTED REPLY TYPE (if reply needed)
+7. URGENCY (High/Medium/Low)
+
+Respond in a structured JSON format:
+{"type":"...","sender":"...","subject":"...","keyPoints":["..."],"actionNeeded":"...","suggestedReplyType":"...","urgency":"...","summary":"one paragraph summary in Bengali"}
+
+DOCUMENT TEXT:
+${this.originalText}`;
+      
+      const analysisBody = {contents:[{parts:[{text:analysisPrompt}]}], generationConfig:{temperature:0.3}};
+      const analysisRes = await fetch(ocrUrl, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(analysisBody)});
+      const analysisJson = await analysisRes.json();
+      const analysisText = analysisJson.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      
+      // Parse JSON from response
+      try {
+        const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+        if(jsonMatch) this.analysis = JSON.parse(jsonMatch[0]);
+      } catch(e) { this.analysis = {summary: analysisText}; }
+      
+      this.showLoading(false);
+      
+      // Step 3: Show analysis and ask user
+      if(this.analysis) {
+        let msg = '📋 **বিশ্লেষণ সম্পূর্ণ:**\n\n';
+        if(this.analysis.type) msg += '📌 ধরন: ' + this.analysis.type + '\n';
+        if(this.analysis.sender) msg += '👤 প্রেরক: ' + this.analysis.sender + '\n';
+        if(this.analysis.subject) msg += '📝 বিষয়: ' + this.analysis.subject + '\n';
+        if(this.analysis.urgency) msg += '⚡ জরুরিতা: ' + this.analysis.urgency + '\n';
+        if(this.analysis.actionNeeded) msg += '\n🎯 প্রয়োজনীয় পদক্ষেপ: ' + this.analysis.actionNeeded + '\n';
+        if(this.analysis.summary) msg += '\n📖 সারসংক্ষেপ: ' + this.analysis.summary;
+        
+        this.addMessage('ai', msg);
+        
+        // Show suggestion buttons
+        const suggestions = [];
+        if(this.analysis.suggestedReplyType) suggestions.push('Reply: ' + this.analysis.suggestedReplyType);
+        suggestions.push('Forward to higher authority');
+        suggestions.push('File for record');
+        suggestions.push('Send reminder');
+        suggestions.push('Custom reply...');
+        
+        this.addMessage('ai', 'আপনি কী করতে চান?');
+        this.showSuggestions(suggestions);
+      }
+      
+    } catch(e) {
+      this.showLoading(false);
+      this.addMessage('ai', '❌ সমস্যা হয়েছে: ' + e.message);
+    }
+  },
+  
+  async sendMessage(text) {
+    if(!text.trim()) return;
+    this.addMessage('user', text);
+    this.chatHistory.push({role:'user', text});
+    
+    const input = document.getElementById('srInput');
+    if(input) input.value = '';
+    
+    this.showLoading(true);
+    
+    try {
+      const apiKey = State.apiKeys[State.currentKeyIndex || 0]?.key;
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
+      
+      // Build context with full conversation
+      const ws = State.workspaces[State.currentWsIdx] || {};
+      const sig = State.signatories[State.currentSigIdx] || {};
+      const ragContext = RAG.buildContext(this.originalText.substring(0, 200));
+      
+      let chatContext = 'You are an Indian Government office assistant helping draft a reply. ';
+      chatContext += 'Office: ' + (ws.office_en || ws.name || 'Not set') + '. ';
+      chatContext += 'Signing Authority: ' + (sig.name || 'Not set') + ', ' + (sig.desig || '') + '.\n\n';
+      chatContext += 'ORIGINAL LETTER (received):\n' + this.originalText + '\n\n';
+      if(ragContext) chatContext += 'REFERENCE FROM PAST LETTERS:\n' + ragContext + '\n\n';
+      chatContext += 'CONVERSATION SO FAR:\n';
+      this.chatHistory.forEach(m => { chatContext += (m.role === 'user' ? 'User' : 'AI') + ': ' + m.text + '\n'; });
+      chatContext += '\nUser\'s latest message: ' + text + '\n\n';
+      chatContext += 'Instructions: If the user wants to draft a reply, ask clarifying questions first (tone, specific points, sections to cite). ';
+      chatContext += 'If they say "write" or "draft" or "তৈরি করো", generate the complete formal letter in GOI format. ';
+      chatContext += 'Respond in the same language the user uses (Bengali/Hindi/English). ';
+      chatContext += 'If generating a letter, output ONLY the letter body (no subject line — that goes separately).';
+      
+      const body = {contents:[{parts:[{text:chatContext}]}], generationConfig:{temperature:0.4, maxOutputTokens:4096}};
+      const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+      const json = await res.json();
+      const reply = json.candidates?.[0]?.content?.parts?.[0]?.text || 'কোনো উত্তর পাওয়া যায়নি।';
+      
+      this.showLoading(false);
+      this.chatHistory.push({role:'ai', text: reply});
+      this.addMessage('ai', reply);
+      
+      // Check if the reply contains a letter draft
+      if(reply.length > 300 && (reply.includes('Sir') || reply.includes('Madam') || reply.includes('মহোদয়') || reply.includes('Subject') || reply.includes('Ref'))) {
+        this.addMessage('system', '📝 চিঠি draft তৈরি হয়েছে!');
+        this.showSuggestions(['✅ Write ট্যাবে পাঠাও', '🔄 আবার লেখো', '✏️ পরিবর্তন করো']);
+      }
+      
+    } catch(e) {
+      this.showLoading(false);
+      this.addMessage('ai', '❌ Error: ' + e.message);
+    }
+  },
+  
+  handleSuggestion(text) {
+    if(text === '✅ Write ট্যাবে পাঠাও') {
+      this.sendToWrite();
+      return;
+    }
+    this.sendMessage(text);
+  },
+  
+  sendToWrite() {
+    // Find the last AI message that looks like a letter
+    const lastLetter = [...this.chatHistory].reverse().find(m => m.role === 'ai' && m.text.length > 300);
+    if(!lastLetter) { toast('কোনো draft পাওয়া যায়নি', 'error'); return; }
+    
+    this.closePanel();
+    switchTab('write');
+    setMode('ai');
+    
+    setTimeout(() => {
+      const sub = document.getElementById('fldSubject');
+      const det = document.getElementById('fldDetails');
+      const ref = document.getElementById('fldRef');
+      
+      if(sub && this.analysis?.subject) sub.value = 'Reply — ' + this.analysis.subject;
+      if(ref) ref.value = this.originalText.substring(0, 500);
+      if(det) det.value = 'AI Generated Reply:\n\n' + lastLetter.text;
+      
+      toast('Draft Write ট্যাবে পাঠানো হয়েছে!', 'success');
+    }, 300);
+  },
+  
+  openPanel() {
+    if(document.getElementById('smartReplyPanel')) return;
+    const div = document.createElement('div');
+    div.id = 'smartReplyPanel';
+    div.className = 'sr-panel';
+    div.innerHTML = '<div class="sr-box">' +
+      '<div class="sr-header"><h3>🤖 Smart Reply</h3><button onclick="SmartReply.closePanel()" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;">✕</button></div>' +
+      '<div class="sr-chat" id="srChat"></div>' +
+      '<div class="sr-input-row"><input id="srInput" placeholder="আপনার নির্দেশ দিন..." onkeydown="if(event.key===\'Enter\')SmartReply.sendMessage(this.value)"><button onclick="SmartReply.sendMessage(document.getElementById(\'srInput\').value)">পাঠান</button></div>' +
+      '</div>';
+    document.body.appendChild(div);
+  },
+  
+  closePanel() {
+    const p = document.getElementById('smartReplyPanel');
+    if(p) p.remove();
+  },
+  
+  addMessage(type, text) {
+    const chat = document.getElementById('srChat');
+    if(!chat) return;
+    const div = document.createElement('div');
+    div.className = 'sr-msg ' + type;
+    div.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  },
+  
+  showSuggestions(items) {
+    const chat = document.getElementById('srChat');
+    if(!chat) return;
+    const div = document.createElement('div');
+    div.className = 'sr-suggestions';
+    items.forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'sr-sug';
+      btn.textContent = s;
+      btn.onclick = () => { div.remove(); SmartReply.handleSuggestion(s); };
+      div.appendChild(btn);
+    });
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  },
+  
+  showLoading(show) {
+    const existing = document.getElementById('srLoading');
+    if(existing) existing.remove();
+    if(show) {
+      const chat = document.getElementById('srChat');
+      if(!chat) return;
+      const div = document.createElement('div');
+      div.id = 'srLoading';
+      div.className = 'sr-loading';
+      div.innerHTML = '<span class="spinner spinner-sm"></span> AI চিন্তা করছে...';
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  }
+};
+
+function smartReply(id) { SmartReply.start(id); }
 
 document.addEventListener('DOMContentLoaded', loadTheme);
 </script>
