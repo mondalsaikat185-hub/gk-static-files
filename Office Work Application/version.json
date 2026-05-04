@@ -1,6 +1,6 @@
 {
-  "version": 10,
-  "uploaded_at": "2026-05-04T06:00:25",
-  "timestamp": 1777874425,
-  "changes": "Auto-update system, DOCX CDN fallback, format mode fix, Force Update button"
+  "version": 11,
+  "uploaded_at": "2026-05-04T06:38:14",
+  "timestamp": 1777876694,
+  "changes": "Smart Reply button added to inbox items"
 }
