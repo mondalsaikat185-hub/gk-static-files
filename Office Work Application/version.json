@@ -1,6 +1,6 @@
 {
-  "version": 7,
-  "uploaded_at": "2026-04-27T22:02:23",
-  "timestamp": 1777307543,
-  "folder": "Office Work Application"
+  "version": 10,
+  "uploaded_at": "2026-05-04T06:00:25",
+  "timestamp": 1777874425,
+  "changes": "Auto-update system, DOCX CDN fallback, format mode fix, Force Update button"
 }
