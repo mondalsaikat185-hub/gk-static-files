@@ -766,7 +766,7 @@ select option{background:var(--card);color:var(--text);}
 <script>
 'use strict';
 // === AUTO-UPDATE SYSTEM v1.0 ===
-const APP_VERSION = 11;
+const APP_VERSION = 12;
 (function(){
   // Check for updates on every page load
   fetch('version.json?_t='+Date.now(),{cache:'no-store'})
@@ -889,6 +889,15 @@ async function signOutUser() {
   await auth.signOut();
   location.reload();
 }
+// Timeout fallback: if auth takes too long, show login screen
+setTimeout(() => {
+  const ls = $('loadScreen');
+  if(ls && ls.style.display !== 'none' && ls.parentElement) {
+    showLoad(false);
+    $('authScreen').classList.remove('hidden');
+  }
+}, 8000);
+
 auth.onAuthStateChanged(async user => {
   if(user) {
     State.user = user;
