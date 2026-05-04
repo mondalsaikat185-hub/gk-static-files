@@ -875,25 +875,76 @@ function loadTheme() {
 async function signInWithGoogle() {
   const btn = $('googleSignInBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner spinner-sm"></span> Signing in…';
+  btn.innerHTML = '<span class="spinner spinner-sm"></span> Google Sign-in...';
   const googleIcon = '<svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/></svg>';
   try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    const result = await auth.signInWithPopup(provider);
-    // Success — onAuthStateChanged will handle the rest
+    // Wait for GIS library to load
+    if(typeof google === 'undefined' || !google.accounts) {
+      await new Promise((resolve, reject) => {
+        let attempts = 0;
+        const check = setInterval(() => {
+          if(typeof google !== 'undefined' && google.accounts) { clearInterval(check); resolve(); }
+          if(++attempts > 30) { clearInterval(check); reject(new Error('Google Identity Services load fail')); }
+        }, 200);
+      });
+    }
+    // Use Google Identity Services - bypasses Firebase popup/redirect handler completely
+    const idToken = await new Promise((resolve, reject) => {
+      google.accounts.id.initialize({
+        client_id: '1080714862635-rtkaoj08a64eohm740v4516985amt1r1.apps.googleusercontent.com',
+        callback: (response) => {
+          if(response.credential) resolve(response.credential);
+          else reject(new Error('Google credential not received'));
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true
+      });
+      google.accounts.id.prompt((notification) => {
+        if(notification.isNotDisplayed()) {
+          // One Tap not available - show Google button overlay
+          const gDiv = document.createElement('div');
+          gDiv.id = 'gisButtonDiv';
+          gDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:10000;background:rgba(0,0,0,0.7);display:flex;flex-direction:column;align-items:center;justify-content:center;';
+          const label = document.createElement('div');
+          label.textContent = 'Google Account select korun:';
+          label.style.cssText = 'color:#fff;font-size:16px;margin-bottom:20px;font-weight:600;';
+          gDiv.appendChild(label);
+          const btnContainer = document.createElement('div');
+          btnContainer.id = 'gisRenderBtn';
+          gDiv.appendChild(btnContainer);
+          const closeBtn = document.createElement('button');
+          closeBtn.textContent = 'Cancel';
+          closeBtn.style.cssText = 'display:block;margin:20px auto 0;background:none;border:1px solid #fff;color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-size:14px;';
+          closeBtn.onclick = () => { gDiv.remove(); reject(new Error('Sign-in cancelled')); };
+          gDiv.appendChild(closeBtn);
+          document.body.appendChild(gDiv);
+          google.accounts.id.renderButton(btnContainer, {
+            type: 'standard', theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'rectangular', width: 300
+          });
+        }
+        if(notification.isSkippedMoment()) {
+          // User dismissed One Tap
+        }
+      });
+    });
+    // Got the ID token from Google - now sign in to Firebase
+    btn.innerHTML = '<span class="spinner spinner-sm"></span> Signing in to Firebase...';
+    const credential = firebase.auth.GoogleAuthProvider.credential(idToken);
+    await auth.signInWithCredential(credential);
+    // Remove GIS overlay if present
+    const gDiv = document.getElementById('gisButtonDiv');
+    if(gDiv) gDiv.remove();
+    // Success - onAuthStateChanged will handle the rest
   } catch(e) {
-    console.error('Sign-in error:', e.code, e.message);
+    console.error('Sign-in error:', e);
     btn.disabled = false;
     btn.innerHTML = googleIcon + '<span>Sign in with Google</span>';
-    if(e.code === 'auth/popup-blocked') {
-      toast('পপআপ ব্লক হয়েছে। অনুগ্রহ করে Popup allow করুন।', 'error');
-    } else if(e.code === 'auth/popup-closed-by-user') {
-      toast('Sign-in বাতিল করা হয়েছে।', 'info');
-    } else if(e.code === 'auth/unauthorized-domain') {
-      toast('Domain authorized নেই। Firebase Console এ যোগ করুন।', 'error');
+    const gDiv = document.getElementById('gisButtonDiv');
+    if(gDiv) gDiv.remove();
+    if(e.message && (e.message.includes('cancel') || e.message.includes('Cancel'))) {
+      toast('Sign-in cancelled.', 'info');
     } else {
-      toast('Sign-in সমস্যা: ' + (e.message || e.code), 'error');
+      toast('Sign-in error: ' + (e.message || 'Unknown error'), 'error');
     }
   }
 }
