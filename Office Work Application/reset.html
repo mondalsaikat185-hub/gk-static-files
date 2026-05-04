@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Office AI - Reset</title>
+<title>Office AI - Force Update</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0a0e1a;color:#e8eef7;font-family:system-ui,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
@@ -8,32 +8,78 @@ body{background:#0a0e1a;color:#e8eef7;font-family:system-ui,sans-serif;display:f
 h1{font-size:22px;margin-bottom:16px;color:#5b8ff9}
 #status{margin:20px 0;padding:16px;border-radius:12px;font-size:14px;line-height:1.8;background:rgba(91,143,249,.15);border:1px solid rgba(91,143,249,.3);color:#5b8ff9}
 .done{background:rgba(72,199,142,.15)!important;border-color:rgba(72,199,142,.3)!important;color:#48c78e!important}
+.step{text-align:left;margin:4px 0;opacity:0.5;transition:opacity .3s}
+.step.active{opacity:1}
+.step.done{opacity:1;color:#48c78e}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #5b8ff9;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head><body>
 <div class="card">
-<h1>Office AI - Cache Reset</h1>
-<div id="status">Clearing old data...</div>
+<h1>🔄 Office AI — Force Update</h1>
+<div id="status">
+  <div class="step" id="s1">⏳ Service Worker মুছে ফেলা হচ্ছে...</div>
+  <div class="step" id="s2">⏳ সমস্ত Cache মুছে ফেলা হচ্ছে...</div>
+  <div class="step" id="s3">⏳ IndexedDB পরিষ্কার করা হচ্ছে...</div>
+  <div class="step" id="s4">⏳ নতুন version লোড হচ্ছে...</div>
+</div>
 </div>
 <script>
 async function reset() {
-  const el = document.getElementById('status');
+  const steps = ['s1','s2','s3','s4'];
+  function markActive(id) { document.getElementById(id).classList.add('active'); document.getElementById(id).innerHTML = '<span class="spinner"></span>' + document.getElementById(id).textContent.slice(2); }
+  function markDone(id, msg) { document.getElementById(id).classList.add('done'); document.getElementById(id).innerHTML = '✅ ' + msg; }
+
   try {
-    // Unregister all service workers
+    // Step 1: Unregister ALL service workers
+    markActive('s1');
     if('serviceWorker' in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
-      for(const reg of regs) await reg.unregister();
+      for(const reg of regs) {
+        try { await reg.unregister(); } catch(e) {}
+      }
     }
-    // Delete all caches
+    markDone('s1', 'Service Worker মুছে ফেলা হয়েছে (' + (navigator.serviceWorker ? 'OK' : 'N/A') + ')');
+
+    // Step 2: Delete ALL caches
+    markActive('s2');
     if('caches' in window) {
       const keys = await caches.keys();
-      for(const key of keys) await caches.delete(key);
+      for(const key of keys) {
+        try { await caches.delete(key); } catch(e) {}
+      }
+      markDone('s2', keys.length + ' টি Cache মুছে ফেলা হয়েছে');
+    } else {
+      markDone('s2', 'Cache API উপলব্ধ নয়');
     }
-    el.className = 'done';
-    el.innerHTML = 'Done! Redirecting to Office AI...';
-    // Wait 1.5s then redirect
-    setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+
+    // Step 3: Clear IndexedDB (Firestore offline cache — will re-sync)
+    markActive('s3');
+    try {
+      const dbs = await indexedDB.databases();
+      let cleared = 0;
+      for(const db of dbs) {
+        if(db.name && (db.name.includes('firestore') || db.name.includes('firebase'))) {
+          // Skip Firebase auth DB to keep user logged in
+          if(db.name.includes('firebase-auth')) continue;
+          indexedDB.deleteDatabase(db.name);
+          cleared++;
+        }
+      }
+      markDone('s3', cleared + ' টি IndexedDB পরিষ্কার করা হয়েছে');
+    } catch(e) {
+      markDone('s3', 'IndexedDB — ' + (e.message || 'skipped'));
+    }
+
+    // Step 4: Redirect with cache-bust
+    markActive('s4');
+    markDone('s4', 'নতুন version-এ redirect করা হচ্ছে...');
+
+    // Wait 1.5s so user can see progress, then redirect
+    await new Promise(r => setTimeout(r, 1500));
+    window.location.href = 'index.html?forceUpdate=' + Date.now();
   } catch(err) {
-    el.innerHTML = 'Error: ' + err.message + '<br><a href="index.html" style="color:#5b8ff9">Open Office AI manually</a>';
+    document.getElementById('status').innerHTML = '❌ Error: ' + err.message + '<br><br><a href="index.html?forceUpdate=' + Date.now() + '" style="color:#5b8ff9;font-size:16px">অ্যাপে যান →</a>';
   }
 }
 reset();
