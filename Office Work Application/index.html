@@ -13,8 +13,20 @@
 <link rel="apple-touch-icon" href="icon.jpeg">
 <link rel="icon" type="image/jpeg" href="icon.jpeg">
 <title>AI Office Assistant</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.umd.min.js" onerror="loadDocxFallback()"></script>
+<script>
+function loadDocxFallback(){
+  var s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.umd.min.js';
+  s.onerror=function(){
+    var s2=document.createElement('script');
+    s2.src='https://unpkg.com/docx@7.8.2/build/index.umd.min.js';
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s);
+}
+</script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -1649,9 +1661,11 @@ async function callGemini(prompt, opts={}) {
         throw new Error(json.error.message);
       }
       const text = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const finishReason = json.candidates?.[0]?.finishReason || '';
       const usage = json.usageMetadata || {};
       keyObj.usage.tokens += (usage.totalTokenCount || 0);
       if(State.tokenBudget && keyObj.usage.tokens > State.tokenBudget) toast('⚠️ Budget exceeded on '+keyObj.label, 'warn');
+      if(finishReason === 'MAX_TOKENS') console.warn('Gemini output truncated (MAX_TOKENS)');
       debounceSave();
       return text;
     } catch(e) {
@@ -2173,7 +2187,17 @@ OUTPUT FORMAT (plain text — no markdown):
     const ragContext = RAG.buildContext(ragQuery);
     if(ragContext) prompt += ragContext;
 
-    const result = await callGemini(prompt, {temp:0.35, maxOut:3000});
+    let result = await callGemini(prompt, {temp:0.35, maxOut:8192});
+    // Check if output was truncated
+    const trimmed = result.trim();
+    const looksComplete = /yours\s+(faithfully|sincerely|truly)|submitted\s+for|for\s+kind\s+perusal/i.test(trimmed.slice(-200));
+    if(!looksComplete && trimmed.length > 100) {
+      try {
+        const contPrompt = 'Continue EXACTLY from where this stopped. Do NOT repeat anything. Complete the remaining part:\n\n' + trimmed.slice(-300);
+        const contResult = await callGemini(contPrompt, {temp:0.35, maxOut:4096});
+        result = trimmed + '\n' + contResult.trim();
+      } catch(e) { /* use what we have */ }
+    }
     renderLetterPreview(result.trim(), {subject, mode});
     State.letterPendingSave = {subject, mode, body:result.trim(), generatedAt:now()};
     $('outputSection').classList.remove('hidden');
@@ -2303,6 +2327,28 @@ async function saveCurrentLetter() {
   }
 }
 
+async function ensureDocxLoaded() {
+  if(typeof docx !== 'undefined') return true;
+  const urls = [
+    'https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.umd.min.js',
+    'https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.umd.min.js',
+    'https://unpkg.com/docx@7.8.2/build/index.umd.min.js'
+  ];
+  for(const url of urls) {
+    try {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = url;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+      if(typeof docx !== 'undefined') return true;
+    } catch(e) { continue; }
+  }
+  return false;
+}
+
 async function downloadLetterAsWord() {
   const ws = currentWorkspace();
   const dir = currentDirectory();
@@ -2312,6 +2358,10 @@ async function downloadLetterAsWord() {
   const subject = State.letterPendingSave?.subject || $('fldSubject')?.value?.trim() || 'Letter';
   const isNote = State.currentMode === 'note';
   try {
+    if(!(await ensureDocxLoaded())) {
+      toast('DOCX library failed to load. Check your internet connection and try again.', 'error');
+      return;
+    }
     const { Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType } = docx;
     const children = [];
     if(!isNote) {
