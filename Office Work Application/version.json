@@ -1,6 +1,6 @@
 {
-  "version": 11,
-  "uploaded_at": "2026-05-04T06:38:14",
-  "timestamp": 1777876694,
-  "changes": "Smart Reply button added to inbox items"
+  "version": 12,
+  "uploaded_at": "2026-05-04T06:43:04",
+  "timestamp": 1777876984,
+  "changes": "Auth timeout fallback, all features verified"
 }
