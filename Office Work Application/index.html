@@ -14,19 +14,7 @@
 <link rel="icon" type="image/jpeg" href="icon.jpeg">
 <title>AI Office Assistant</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.umd.min.js" onerror="loadDocxFallback()"></script>
-<script>
-function loadDocxFallback(){
-  var s=document.createElement('script');
-  s.src='https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.umd.min.js';
-  s.onerror=function(){
-    var s2=document.createElement('script');
-    s2.src='https://unpkg.com/docx@7.8.2/build/index.umd.min.js';
-    document.head.appendChild(s2);
-  };
-  document.head.appendChild(s);
-}
-</script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -2375,9 +2363,9 @@ async function saveCurrentLetter() {
 async function ensureDocxLoaded() {
   if(typeof docx !== 'undefined') return true;
   const urls = [
-    'https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.umd.min.js',
-    'https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.umd.min.js',
-    'https://unpkg.com/docx@7.8.2/build/index.umd.min.js'
+    'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.min.js',
+    'https://cdn.jsdelivr.net/npm/docx@9.1.0/build/index.umd.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js'
   ];
   for(const url of urls) {
     try {
