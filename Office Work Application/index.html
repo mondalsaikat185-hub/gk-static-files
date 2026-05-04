@@ -3255,20 +3255,21 @@ function showUpdateBanner() {
   document.body.appendChild(div);
 }
 async function clearAppCacheAndReload() {
-  if(!confirm('Clear app cache and reload? Your data is safe in cloud \u2014 only the app code refreshes.')) return;
+  toast('আপডেট করা হচ্ছে... অপেক্ষা করুন', 'info');
   try {
     if('serviceWorker' in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
+      for(const r of regs) { try{await r.unregister();}catch(e){} }
     }
     if('caches' in window) {
       const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
+      for(const k of keys) { try{await caches.delete(k);}catch(e){} }
     }
-    toast('Cache cleared. Reloading\u2026', 'success');
-    setTimeout(() => location.reload(true), 800);
+    toast('Cache cleared! Loading new version...', 'success');
+    setTimeout(() => { window.location.href = window.location.pathname + '?v=' + Date.now(); }, 1000);
   } catch(e) {
-    toast('Clear failed: ' + e.message, 'error');
+    toast('Error: ' + e.message, 'error');
+    setTimeout(() => { window.location.reload(true); }, 1000);
   }
 }
 
