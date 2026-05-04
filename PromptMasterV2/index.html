@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- build:1777825669 -->
+<!DOCTYPE html><!-- build:1777856732 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -230,7 +230,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy }
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy }
   from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 var FIREBASE_CONFIG = {
@@ -244,7 +244,9 @@ var FIREBASE_CONFIG = {
 
 var app  = initializeApp(FIREBASE_CONFIG);
 var auth = getAuth(app);
-var db   = getFirestore(app);
+var db   = initializeFirestore(app, {
+  localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+});
 var provider = new GoogleAuthProvider();
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -253,6 +255,7 @@ var PROMPTS = [];
 var activeCat = "all", searchQ = "", viewingId = null, editingId = null, pendingDelId = null;
 var currentUser = null;
 var unsubCats = null, unsubPrompts = null;
+var isFirstLoad = true;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
@@ -307,9 +310,10 @@ function startSync(uid){
 
   unsubPrompts = onSnapshot(promptsRef, function(snap){
     PROMPTS = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    isFirstLoad = false;
     setSyncDot("ok");
     renderAll();
-  }, function(e){ toast("Sync error: "+e.message,"err"); setSyncDot(""); });
+  }, function(e){ toast("Sync error: "+e.message,"err"); setSyncDot(""); isFirstLoad=false; renderAll(); });
 }
 
 function stopSync(){
@@ -320,8 +324,9 @@ function stopSync(){
 
 onAuthStateChanged(auth,function(user){
   currentUser=user;
+  isFirstLoad=true;
   updateAuthUI(user);
-  if(user){ startSync(user.uid); }
+  if(user){ renderAll(); startSync(user.uid); }
   else { stopSync(); }
 });
 
@@ -351,6 +356,10 @@ function renderPrompts(){
   else{for(var i=0;i<CATS.length;i++){if(CATS[i].id===activeCat){title.textContent=CATS[i].name;break;}}}
   if(!currentUser){
     grid.innerHTML="<div class='empty'><div class='icon'>&#128274;</div><p>Sign in to view and manage your prompts.</p></div>";
+    return;
+  }
+  if(isFirstLoad){
+    grid.innerHTML="<div class='empty'><div class='icon' style='animation:blink 1s infinite'>&#9728;</div><p>Loading prompts...</p><p style='font-size:13px;color:var(--text2)'>Connecting to cloud...</p></div>";
     return;
   }
   if(list.length===0){
@@ -519,10 +528,11 @@ document.getElementById("delConfirm").onclick=async function(){
   }catch(e){toast("Delete failed: "+e.message,"err");}
 };
 
-// ── Search ────────────────────────────────────────────────────────────────────
+// ── Search ──────────────────
+────────────────────────────────────────────────────────────────────────────────
 document.getElementById("searchInput").oninput=function(){searchQ=this.value;renderPrompts();};
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────────────────────────
 renderAll();
 </script>
 </body>
