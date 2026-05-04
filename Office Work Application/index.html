@@ -716,8 +716,12 @@ select option{background:var(--card);color:var(--text);}
         </div>
         <div class="divider"></div>
         <div class="muted small mb-2">App version cache management:</div>
-        <button class="btn btn-warn btn-sm btn-full" onclick="clearAppCacheAndReload()">🔄 Clear Cache &amp; Get Latest Version</button>
-        <div class="input-hint mt-1">Use this if you see an old version after I push code updates. Your data stays safe in cloud.</div>
+        <div style="background:rgba(91,143,249,.12);border:1.5px solid rgba(91,143,249,.35);border-radius:12px;padding:14px;margin-bottom:8px;">
+          <div style="font-size:13px;color:var(--text);margin-bottom:10px;">📌 যদি নতুন আপডেট দেখা না যায় — এই বাটনে ক্লিক করুন:</div>
+          <button class="btn btn-primary btn-full" onclick="clearAppCacheAndReload()" style="font-size:15px;padding:14px;font-weight:700;">🔄 Force Update — নতুন Version আনুন</button>
+          <div class="input-hint mt-1">আপনার সমস্ত ডেটা Cloud-এ সুরক্ষিত। শুধু অ্যাপ কোড রিফ্রেশ হবে।</div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px;">বিকল্প: ব্রাউজারে <a href="reset.html" style="color:#5b8ff9;">reset.html</a> খুলুন</div>
       </div></div>
       <div class="acc"><div class="acc-head" onclick="toggleAcc(this)"><span>👤 Account</span><span class="acc-arrow">▼</span></div><div class="acc-body">
         <div class="account-chip" style="margin-bottom:0;">
@@ -747,7 +751,7 @@ select option{background:var(--card);color:var(--text);}
         <button class="btn btn-primary btn-full mt-2" onclick="testTelegram()">📤 Send Test Message</button>
       </div></div>
       <div class="acc"><div class="acc-head" onclick="toggleAcc(this)"><span>ℹ️ About</span><span class="acc-arrow">▼</span></div><div class="acc-body">
-        <div class="muted small">AI Office Assistant — Phase 1</div>
+        <div class="muted small">AI Office Assistant — v10 (Phase 1)</div><div class="muted small mt-1" id="appVersionInfo" style="color:#5b8ff9;">App Version: 10</div>
         <div class="muted small mt-1">For government officers handling letters, notes &amp; case files.</div>
         <div class="muted small mt-1">Storage: Firebase (sync) + IndexedDB (cache).</div>
         <div class="muted small mt-1">AI: Gemini 2.5 (primary), Mistral (fallback).</div>
@@ -773,6 +777,47 @@ select option{background:var(--card);color:var(--text);}
 
 <script>
 'use strict';
+// === AUTO-UPDATE SYSTEM v1.0 ===
+const APP_VERSION = 10;
+(function(){
+  // Check for updates on every page load
+  fetch('version.json?_t='+Date.now(),{cache:'no-store'})
+    .then(function(r){return r.json()})
+    .then(function(d){
+      if(d.version && d.version > APP_VERSION){
+        console.log('[AutoUpdate] New version:',d.version,'(current:',APP_VERSION,')');
+        // Show update banner and auto-update
+        var banner = document.createElement('div');
+        banner.id = 'updateBanner';
+        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#5b8ff9,#9c6cd8);color:#fff;padding:16px 20px;text-align:center;font-size:15px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);';
+        banner.innerHTML = '🔄 নতুন আপডেট পাওয়া গেছে (v'+d.version+')! স্বয়ংক্রিয়ভাবে আপডেট হচ্ছে...';
+        document.body.appendChild(banner);
+        // Auto-update after 1.5s
+        setTimeout(function(){ window.__forceAppUpdate(); }, 1500);
+      }
+    })
+    .catch(function(){/* offline — skip update check */});
+})();
+window.__forceAppUpdate = async function(){
+  try {
+    // 1. Unregister all service workers
+    if('serviceWorker' in navigator){
+      var regs = await navigator.serviceWorker.getRegistrations();
+      for(var i=0;i<regs.length;i++) await regs[i].unregister();
+    }
+    // 2. Clear all caches
+    if('caches' in window){
+      var keys = await caches.keys();
+      for(var i=0;i<keys.length;i++) await caches.delete(keys[i]);
+    }
+    // 3. Hard reload with cache-bust
+    window.location.href = window.location.pathname + '?v=' + Date.now();
+  } catch(e){
+    window.location.reload(true);
+  }
+};
+// === END AUTO-UPDATE ===
+
 const firebaseConfig = {
   apiKey:"AIzaSyDTISW3t14smuZJip2nYhOYM6XrYSrN_pI",
   authDomain:"service-book-tracker.firebaseapp.com",
@@ -3166,6 +3211,12 @@ if(window.innerWidth >= 900) {
 // === Service Worker Registration ===
 if('serviceWorker' in navigator) {
   // Track if we already had a controller (= SW was already active before this page load)
+  // Handle ?forceUpdate= param — skip SW registration to get clean load
+  const urlParams = new URLSearchParams(window.location.search);
+  if(urlParams.has('forceUpdate') || urlParams.has('v')) {
+    // Clean URL without reload
+    window.history.replaceState({}, '', window.location.pathname);
+  }
   const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('sw.js', {updateViaCache: 'none'}).then(reg => {
     // Check for updates periodically (every 60s)
