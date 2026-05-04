@@ -19,6 +19,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -766,7 +767,7 @@ select option{background:var(--card);color:var(--text);}
 <script>
 'use strict';
 // === AUTO-UPDATE SYSTEM v1.0 ===
-const APP_VERSION = 14;
+const APP_VERSION = 15;
 (function(){
   // Check for updates on every page load
   fetch('version.json?_t='+Date.now(),{cache:'no-store'})
