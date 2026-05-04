@@ -1,7 +1,7 @@
 {
-  "version": 13,
-  "uploaded_at": "2026-05-04T14:19:11",
-  "timestamp": 1777904351,
+  "version": 14,
+  "uploaded_at": "2026-05-04T15:43:14",
+  "timestamp": 1777909394,
   "folder": "Office Work Application",
-  "changes": "Fix Google Sign-in: switch from popup to redirect (popup was getting blocked)"
+  "changes": "Revert to signInWithPopup with proper error handling and Bengali messages"
 }
