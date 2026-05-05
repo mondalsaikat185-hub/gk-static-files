@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- build:1777858136 -->
+<!DOCTYPE html><!-- build:1777969920 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -132,6 +132,10 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
     <div id="authArea"><button class="btn-signin" id="signInBtn">Sign in with Google</button></div>
   </div>
 </header>
+<div id="dbPanel" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;border-top:2px solid #7c3aed;padding:8px 12px;z-index:9999;max-height:160px;overflow-y:auto;font-family:monospace;font-size:11px;color:#a0a0c0">
+<div style="display:flex;justify-content:space-between;margin-bottom:4px"><b style="color:#a78bfa">🔍 SYNC DIAGNOSTIC</b><button onclick="document.getElementById('dbPanel').style.display='none'" style="background:#333;color:#fff;border:none;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:11px">Close</button></div>
+<div id="dbLog"></div>
+</div>
 <div class="mobile-cats" id="mobileCats"></div>
 <div class="layout">
   <aside class="sidebar">
@@ -293,25 +297,37 @@ function doSignIn(){
 }
 
 // ── Firestore Listeners ───────────────────────────────────────────────────────
+function dbLog(msg){
+  var el=document.getElementById("dbLog");
+  if(!el)return;
+  var t=new Date().toLocaleTimeString();
+  el.innerHTML='<div style="margin-bottom:4px"><b>'+t+'</b> '+msg+'</div>'+el.innerHTML;
+  el.parentElement.style.display='block';
+}
+
 function startSync(uid){
   setSyncDot("syncing");
+  dbLog("startSync called. UID="+uid.slice(0,8)+"...");
   if(unsubCats){unsubCats();unsubCats=null;}
   if(unsubPrompts){unsubPrompts();unsubPrompts=null;}
 
   var catsRef    = collection(db,"users/"+uid+"/categories");
   var promptsRef = collection(db,"users/"+uid+"/prompts");
+  dbLog("Listening: users/"+uid.slice(0,8)+".../prompts");
 
   unsubCats = onSnapshot(catsRef, function(snap){
     CATS = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
+    dbLog("CATS snapshot: "+snap.docs.length+" items. fromCache="+snap.metadata.fromCache);
     renderAll();
-  }, function(e){ toast("Sync error: "+e.message,"err"); setSyncDot(""); });
+  }, function(e){ dbLog("CATS ERROR: "+e.code+" "+e.message); toast("Sync error: "+e.message,"err"); setSyncDot(""); });
 
   unsubPrompts = onSnapshot(promptsRef, function(snap){
     PROMPTS = snap.docs.map(function(d){return Object.assign({id:d.id},d.data());});
     isFirstLoad = false;
+    dbLog("PROMPTS snapshot: "+snap.docs.length+" items. fromCache="+snap.metadata.fromCache+" hasPendingWrites="+snap.metadata.hasPendingWrites);
     setSyncDot("ok");
     renderAll();
-  }, function(e){ toast("Sync error: "+e.message,"err"); setSyncDot(""); isFirstLoad=false; renderAll(); });
+  }, function(e){ dbLog("PROMPTS ERROR: "+e.code+" "+e.message); toast("Sync error: "+e.message,"err"); setSyncDot(""); isFirstLoad=false; renderAll(); });
 }
 
 function stopSync(){
