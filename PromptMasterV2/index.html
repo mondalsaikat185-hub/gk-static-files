@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- build:1777969920 -->
+<!DOCTYPE html><!-- build:1777970442 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -234,7 +234,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy }
+import { initializeFirestore, persistentLocalCache, getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy }
   from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 var FIREBASE_CONFIG = {
@@ -248,7 +248,12 @@ var FIREBASE_CONFIG = {
 
 var app  = initializeApp(FIREBASE_CONFIG);
 var auth = getAuth(app);
-var db   = getFirestore(app);
+var db;
+try {
+  db = initializeFirestore(app, { localCache: persistentLocalCache() });
+} catch(e) {
+  db = getFirestore(app);
+}
 var provider = new GoogleAuthProvider();
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -342,6 +347,20 @@ onAuthStateChanged(auth,function(user){
   updateAuthUI(user);
   if(user){ renderAll(); startSync(user.uid); }
   else { stopSync(); }
+});
+
+// Force Firestore to reconnect when browser comes back online
+window.addEventListener('online', function(){
+  dbLog("Network online - reconnecting Firestore...");
+  if(currentUser){ startSync(currentUser.uid); }
+});
+
+// Also reconnect when page becomes visible again (mobile background recovery)
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState==='visible' && currentUser){
+    dbLog("Tab visible - checking sync...");
+    startSync(currentUser.uid);
+  }
 });
 
 // ── Render ────────────────────────────────────────────────────────────────────
