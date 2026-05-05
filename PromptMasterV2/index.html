@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- build:1777972287 -->
+<!DOCTYPE html><!-- build:1777972950 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -6,6 +6,12 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Prompt Master</title>
 <meta name="theme-color" content="#1e1b4b">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PromptMaster">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0f0e1a;--surface:#1a1929;--surface2:#232236;--border:#2e2d4a;--accent:#7c3aed;--accent2:#6d28d9;--text:#e2e0f0;--text2:#9490b5;--green:#22c55e;--red:#ef4444;--radius:12px}
@@ -691,6 +697,15 @@ document.getElementById("delCatConfirm").onclick=async function(){
 
 // ── Init ──────────────────────────────────────────────────────────────────────────────
 renderAll();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js')
+      .then(function(r){ console.log('SW registered:', r.scope); })
+      .catch(function(e){ console.warn('SW failed:', e); });
+  });
+}
 </script>
 </body>
 </html>
