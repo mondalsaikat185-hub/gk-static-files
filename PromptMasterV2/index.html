@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- build:1777971274 -->
+<!DOCTYPE html><!-- build:1777972287 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -39,6 +39,18 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .cat-item.active{background:var(--surface2);color:#a78bfa;font-weight:600}
 .cat-count{background:var(--border);color:var(--text2);font-size:11px;padding:1px 7px;border-radius:20px;min-width:22px;text-align:center;flex-shrink:0}
 .cat-item.active .cat-count{background:var(--accent);color:white}
+.cat-menu-btn{opacity:0;background:transparent;border:none;color:var(--text2);cursor:pointer;font-size:15px;padding:2px 6px;border-radius:4px;transition:opacity .15s,background .15s;flex-shrink:0;line-height:1}
+.cat-item:hover .cat-menu-btn{opacity:1}
+.cat-menu-btn:hover{background:var(--border)!important;color:var(--text)!important}
+.mob-cat-wrap{display:inline-flex;align-items:center;margin-right:6px;vertical-align:middle}
+.mob-cat-wrap .mob-btn{margin-right:0}
+.mob-cat-dots{background:transparent;border:none;color:var(--text2);cursor:pointer;font-size:13px;padding:4px 5px;line-height:1;border-radius:4px;flex-shrink:0}
+.mob-cat-dots:hover{background:var(--border);color:var(--text)}
+.cat-ctx-menu{display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.55);z-index:5000;min-width:130px;overflow:hidden}
+.cat-ctx-menu.open{display:block}
+.cat-ctx-item{padding:11px 16px;font-size:13px;cursor:pointer;color:var(--text);transition:background .15s;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.cat-ctx-item:hover{background:var(--surface2)}
+.cat-ctx-item.danger{color:var(--red)}
 .sidebar-footer{padding:12px;border-top:1px solid var(--border);flex-shrink:0}
 .btn-add-cat{width:100%;background:transparent;border:1px dashed var(--border);color:var(--text2);border-radius:8px;padding:8px;font-size:13px;cursor:pointer;transition:all .15s}
 .btn-add-cat:hover{border-color:var(--accent);color:var(--accent)}
@@ -230,6 +242,40 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 
 <div class="toast" id="toast"></div>
 
+<!-- Category Context Menu -->
+<div class="cat-ctx-menu" id="catCtxMenu">
+  <div class="cat-ctx-item" id="catCtxEdit">&#9999;&#xFE0E; Rename</div>
+  <div class="cat-ctx-item danger" id="catCtxDel">&#128465; Delete</div>
+</div>
+
+<!-- Edit Category Modal -->
+<div class="form-overlay" id="editCatFormOverlay">
+  <div class="form-modal">
+    <div class="form-title">Rename Category</div>
+    <div class="form-group">
+      <label class="form-label">Category Name *</label>
+      <input class="form-input" id="fEditCatName" type="text" placeholder="e.g. Marketing">
+    </div>
+    <div class="form-actions">
+      <button class="btn-form-cancel" id="editCatFormCancel">Cancel</button>
+      <button class="btn-save" id="editCatFormSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Category Dialog -->
+<div class="del-overlay" id="delCatOverlay">
+  <div class="dialog">
+    <div class="dialog-icon">&#128193;</div>
+    <div class="dialog-title">Delete Category?</div>
+    <div class="dialog-msg">Delete "<span class="dname" id="delCatName"></span>"?<br><small style="color:var(--text2)">Prompts in this category will remain in All Prompts.</small></div>
+    <div class="dialog-btns">
+      <button class="btn-cancel" id="delCatCancel">Cancel</button>
+      <button class="btn-del" id="delCatConfirm">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
@@ -263,7 +309,7 @@ var provider = new GoogleAuthProvider();
 // ── State ─────────────────────────────────────────────────────────────────────
 var CATS    = [];
 var PROMPTS = [];
-var activeCat = "all", searchQ = "", viewingId = null, editingId = null, pendingDelId = null;
+var activeCat = "all", searchQ = "", viewingId = null, editingId = null, pendingDelId = null, pendingDelCatId = null, editingCatId = null;
 var currentUser = null;
 var unsubCats = null, unsubPrompts = null;
 var isFirstLoad = true;
@@ -311,7 +357,6 @@ function dbLog(msg){
   if(!el)return;
   var t=new Date().toLocaleTimeString();
   el.innerHTML='<div style="margin-bottom:4px"><b>'+t+'</b> '+msg+'</div>'+el.innerHTML;
-  el.parentElement.style.display='block';
 }
 
 function startSync(uid){
@@ -378,8 +423,13 @@ function renderCats(){
   }
   for(var i=0;i<items.length;i++){
     var it=items[i],act=activeCat===it.id;
-    s+="<div class='cat-item"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='window.selCat(this.dataset.catid)'><span>"+esc(it.name)+"</span><span class='cat-count'>"+it.n+"</span></div>";
-    m+="<span class='mob-btn"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='window.selCat(this.dataset.catid)'>"+esc(it.name)+" ("+it.n+")</span>";
+    if(it.id==="all"){
+      s+="<div class='cat-item"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='window.selCat(this.dataset.catid)'><span>"+esc(it.name)+"</span><span class='cat-count'>"+it.n+"</span></div>";
+      m+="<div class='mob-cat-wrap'><span class='mob-btn"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='window.selCat(this.dataset.catid)'>"+esc(it.name)+" ("+it.n+")</span></div>";
+    }else{
+      s+="<div class='cat-item"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='window.selCat(this.dataset.catid)'><span>"+esc(it.name)+"</span><div style='display:flex;align-items:center;gap:4px'><span class='cat-count'>"+it.n+"</span><button class='cat-menu-btn' data-catid='"+it.id+"' onclick='event.stopPropagation();window.openCatMenu(this.dataset.catid,event)'>&#8942;</button></div></div>";
+      m+="<div class='mob-cat-wrap'><span class='mob-btn"+(act?" active":"")+"' data-catid='"+it.id+"' onclick='window.selCat(this.dataset.catid)'>"+esc(it.name)+" ("+it.n+")</span><button class='mob-cat-dots' data-catid='"+it.id+"' onclick='event.stopPropagation();window.openCatMenu(this.dataset.catid,event)'>&#8942;</button></div>";
+    }
   }
   list.innerHTML=s; mob.innerHTML=m;
 }
@@ -501,6 +551,7 @@ document.getElementById("addPromptBtn").onclick=function(){
   document.getElementById("fName").value="";
   document.getElementById("fSub").value="";
   document.getElementById("fText").value="";
+  if(activeCat!=="all") document.getElementById("fCat").value=activeCat;
   document.getElementById("promptFormOverlay").classList.add("open");
   setTimeout(function(){document.getElementById("fName").focus();},100);
 };
@@ -567,6 +618,76 @@ document.getElementById("delConfirm").onclick=async function(){
 
 // ── Search ──────────────────
 document.getElementById("searchInput").oninput=function(){searchQ=this.value;renderPrompts();};
+
+// ── Category Context Menu ─────────────────────────────────────────────────────
+var catCtxMenu=document.getElementById("catCtxMenu");
+window.openCatMenu=function(catId,evt){
+  pendingDelCatId=catId; editingCatId=catId;
+  catCtxMenu.classList.add("open");
+  var x=evt.clientX, y=evt.clientY;
+  catCtxMenu.style.top=(y+4)+"px";
+  catCtxMenu.style.left=x+"px";
+  setTimeout(function(){
+    var r=catCtxMenu.getBoundingClientRect();
+    if(r.right>window.innerWidth-4) catCtxMenu.style.left=(x-r.width)+"px";
+    if(r.bottom>window.innerHeight-4) catCtxMenu.style.top=(y-r.height)+"px";
+  },0);
+};
+document.addEventListener("click",function(e){
+  if(!catCtxMenu.contains(e.target)) catCtxMenu.classList.remove("open");
+});
+
+document.getElementById("catCtxEdit").onclick=function(){
+  catCtxMenu.classList.remove("open");
+  if(!editingCatId)return;
+  var cat=null;
+  for(var i=0;i<CATS.length;i++){if(CATS[i].id===editingCatId){cat=CATS[i];break;}}
+  if(!cat)return;
+  document.getElementById("fEditCatName").value=cat.name;
+  document.getElementById("editCatFormOverlay").classList.add("open");
+  setTimeout(function(){var el=document.getElementById("fEditCatName");el.focus();el.select();},100);
+};
+document.getElementById("catCtxDel").onclick=function(){
+  catCtxMenu.classList.remove("open");
+  if(!pendingDelCatId)return;
+  var cat=null;
+  for(var i=0;i<CATS.length;i++){if(CATS[i].id===pendingDelCatId){cat=CATS[i];break;}}
+  if(!cat)return;
+  document.getElementById("delCatName").textContent=cat.name;
+  document.getElementById("delCatOverlay").classList.add("open");
+};
+
+// Edit category modal
+function closeEditCatForm(){editingCatId=null;document.getElementById("editCatFormOverlay").classList.remove("open");}
+document.getElementById("editCatFormCancel").onclick=closeEditCatForm;
+document.getElementById("editCatFormOverlay").onclick=function(e){if(e.target===this)closeEditCatForm();};
+document.getElementById("editCatFormSave").onclick=async function(){
+  var name=document.getElementById("fEditCatName").value.trim();
+  if(!name){toast("Category name is required","err");return;}
+  if(!editingCatId){toast("Error: no category","err");return;}
+  var btn=document.getElementById("editCatFormSave");
+  btn.disabled=true; btn.textContent="Saving...";
+  try{
+    await setDoc(doc(db,"users/"+currentUser.uid+"/categories/"+editingCatId),{name:name},{merge:true});
+    toast("Category renamed!");
+    closeEditCatForm();
+  }catch(e){toast("Failed: "+e.message,"err");}
+  finally{btn.disabled=false;btn.textContent="Save";}
+};
+
+// Delete category dialog
+function closeDelCat(){pendingDelCatId=null;document.getElementById("delCatOverlay").classList.remove("open");}
+document.getElementById("delCatCancel").onclick=closeDelCat;
+document.getElementById("delCatOverlay").onclick=function(e){if(e.target===this)closeDelCat();};
+document.getElementById("delCatConfirm").onclick=async function(){
+  if(!pendingDelCatId)return;
+  var id=pendingDelCatId; closeDelCat();
+  if(activeCat===id){activeCat="all";}
+  try{
+    await deleteDoc(doc(db,"users/"+currentUser.uid+"/categories/"+id));
+    toast("Category deleted");
+  }catch(e){toast("Delete failed: "+e.message,"err");}
+};
 
 // ── Init ──────────────────────────────────────────────────────────────────────────────
 renderAll();
