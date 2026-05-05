@@ -867,7 +867,7 @@ async function extractPageText(doc, pageNum) {
 
   // Step 1: Try normal orientation at scale 3.0
   setStatus(`পেজ ${pageNum} render হচ্ছে...`, '');
-  const b64Normal = await renderPageToBase64(page, 3.0, 0);
+  const b64Normal = await renderPageToBase64(page, 2.0, 0);
 
   armStuck(pageNum);
   let text;
@@ -881,7 +881,7 @@ async function extractPageText(doc, pageNum) {
   if (text.length < 120 && text.trim() !== '[Page could not be read]') {
     setStatus(`পেজ ${pageNum}: কম text পাওয়া গেছে। ঘোরানো page চেক হচ্ছে...`, 'warn');
     try {
-      const b64Rot90 = await renderPageToBase64(page, 3.0, 90);
+      const b64Rot90 = await renderPageToBase64(page, 2.0, 90);
       armStuck(pageNum);
       const textRot90 = await callWithRetry(b64Rot90);
       disarmStuck();
@@ -889,7 +889,7 @@ async function extractPageText(doc, pageNum) {
         text = textRot90;
         // Step 3: Also try 270° and pick the best
         try {
-          const b64Rot270 = await renderPageToBase64(page, 3.0, 270);
+          const b64Rot270 = await renderPageToBase64(page, 2.0, 270);
           armStuck(pageNum);
           const textRot270 = await callWithRetry(b64Rot270);
           disarmStuck();
@@ -906,7 +906,7 @@ async function extractPageText(doc, pageNum) {
 async function renderPageToBase64(page, scale, rotationDeg) {
   // Cap to max 1900px — scale 3.0 can produce 2500px+ images that exceed
   // Gemini's inline_data request limit and cause 400 errors.
-  const MAX_DIM = 1900;
+  const MAX_DIM = 1500;  // ~1100×1500 for A4 — safely within Gemini inline_data limits
   let vp = page.getViewport({ scale, rotation: rotationDeg });
   const largest = Math.max(vp.width, vp.height);
   if (largest > MAX_DIM) {
@@ -920,7 +920,7 @@ async function renderPageToBase64(page, scale, rotationDeg) {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   await page.render({ canvasContext: ctx, viewport: vp }).promise;
-  return canvas.toDataURL('image/jpeg', 0.90).split(',')[1];
+  return canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
 }
 
 // ────────────────────────────────────────────────
@@ -954,11 +954,25 @@ async function callWithRetry(b64, maxAttempts = 4) {
         continue;
       }
 
-      const data = await res.json();
+      // Parse response — log actual error so it's visible in console
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        const raw = `Worker returned ${res.status} with non-JSON body`;
+        console.error('[PDF Scanner]', raw);
+        const e = new Error(raw);
+        e.noRetry = (res.status >= 400 && res.status < 500);
+        throw e;
+      }
+
       if (data.error) {
+        console.error(`[PDF Scanner] Worker error ${res.status}:`, data.error);
+        setStatus(`❌ ${data.error}`, 'err');
         const e = new Error(data.error);
-        // 400 = Gemini bad request (e.g. image too large) — retrying won't help
-        if (res.status === 400) e.noRetry = true;
+        // 4xx errors from Gemini (bad request, invalid key, model not found)
+        // won't improve on retry — throw immediately
+        e.noRetry = (res.status >= 400 && res.status < 500);
         throw e;
       }
       return data.text;
