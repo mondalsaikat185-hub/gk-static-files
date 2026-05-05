@@ -9,7 +9,9 @@
   <link rel="manifest" href="./manifest.json" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <meta name="theme-color" content="#4361ee" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <!-- apple-mobile-web-app-capable removed — deprecated in Chrome DevTools.
+       iOS 13+ supports standalone PWA via manifest alone.
+       apple-mobile-web-app-status-bar-style kept for older iOS status bar colour. -->
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="PDF Scanner" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -902,16 +904,23 @@ async function extractPageText(doc, pageNum) {
 
 // Render a PDF page to base64 JPEG at given scale and rotation
 async function renderPageToBase64(page, scale, rotationDeg) {
-  const vp = page.getViewport({ scale, rotation: rotationDeg });
+  // Cap to max 1900px — scale 3.0 can produce 2500px+ images that exceed
+  // Gemini's inline_data request limit and cause 400 errors.
+  const MAX_DIM = 1900;
+  let vp = page.getViewport({ scale, rotation: rotationDeg });
+  const largest = Math.max(vp.width, vp.height);
+  if (largest > MAX_DIM) {
+    vp = page.getViewport({ scale: scale * (MAX_DIM / largest), rotation: rotationDeg });
+  }
   const canvas = document.createElement('canvas');
   canvas.width  = vp.width;
   canvas.height = vp.height;
   const ctx = canvas.getContext('2d');
-  // White background so JPEG doesn't get artefacts on transparent areas
+  // White background — prevents JPEG artefacts on transparent PDF backgrounds
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   await page.render({ canvasContext: ctx, viewport: vp }).promise;
-  return canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+  return canvas.toDataURL('image/jpeg', 0.90).split(',')[1];
 }
 
 // ────────────────────────────────────────────────
@@ -946,11 +955,16 @@ async function callWithRetry(b64, maxAttempts = 4) {
       }
 
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (data.error) {
+        const e = new Error(data.error);
+        // 400 = Gemini bad request (e.g. image too large) — retrying won't help
+        if (res.status === 400) e.noRetry = true;
+        throw e;
+      }
       return data.text;
 
     } catch (err) {
-      if (attempt === maxAttempts) throw err;
+      if (err.noRetry || attempt === maxAttempts) throw err;
       const waitSec = 6 * attempt;
       setStatus(`সমস্যা। ${waitSec}s পরে আবার চেষ্টা (${attempt}/${maxAttempts - 1})...`, 'warn');
       await sleep(waitSec * 1000);
