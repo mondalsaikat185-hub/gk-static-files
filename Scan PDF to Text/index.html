@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Scanner — Text Converter</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <meta name="theme-color" content="#4361ee" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PDF Scanner" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Scanned PDF থেকে Markdown text বের করুন — বিনামূল্যে, সম্পূর্ণ ব্যক্তিগত" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px 80px;
+    }
+
+    .container { width: 100%; max-width: 580px; }
+
+    /* ── Install Banner (bottom sheet) ── */
+    .install-banner {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #16162a;
+      border-top: 2px solid #4361ee;
+      padding: 14px 20px;
+      flex-direction: row;
+      align-items: center;
+      gap: 12px;
+      z-index: 200;
+      box-shadow: 0 -6px 30px rgba(0,0,0,0.5);
+      animation: slideUp 0.3s ease;
+    }
+    .install-banner.show { display: flex; }
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .install-app-icon {
+      width: 48px; height: 48px;
+      border-radius: 12px;
+      flex-shrink: 0;
+      object-fit: cover;
+    }
+    .install-text { flex: 1; min-width: 0; }
+    .install-text strong { display: block; color: #fff; font-size: 0.92rem; }
+    .install-text span   { color: #666; font-size: 0.78rem; }
+    .btn-install {
+      background: #4361ee;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-install:hover { background: #3251de; }
+    .btn-dismiss-install {
+      background: transparent;
+      border: none;
+      color: #444;
+      cursor: pointer;
+      font-size: 1.3rem;
+      line-height: 1;
+      padding: 4px;
+      flex-shrink: 0;
+    }
+    .btn-dismiss-install:hover { color: #888; }
+
+    /* iOS instruction banner */
+    .ios-banner {
+      display: none;
+      background: #1a1a35;
+      border: 1px solid #3a3a6a;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 0.82rem;
+      color: #aaa;
+      line-height: 1.5;
+      margin-bottom: 14px;
+      position: relative;
+    }
+    .ios-banner.show { display: block; }
+    .ios-banner .ios-close {
+      position: absolute;
+      top: 8px; right: 10px;
+      background: none; border: none;
+      color: #555; cursor: pointer;
+      font-size: 1rem;
+    }
+
+    /* Hide install UI when running as installed app */
+    @media (display-mode: standalone) {
+      .install-banner, .ios-banner { display: none !important; }
+    }
+
+    /* ── Header ── */
+    .app-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 24px 0 6px;
+    }
+    .app-header img {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      object-fit: cover;
+    }
+    .app-header-text h1 {
+      font-size: 1.5rem;
+      color: #fff;
+      letter-spacing: -0.4px;
+    }
+    .app-header-text .subtitle {
+      color: #555;
+      font-size: 0.82rem;
+      margin-top: 2px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: #16162a;
+      border: 1px solid #252545;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 14px;
+    }
+
+    /* ── Drop Zone ── */
+    .drop-zone {
+      border: 2px dashed #3a3a6a;
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: #4361ee;
+      background: #1a1a35;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
+    }
+    .drop-icon { font-size: 2.6rem; margin-bottom: 10px; }
+    .drop-text { font-size: 0.95rem; color: #bbb; margin-bottom: 4px; }
+    .drop-hint { font-size: 0.8rem; color: #555; }
+
+    .file-info {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: #1f1f40;
+      border-radius: 8px;
+      font-size: 0.86rem;
+      color: #7b8cff;
+      word-break: break-all;
+    }
+
+    /* ── API Key Section ── */
+    .api-section { margin-top: 20px; }
+
+    .api-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: #555;
+      font-size: 0.86rem;
+      user-select: none;
+      transition: color 0.2s;
+      padding: 4px 0;
+    }
+    .api-toggle:hover { color: #999; }
+    .api-toggle .arrow { margin-left: auto; font-size: 0.72rem; transition: transform 0.2s; }
+    .api-toggle.open .arrow { transform: rotate(180deg); }
+
+    .api-body { display: none; margin-top: 14px; }
+    .api-body.open { display: block; }
+
+    .section-label {
+      font-size: 0.78rem;
+      color: #555;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Key rows */
+    .key-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .key-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .key-num {
+      font-size: 0.72rem;
+      color: #444;
+      min-width: 36px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .key-input {
+      flex: 1;
+      background: #0f0f1a;
+      border: 1px solid #252545;
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: #e0e0e0;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color 0.2s;
+      min-width: 0;
+    }
+    .key-input:focus { border-color: #4361ee; }
+    .key-btn {
+      background: transparent;
+      border: 1px solid #252545;
+      border-radius: 6px;
+      color: #555;
+      cursor: pointer;
+      padding: 7px 9px;
+      font-size: 0.78rem;
+      flex-shrink: 0;
+      transition: color 0.2s, border-color 0.2s;
+      line-height: 1;
+    }
+    .key-btn:hover { color: #aaa; border-color: #444; }
+    .key-btn.del:hover { color: #ff6b6b; border-color: #ff6b6b; }
+
+    .btn-add-key {
+      margin-top: 10px;
+      width: 100%;
+      background: transparent;
+      border: 1px dashed #3a3a6a;
+      border-radius: 8px;
+      color: #555;
+      font-size: 0.84rem;
+      padding: 9px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-add-key:hover { color: #aaa; border-color: #4361ee; }
+
+    .hint {
+      font-size: 0.75rem;
+      color: #3a3a6a;
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    /* ── Primary Button ── */
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+      background: #4361ee;
+      color: #fff;
+      margin-top: 20px;
+    }
+    .btn-primary:hover:not(:disabled) { background: #3251de; }
+    .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-success {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: #2f9e44;
+      color: #fff;
+      margin-top: 14px;
+      display: none;
+    }
+    .btn-success.visible { display: block; }
+    .btn-success:hover { background: #27832f; }
+
+    .btn-warn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: #e67700;
+      color: #fff;
+      margin-top: 10px;
+      display: none;
+    }
+    .btn-warn.visible { display: block; }
+    .btn-warn:hover { background: #cc6a00; }
+
+    .btn-ghost {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #252545;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: #555;
+      margin-top: 10px;
+      display: none;
+    }
+    .btn-ghost.visible { display: block; }
+    .btn-ghost:hover { color: #aaa; border-color: #444; }
+
+    /* ── Progress Card ── */
+    #progressCard { display: none; }
+    #progressCard.visible { display: block; }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .progress-label { font-size: 0.86rem; color: #bbb; }
+    .progress-pct   { font-size: 0.86rem; font-weight: 700; color: #7b8cff; }
+
+    .progress-track {
+      height: 8px;
+      background: #252545;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4361ee, #7b8cff);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+
+    .status {
+      font-size: 0.82rem;
+      color: #555;
+      text-align: center;
+      min-height: 18px;
+      line-height: 1.5;
+    }
+    .status.ok   { color: #51cf66; }
+    .status.warn { color: #ffd43b; }
+    .status.err  { color: #ff6b6b; }
+
+    /* Summary row after completion */
+    .summary {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: #0f0f1a;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: #666;
+      line-height: 1.7;
+    }
+    .summary.visible { display: block; }
+    .summary .ok-count  { color: #51cf66; font-weight: 700; }
+    .summary .err-count { color: #ff6b6b; font-weight: 700; }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      color: #2a2a4a;
+      font-size: 0.74rem;
+      margin-top: 16px;
+      padding-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Install Banner (Android / Chrome / Desktop) ── -->
+<div class="install-banner" id="installBanner">
+  <img src="./icon-192.png" class="install-app-icon" alt="PDF Scanner" />
+  <div class="install-text">
+    <strong>PDF Scanner</strong>
+    <span>Home screen-এ install করুন</span>
+  </div>
+  <button class="btn-install" id="btnInstall">Install</button>
+  <button class="btn-dismiss-install" id="btnDismissInstall" title="Dismiss">✕</button>
+</div>
+
+<div class="container">
+
+  <!-- ── iOS Install Instructions ── -->
+  <div class="ios-banner" id="iosBanner">
+    <button class="ios-close" id="btnDismissIos">✕</button>
+    📱 <strong>iOS-এ Install করুন:</strong> নিচে <strong>Share (□↑)</strong> button → <strong>"Add to Home Screen"</strong> tap করুন। তারপর app-এর icon home screen-এ দেখবেন।
+  </div>
+
+  <!-- ── App Header ── -->
+  <div class="app-header">
+    <img src="./icon-192.png" alt="PDF Scanner Icon" />
+    <div class="app-header-text">
+      <h1>PDF Scanner</h1>
+      <div class="subtitle">Scanned PDF → Markdown Text</div>
+    </div>
+  </div>
+
+  <!-- ── Upload Card ── -->
+  <div class="card" id="uploadCard">
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf" />
+      <div class="drop-icon">📁</div>
+      <div class="drop-text">PDF ফাইল এখানে ড্রপ করুন</div>
+      <div class="drop-hint">অথবা click করে select করুন</div>
+    </div>
+    <div class="file-info" id="fileInfo"></div>
+
+    <!-- API Keys -->
+    <div class="api-section">
+      <div class="api-toggle" id="apiToggle">
+        <span>⚙️</span>
+        <span>API Keys (optional)</span>
+        <span class="arrow" id="arrow">▼</span>
+      </div>
+      <div class="api-body" id="apiBody">
+        <p class="section-label">আপনার Gemini API Keys</p>
+        <div class="key-list" id="keyList"></div>
+        <button class="btn-add-key" id="btnAddKey">＋ আরেকটি Key যোগ করুন</button>
+        <p class="hint">
+          একটির limit শেষ হলে পরেরটিতে যাবে। Tab বন্ধ হলে সব মুছে যাবে।<br/>
+          Key পেতে: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:#4361ee;">aistudio.google.com</a>
+        </p>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="btnStart" disabled>▶ শুরু করুন</button>
+  </div>
+
+  <!-- ── Progress Card ── -->
+  <div class="card" id="progressCard">
+    <div class="progress-header">
+      <span class="progress-label" id="progLabel">প্রস্তুত হচ্ছে...</span>
+      <span class="progress-pct" id="progPct">0%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progFill"></div>
+    </div>
+    <div class="status" id="statusMsg"></div>
+
+    <div class="summary" id="summary"></div>
+
+    <button class="btn-success" id="btnDownload">⬇ Markdown Download করুন</button>
+    <button class="btn-warn"    id="btnRetry">↻ ব্যর্থ পেজগুলো আবার চেষ্টা</button>
+    <button class="btn-ghost"   id="btnReset">নতুন PDF দিন</button>
+  </div>
+
+  <p class="footer">কোনো data কোথাও save হয় না &nbsp;•&nbsp; সম্পূর্ণ ব্যক্তিগত</p>
+</div>
+
+<!-- PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// ─────────────────────────────────────────────────────────────
+//  CONFIGURATION — আপনার Cloudflare Worker URL
+// ─────────────────────────────────────────────────────────────
+const WORKER_URL = 'https://pdf-ocr-proxy.mondal-saikat185.workers.dev';
+// ─────────────────────────────────────────────────────────────
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ────────────────────────────────────────────────
+//  SERVICE WORKER REGISTRATION
+// ────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ────────────────────────────────────────────────
+//  PWA INSTALL LOGIC
+// ────────────────────────────────────────────────
+let deferredPrompt = null;
+const installBanner = document.getElementById('installBanner');
+const btnInstall    = document.getElementById('btnInstall');
+const btnDismiss    = document.getElementById('btnDismissInstall');
+const iosBanner     = document.getElementById('iosBanner');
+const btnDismissIos = document.getElementById('btnDismissIos');
+
+const isIOS        = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                   || window.navigator.standalone === true;
+
+// Android / Chrome / Desktop — capture install prompt
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBanner.classList.add('show');
+});
+
+window.addEventListener('appinstalled', () => {
+  installBanner.classList.remove('show');
+  deferredPrompt = null;
+});
+
+btnInstall.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === 'accepted') installBanner.classList.remove('show');
+  deferredPrompt = null;
+});
+
+btnDismiss.addEventListener('click', () => {
+  installBanner.classList.remove('show');
+});
+
+// iOS — show manual instruction if not already installed
+if (isIOS && !isStandalone) {
+  iosBanner.classList.add('show');
+}
+btnDismissIos.addEventListener('click', () => {
+  iosBanner.classList.remove('show');
+});
+
+// ────────────────────────────────────────────────
+//  STATE
+// ────────────────────────────────────────────────
+let selectedFile   = null;
+let markdownOut    = '';
+let processing     = false;
+let stuckTimer     = null;
+let currentKeyIdx  = 0;
+let apiKeys        = [''];         // dynamic key array
+let failedPages    = [];           // pages that failed extraction
+let pdfDoc         = null;
+
+// ────────────────────────────────────────────────
+//  DOM REFS
+// ────────────────────────────────────────────────
+const dropZone    = document.getElementById('dropZone');
+const fileInput   = document.getElementById('fileInput');
+const fileInfo    = document.getElementById('fileInfo');
+const apiToggle   = document.getElementById('apiToggle');
+const apiBody     = document.getElementById('apiBody');
+const arrow       = document.getElementById('arrow');
+const btnStart    = document.getElementById('btnStart');
+const uploadCard  = document.getElementById('uploadCard');
+const progressCard= document.getElementById('progressCard');
+const progLabel   = document.getElementById('progLabel');
+const progPct     = document.getElementById('progPct');
+const progFill    = document.getElementById('progFill');
+const statusMsg   = document.getElementById('statusMsg');
+const summaryEl   = document.getElementById('summary');
+const btnDownload = document.getElementById('btnDownload');
+const btnRetry    = document.getElementById('btnRetry');
+const btnReset    = document.getElementById('btnReset');
+
+// ────────────────────────────────────────────────
+//  FILE SELECTION
+// ────────────────────────────────────────────────
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) pickFile(e.target.files[0]);
+});
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault(); dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type === 'application/pdf') pickFile(f);
+});
+
+function pickFile(f) {
+  selectedFile = f;
+  fileInfo.textContent = `✓  ${f.name}  (${(f.size / 1024 / 1024).toFixed(1)} MB)`;
+  fileInfo.style.display = 'block';
+  btnStart.disabled = false;
+}
+
+// ────────────────────────────────────────────────
+//  API KEY MANAGEMENT (unlimited keys)
+// ────────────────────────────────────────────────
+apiToggle.addEventListener('click', () => {
+  const open = apiBody.classList.toggle('open');
+  apiToggle.classList.toggle('open', open);
+  arrow.textContent = open ? '▲' : '▼';
+});
+
+document.getElementById('btnAddKey').addEventListener('click', () => {
+  apiKeys.push('');
+  renderKeyList();
+});
+
+function renderKeyList() {
+  const list = document.getElementById('keyList');
+  list.innerHTML = '';
+  apiKeys.forEach((val, i) => {
+    const row = document.createElement('div');
+    row.className = 'key-row';
+
+    const num = document.createElement('span');
+    num.className = 'key-num';
+    num.textContent = `Key ${i + 1}`;
+
+    const inp = document.createElement('input');
+    inp.type = 'password';
+    inp.className = 'key-input';
+    inp.placeholder = 'AIza...';
+    inp.value = val;
+    inp.autocomplete = 'off';
+    inp.addEventListener('input', () => { apiKeys[i] = inp.value; });
+
+    const vis = document.createElement('button');
+    vis.className = 'key-btn';
+    vis.title = 'Show / Hide';
+    vis.textContent = '👁';
+    vis.addEventListener('click', () => {
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    });
+
+    row.appendChild(num);
+    row.appendChild(inp);
+    row.appendChild(vis);
+
+    if (apiKeys.length > 1) {
+      const del = document.createElement('button');
+      del.className = 'key-btn del';
+      del.title = 'Remove';
+      del.textContent = '✕';
+      del.addEventListener('click', () => {
+        apiKeys.splice(i, 1);
+        renderKeyList();
+      });
+      row.appendChild(del);
+    }
+
+    list.appendChild(row);
+  });
+}
+
+function getKeys() {
+  return apiKeys.map(k => k.trim()).filter(Boolean);
+}
+
+// Initial render
+renderKeyList();
+
+// ────────────────────────────────────────────────
+//  START
+// ────────────────────────────────────────────────
+btnStart.addEventListener('click', () => {
+  failedPages = [];
+  runProcess(null);
+});
+
+// ────────────────────────────────────────────────
+//  RETRY FAILED PAGES
+// ────────────────────────────────────────────────
+btnRetry.addEventListener('click', async () => {
+  if (!pdfDoc || failedPages.length === 0) return;
+  btnRetry.classList.remove('visible');
+  const pagesToRetry = [...failedPages];
+  failedPages = [];
+  setStatus('ব্যর্থ পেজগুলো আবার চেষ্টা হচ্ছে...', 'warn');
+  await retryPages(pdfDoc, pagesToRetry);
+});
+
+// ────────────────────────────────────────────────
+//  DOWNLOAD
+// ────────────────────────────────────────────────
+btnDownload.addEventListener('click', () => {
+  const name = (selectedFile?.name || 'output').replace(/\.pdf$/i, '') + '_extracted.md';
+  const blob = new Blob([markdownOut], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+});
+
+// ────────────────────────────────────────────────
+//  RESET
+// ────────────────────────────────────────────────
+btnReset.addEventListener('click', () => {
+  selectedFile = null; markdownOut = ''; processing = false;
+  currentKeyIdx = 0; failedPages = []; pdfDoc = null;
+  fileInput.value = '';
+  fileInfo.textContent = ''; fileInfo.style.display = 'none';
+  btnStart.disabled = true;
+  progressCard.classList.remove('visible');
+  uploadCard.style.display = 'block';
+  [btnDownload, btnRetry, btnReset].forEach(b => b.classList.remove('visible'));
+  summaryEl.classList.remove('visible');
+  setProgress(0, 1, 'প্রস্তুত');
+  setStatus('', '');
+});
+
+// ────────────────────────────────────────────────
+//  CORE PROCESSING
+// ────────────────────────────────────────────────
+async function runProcess(specificPages) {
+  if (!selectedFile || processing) return;
+  processing = true;
+  currentKeyIdx = 0;
+  uploadCard.style.display = 'none';
+  progressCard.classList.add('visible');
+  [btnDownload, btnRetry, btnReset].forEach(b => b.classList.remove('visible'));
+  summaryEl.classList.remove('visible');
+
+  try {
+    setStatus('PDF লোড হচ্ছে...', '');
+    const buf = await selectedFile.arrayBuffer();
+    pdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+    const total = pdfDoc.numPages;
+    const pagesToProcess = specificPages || Array.from({ length: total }, (_, i) => i + 1);
+
+    if (!specificPages) {
+      // Fresh run — reset output
+      markdownOut = `# ${selectedFile.name.replace(/\.pdf$/i, '')}\n\n`;
+      markdownOut += `> মোট পেজ: ${total}\n\n---\n\n`;
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let idx = 0; idx < pagesToProcess.length; idx++) {
+      const p = pagesToProcess[idx];
+      setProgress(idx, pagesToProcess.length, `Page ${p}/${total} process হচ্ছে...`);
+      setStatus(`পেজ ${p} render হচ্ছে...`, '');
+
+      try {
+        const text = await extractPageText(pdfDoc, p);
+        // Replace/append page section in markdownOut
+        const section = `## Page ${p}\n\n${text}\n\n---\n\n`;
+        if (specificPages) {
+          // Replace existing error section
+          const regex = new RegExp(`## Page ${p}\\n\\n> ⚠️[^#]*---\\n\\n`);
+          if (regex.test(markdownOut)) {
+            markdownOut = markdownOut.replace(regex, section);
+          } else {
+            markdownOut += section;
+          }
+        } else {
+          markdownOut += section;
+        }
+        setStatus(`✓ Page ${p} সম্পন্ন`, 'ok');
+        successCount++;
+      } catch (err) {
+        const section = `## Page ${p}\n\n> ⚠️ এই পেজে সমস্যা: ${err.message}\n\n---\n\n`;
+        if (specificPages) {
+          const regex = new RegExp(`## Page ${p}\\n\\n> ⚠️[^#]*---\\n\\n`);
+          if (!regex.test(markdownOut)) markdownOut += section;
+        } else {
+          markdownOut += section;
+        }
+        failedPages.push(p);
+        setStatus(`⚠ Page ${p}-এ সমস্যা`, 'warn');
+        errorCount++;
+      }
+
+      setProgress(idx + 1, pagesToProcess.length, `${idx + 1}/${pagesToProcess.length} পেজ সম্পন্ন`);
+      if (idx < pagesToProcess.length - 1) await sleep(2600);
+    }
+
+    // Done
+    setProgress(pagesToProcess.length, pagesToProcess.length, 'সম্পূর্ণ!');
+
+    if (errorCount === 0) {
+      setStatus('✅ সব পেজ সম্পন্ন! Download করুন।', 'ok');
+    } else {
+      setStatus(`⚠ ${successCount} পেজ সফল, ${errorCount} পেজ ব্যর্থ।`, 'warn');
+    }
+
+    // Summary
+    summaryEl.innerHTML =
+      `✓ সফল: <span class="ok-count">${successCount}</span> পেজ` +
+      (errorCount > 0 ? ` &nbsp;•&nbsp; ✗ ব্যর্থ: <span class="err-count">${errorCount}</span> পেজ (${failedPages.join(', ')})` : '');
+    summaryEl.classList.add('visible');
+
+    btnDownload.classList.add('visible');
+    if (failedPages.length > 0) btnRetry.classList.add('visible');
+    btnReset.classList.add('visible');
+
+  } catch (err) {
+    setStatus(`❌ সমস্যা: ${err.message}`, 'err');
+    btnReset.classList.add('visible');
+  }
+
+  processing = false;
+}
+
+async function retryPages(doc, pages) {
+  processing = true;
+  const successBefore = failedPages.length;
+  setProgress(0, pages.length, 'Retry হচ্ছে...');
+
+  for (let idx = 0; idx < pages.length; idx++) {
+    const p = pages[idx];
+    setProgress(idx, pages.length, `Page ${p} retry হচ্ছে...`);
+    setStatus(`পেজ ${p} আবার চেষ্টা হচ্ছে...`, 'warn');
+
+    try {
+      const text = await extractPageText(doc, p);
+      const section = `## Page ${p}\n\n${text}\n\n---\n\n`;
+      const regex = new RegExp(`## Page ${p}\\n\\n> ⚠️[^#]*---\\n\\n`);
+      if (regex.test(markdownOut)) {
+        markdownOut = markdownOut.replace(regex, section);
+      } else {
+        markdownOut += section;
+      }
+      setStatus(`✓ Page ${p} সম্পন্ন`, 'ok');
+    } catch (err) {
+      failedPages.push(p);
+      setStatus(`⚠ Page ${p} আবারও ব্যর্থ`, 'warn');
+    }
+
+    setProgress(idx + 1, pages.length, `${idx + 1}/${pages.length} retry সম্পন্ন`);
+    if (idx < pages.length - 1) await sleep(2600);
+  }
+
+  const stillFailed = failedPages.length;
+  if (stillFailed === 0) {
+    setStatus('✅ সব পেজ এখন সফল!', 'ok');
+  } else {
+    setStatus(`⚠ ${stillFailed} পেজ এখনও ব্যর্থ।`, 'warn');
+    btnRetry.classList.add('visible');
+  }
+
+  btnDownload.classList.add('visible');
+  btnReset.classList.add('visible');
+  processing = false;
+}
+
+// ────────────────────────────────────────────────
+//  PAGE EXTRACTION WITH ROTATION FALLBACK
+// ────────────────────────────────────────────────
+async function extractPageText(doc, pageNum) {
+  const page = await doc.getPage(pageNum);
+
+  // Step 1: Try normal orientation at scale 3.0
+  setStatus(`পেজ ${pageNum} render হচ্ছে...`, '');
+  const b64Normal = await renderPageToBase64(page, 3.0, 0);
+
+  armStuck(pageNum);
+  let text;
+  try {
+    text = await callWithRetry(b64Normal);
+  } finally {
+    disarmStuck();
+  }
+
+  // Step 2: If very little text returned, try 90° rotation (handles sideways scans)
+  if (text.length < 120 && text.trim() !== '[Page could not be read]') {
+    setStatus(`পেজ ${pageNum}: কম text পাওয়া গেছে। ঘোরানো page চেক হচ্ছে...`, 'warn');
+    try {
+      const b64Rot90 = await renderPageToBase64(page, 3.0, 90);
+      armStuck(pageNum);
+      const textRot90 = await callWithRetry(b64Rot90);
+      disarmStuck();
+      if (textRot90.length > text.length) {
+        text = textRot90;
+        // Step 3: Also try 270° and pick the best
+        try {
+          const b64Rot270 = await renderPageToBase64(page, 3.0, 270);
+          armStuck(pageNum);
+          const textRot270 = await callWithRetry(b64Rot270);
+          disarmStuck();
+          if (textRot270.length > text.length) text = textRot270;
+        } catch {}
+      }
+    } catch {}
+  }
+
+  return text;
+}
+
+// Render a PDF page to base64 JPEG at given scale and rotation
+async function renderPageToBase64(page, scale, rotationDeg) {
+  const vp = page.getViewport({ scale, rotation: rotationDeg });
+  const canvas = document.createElement('canvas');
+  canvas.width  = vp.width;
+  canvas.height = vp.height;
+  const ctx = canvas.getContext('2d');
+  // White background so JPEG doesn't get artefacts on transparent areas
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  return canvas.toDataURL('image/jpeg', 0.95).split(',')[1];
+}
+
+// ────────────────────────────────────────────────
+//  WORKER CALL WITH KEY ROTATION + RETRY
+// ────────────────────────────────────────────────
+async function callWithRetry(b64, maxAttempts = 4) {
+  const keys = getKeys();
+  const totalKeys = keys.length || 1;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const key = keys.length ? keys[currentKeyIdx % keys.length] : null;
+
+    try {
+      const res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: b64, customApiKey: key || null })
+      });
+
+      // Rate limited → rotate to next key
+      if (res.status === 429) {
+        currentKeyIdx++;
+        if (currentKeyIdx >= totalKeys) {
+          setStatus('সব key-এর limit শেষ। ৬০ সেকেন্ড অপেক্ষা...', 'warn');
+          await sleep(62000);
+          currentKeyIdx = 0;
+        } else {
+          setStatus(`Key ${currentKeyIdx + 1}-এ যাচ্ছি...`, 'warn');
+          await sleep(1000);
+        }
+        continue;
+      }
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      return data.text;
+
+    } catch (err) {
+      if (attempt === maxAttempts) throw err;
+      const waitSec = 6 * attempt;
+      setStatus(`সমস্যা। ${waitSec}s পরে আবার চেষ্টা (${attempt}/${maxAttempts - 1})...`, 'warn');
+      await sleep(waitSec * 1000);
+    }
+  }
+}
+
+// ────────────────────────────────────────────────
+//  STUCK DETECTION
+// ────────────────────────────────────────────────
+function armStuck(p) {
+  disarmStuck();
+  stuckTimer = setTimeout(() => {
+    setStatus(`⚠️ Page ${p} অনেকক্ষণ ধরে চলছে। অপেক্ষা করুন...`, 'warn');
+  }, 50000);
+}
+function disarmStuck() {
+  if (stuckTimer) { clearTimeout(stuckTimer); stuckTimer = null; }
+}
+
+// ────────────────────────────────────────────────
+//  HELPERS
+// ────────────────────────────────────────────────
+function setProgress(cur, tot, label) {
+  const pct = tot === 0 ? 0 : Math.round((cur / tot) * 100);
+  progFill.style.width = pct + '%';
+  progPct.textContent  = pct + '%';
+  if (label) progLabel.textContent = label;
+}
+
+function setStatus(msg, type) {
+  statusMsg.textContent = msg;
+  statusMsg.className   = 'status' + (type ? ' ' + type : '');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
