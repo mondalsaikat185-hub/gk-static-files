@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF → Text Converter</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#4361ee" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container { width: 100%; max-width: 580px; }
+
+    h1 {
+      text-align: center;
+      font-size: 1.9rem;
+      color: #fff;
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 0.88rem;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: #16162a;
+      border: 1px solid #252545;
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 14px;
+    }
+
+    /* ── Drop Zone ── */
+    .drop-zone {
+      border: 2px dashed #3a3a6a;
+      border-radius: 12px;
+      padding: 44px 20px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: #4361ee;
+      background: #1a1a35;
+    }
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .drop-icon { font-size: 2.8rem; margin-bottom: 10px; }
+    .drop-text { font-size: 1rem; color: #bbb; margin-bottom: 4px; }
+    .drop-hint { font-size: 0.82rem; color: #555; }
+
+    .file-info {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 16px;
+      background: #1f1f40;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      color: #7b8cff;
+      word-break: break-all;
+    }
+
+    /* ── API Key Section ── */
+    .api-section { margin-top: 22px; }
+
+    .api-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: #666;
+      font-size: 0.88rem;
+      user-select: none;
+      transition: color 0.2s;
+    }
+    .api-toggle:hover { color: #aaa; }
+    .api-toggle .arrow { margin-left: auto; font-size: 0.75rem; }
+
+    .api-body { display: none; margin-top: 12px; }
+    .api-body.open { display: block; }
+
+    .label {
+      font-size: 0.8rem;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    input[type="password"], input[type="text"] {
+      width: 100%;
+      background: #0f0f1a;
+      border: 1px solid #252545;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #e0e0e0;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="password"]:focus, input[type="text"]:focus {
+      border-color: #4361ee;
+    }
+
+    .hint {
+      font-size: 0.76rem;
+      color: #444;
+      margin-top: 5px;
+      line-height: 1.4;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .btn-primary {
+      background: #4361ee;
+      color: #fff;
+      margin-top: 22px;
+    }
+    .btn-primary:hover:not(:disabled) { background: #3251de; }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-success {
+      background: #2f9e44;
+      color: #fff;
+      margin-top: 14px;
+      display: none;
+    }
+    .btn-success.visible { display: block; }
+    .btn-success:hover { background: #27832f; }
+
+    .btn-ghost {
+      background: transparent;
+      color: #555;
+      border: 1px solid #252545;
+      margin-top: 8px;
+      display: none;
+    }
+    .btn-ghost.visible { display: block; }
+    .btn-ghost:hover { color: #aaa; border-color: #444; }
+
+    /* ── Progress Section ── */
+    #progressCard { display: none; }
+    #progressCard.visible { display: block; }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .progress-label { font-size: 0.88rem; color: #bbb; }
+    .progress-pct { font-size: 0.88rem; font-weight: 700; color: #7b8cff; }
+
+    .progress-track {
+      height: 8px;
+      background: #252545;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4361ee, #7b8cff);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+
+    .status {
+      font-size: 0.83rem;
+      color: #666;
+      text-align: center;
+      min-height: 18px;
+      line-height: 1.4;
+    }
+    .status.ok { color: #51cf66; }
+    .status.warn { color: #ffd43b; }
+    .status.err { color: #ff6b6b; }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      color: #333;
+      font-size: 0.76rem;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📄 PDF → Text</h1>
+  <p class="subtitle">Scanned PDF থেকে Markdown ফাইলে text বের করুন</p>
+
+  <!-- Upload Card -->
+  <div class="card" id="uploadCard">
+
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf" />
+      <div class="drop-icon">📁</div>
+      <div class="drop-text">PDF ফাইল এখানে ড্রপ করুন</div>
+      <div class="drop-hint">অথবা click করে select করুন</div>
+    </div>
+    <div class="file-info" id="fileInfo"></div>
+
+    <!-- Optional custom API key -->
+    <div class="api-section">
+      <div class="api-toggle" id="apiToggle">
+        <span>⚙️</span>
+        <span>নিজের API Key ব্যবহার করুন (optional)</span>
+        <span class="arrow" id="arrow">▼</span>
+      </div>
+      <div class="api-body" id="apiBody">
+        <p class="label">Gemini API Key (paid বা নিজের free key):</p>
+        <input type="password" id="customKey" placeholder="AIza..." autocomplete="off" />
+        <p class="hint">
+          এই key শুধু এই session-এ ব্যবহার হবে।
+          Tab বন্ধ হলে মুছে যাবে। কোথাও save হয় না।
+        </p>
+
+        <p class="label" style="margin-top:14px;">আরও API Key যোগ করুন (rotation এর জন্য):</p>
+        <input type="password" id="key2" placeholder="Key 2 (optional)" autocomplete="off" style="margin-bottom:8px;" />
+        <input type="password" id="key3" placeholder="Key 3 (optional)" autocomplete="off" />
+        <p class="hint">একটার limit শেষ হলে পরেরটা ব্যবহার হবে।</p>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btnStart" disabled>▶ শুরু করুন</button>
+  </div>
+
+  <!-- Progress Card -->
+  <div class="card" id="progressCard">
+    <div class="progress-header">
+      <span class="progress-label" id="progLabel">প্রস্তুত হচ্ছে...</span>
+      <span class="progress-pct" id="progPct">0%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progFill"></div>
+    </div>
+    <div class="status" id="statusMsg"></div>
+
+    <button class="btn btn-success" id="btnDownload">⬇ Markdown ফাইল Download করুন</button>
+    <button class="btn btn-ghost" id="btnReset">নতুন PDF দিন</button>
+  </div>
+
+  <p class="footer">কোনো data কোথাও save হয় না &nbsp;•&nbsp; সম্পূর্ণ ব্যক্তিগত</p>
+</div>
+
+<!-- PDF.js from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// ─────────────────────────────────────────────
+//  CONFIGURATION
+//  আপনার Cloudflare Worker URL এখানে দিন
+//  (Deploy করার পরে পাবেন)
+// ─────────────────────────────────────────────
+const WORKER_URL = 'https://pdf-ocr-proxy.mondal-saikat185.workers.dev';
+// ─────────────────────────────────────────────
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── State ──
+let selectedFile  = null;
+let markdownOut   = '';
+let processing    = false;
+let stuckTimer    = null;
+let currentKeyIdx = 0;
+
+// ── DOM refs ──
+const dropZone    = document.getElementById('dropZone');
+const fileInput   = document.getElementById('fileInput');
+const fileInfo    = document.getElementById('fileInfo');
+const apiToggle   = document.getElementById('apiToggle');
+const apiBody     = document.getElementById('apiBody');
+const arrow       = document.getElementById('arrow');
+const btnStart    = document.getElementById('btnStart');
+const uploadCard  = document.getElementById('uploadCard');
+const progressCard= document.getElementById('progressCard');
+const progLabel   = document.getElementById('progLabel');
+const progPct     = document.getElementById('progPct');
+const progFill    = document.getElementById('progFill');
+const statusMsg   = document.getElementById('statusMsg');
+const btnDownload = document.getElementById('btnDownload');
+const btnReset    = document.getElementById('btnReset');
+
+// ── File selection ──
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) pickFile(e.target.files[0]);
+});
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault(); dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type === 'application/pdf') pickFile(f);
+});
+
+function pickFile(f) {
+  selectedFile = f;
+  fileInfo.textContent = `✓  ${f.name}  (${(f.size/1024/1024).toFixed(1)} MB)`;
+  fileInfo.style.display = 'block';
+  btnStart.disabled = false;
+}
+
+// ── API key toggle ──
+apiToggle.addEventListener('click', () => {
+  const open = apiBody.classList.toggle('open');
+  arrow.textContent = open ? '▲' : '▼';
+});
+
+// ── Start ──
+btnStart.addEventListener('click', runProcess);
+
+// ── Download ──
+btnDownload.addEventListener('click', () => {
+  const name = selectedFile.name.replace(/\.pdf$/i, '') + '_extracted.md';
+  const blob = new Blob([markdownOut], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+});
+
+// ── Reset ──
+btnReset.addEventListener('click', () => {
+  selectedFile = null; markdownOut = ''; processing = false; currentKeyIdx = 0;
+  fileInput.value = '';
+  fileInfo.textContent = ''; fileInfo.style.display = 'none';
+  btnStart.disabled = true;
+  progressCard.classList.remove('visible');
+  uploadCard.style.display = 'block';
+  btnDownload.classList.remove('visible');
+  btnReset.classList.remove('visible');
+  setProgress(0, 1, 'প্রস্তুত');
+  setStatus('', '');
+});
+
+// ── Core processing ──
+async function runProcess() {
+  if (!selectedFile || processing) return;
+  processing = true;
+  uploadCard.style.display = 'none';
+  progressCard.classList.add('visible');
+
+  try {
+    setStatus('PDF লোড হচ্ছে...', '');
+    const buf = await selectedFile.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const total = pdf.numPages;
+
+    markdownOut = `# ${selectedFile.name.replace(/\.pdf$/i, '')}\n\n`;
+    markdownOut += `> মোট পেজ: ${total}\n\n---\n\n`;
+
+    for (let p = 1; p <= total; p++) {
+      setProgress(p - 1, total, `Page ${p} of ${total} process হচ্ছে...`);
+      setStatus(`পেজ ${p} render হচ্ছে...`, '');
+
+      // Render page → canvas → base64 JPEG
+      const page   = await pdf.getPage(p);
+      const vp     = page.getViewport({ scale: 2.0 });
+      const canvas = document.createElement('canvas');
+      canvas.width  = vp.width;
+      canvas.height = vp.height;
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+      const b64 = canvas.toDataURL('image/jpeg', 0.92).split(',')[1];
+
+      // Call worker with stuck detection
+      armStuck(p);
+      try {
+        const text = await callWithRetry(b64);
+        disarmStuck();
+        markdownOut += `## Page ${p}\n\n${text}\n\n---\n\n`;
+        setStatus(`✓ Page ${p} সম্পন্ন`, 'ok');
+      } catch (err) {
+        disarmStuck();
+        markdownOut += `## Page ${p}\n\n> ⚠️ এই পেজে সমস্যা: ${err.message}\n\n---\n\n`;
+        setStatus(`⚠ Page ${p}-এ সমস্যা — পরের পেজে যাচ্ছে`, 'warn');
+      }
+
+      setProgress(p, total, `${p}/${total} পেজ সম্পন্ন`);
+
+      // Rate-limit pause (stay within 15 RPM)
+      if (p < total) await sleep(2600);
+    }
+
+    setProgress(total, total, 'সম্পূর্ণ হয়েছে!');
+    setStatus('✅ সব পেজ সম্পন্ন! Download করুন।', 'ok');
+    btnDownload.classList.add('visible');
+    btnReset.classList.add('visible');
+
+  } catch (err) {
+    setStatus(`❌ সমস্যা: ${err.message}`, 'err');
+    btnReset.classList.add('visible');
+  }
+
+  processing = false;
+}
+
+// ── Worker call with key rotation + retry ──
+async function callWithRetry(b64, maxAttempts = 3) {
+  const keys = getKeys();
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const key = keys.length ? keys[currentKeyIdx % keys.length] : null;
+
+    try {
+      const res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: b64, customApiKey: key || null })
+      });
+
+      // Rate limited → rotate key and wait
+      if (res.status === 429) {
+        setStatus(`Rate limit হয়েছে। পরের key চেষ্টা হচ্ছে...`, 'warn');
+        currentKeyIdx++;
+        if (currentKeyIdx >= (keys.length || 1)) {
+          setStatus('সব key-এর limit শেষ। ৬০ সেকেন্ড অপেক্ষা...', 'warn');
+          await sleep(62000);
+          currentKeyIdx = 0;
+        }
+        continue;
+      }
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      return data.text;
+
+    } catch (err) {
+      if (attempt === maxAttempts) throw err;
+      setStatus(`সমস্যা হয়েছে। ${attempt}/${maxAttempts} retry...`, 'warn');
+      await sleep(5000 * attempt);
+    }
+  }
+}
+
+// ── Read keys from inputs ──
+function getKeys() {
+  return [
+    document.getElementById('customKey').value.trim(),
+    document.getElementById('key2').value.trim(),
+    document.getElementById('key3').value.trim()
+  ].filter(Boolean);
+}
+
+// ── Stuck detection (45 s) ──
+function armStuck(p) {
+  disarmStuck();
+  stuckTimer = setTimeout(() => {
+    setStatus(`⚠️ Page ${p} অনেকক্ষণ ধরে চলছে। Network সমস্যা হতে পারে। অপেক্ষা করুন...`, 'warn');
+  }, 45000);
+}
+function disarmStuck() {
+  if (stuckTimer) { clearTimeout(stuckTimer); stuckTimer = null; }
+}
+
+// ── Helpers ──
+function setProgress(cur, tot, label) {
+  const pct = tot === 0 ? 0 : Math.round((cur / tot) * 100);
+  progFill.style.width  = pct + '%';
+  progPct.textContent   = pct + '%';
+  if (label) progLabel.textContent = label;
+}
+
+function setStatus(msg, type) {
+  statusMsg.textContent = msg;
+  statusMsg.className   = 'status' + (type ? ' ' + type : '');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
