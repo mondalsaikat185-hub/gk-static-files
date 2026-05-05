@@ -1,0 +1,27 @@
+{
+  "name": "PDF Scanner — Text Converter",
+  "short_name": "PDF Scanner",
+  "description": "Scanned PDF থেকে Markdown text বের করুন — বিনামূল্যে, সম্পূর্ণ ব্যক্তিগত",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f0f1a",
+  "theme_color": "#4361ee",
+  "lang": "en",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
