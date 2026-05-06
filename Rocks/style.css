@@ -1,0 +1,169 @@
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
