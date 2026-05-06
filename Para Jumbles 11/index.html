@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>English Parajumble Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  --bg-main: #e8f5e9;
+  --bg-paper: #fffde7;
+  --bg-filler: #fff3e0;
+  --text-color: #000000;
+  --accent-color: #2e7d32;
+  --opt-default-bg: #fce4ec;
+  --opt-border: #f8bbd0;
+  --opt-selected-bg: #d32f2f;
+  --opt-selected-text: #ffffff;
+  --timer-color: #c62828;
+  --sentence-border: #1565c0;
+  --sentence-label-bg: #1565c0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 900px;
+  background-color: var(--bg-filler);
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 90%;
+  max-width: 440px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+.progress-info {
+  font-size: 0.85rem;
+  color: #555;
+  background: rgba(255,255,255,0.8);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+/* Question Card */
+.question-container {
+  background-color: var(--bg-paper);
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 16px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 12px;
+  color: var(--text-color);
+  line-height: 1.5;
+}
+
+/* ── Sentence Display ─────────────────── */
+.sentences-box {
+  background: #e3f2fd;
+  border-left: 4px solid var(--sentence-border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.sentences-box.mini {
+  font-size: 0.92rem;
+  margin-bottom: 10px;
+}
+
+.sentence-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.sentence-row:last-child { margin-bottom: 0; }
+
+.sentence-label {
+  background: var(--sentence-label-bg);
+  color: white;
+  font-weight: bold;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sentence-text {
+  line-height: 1.55;
+  flex: 1;
+}
+
+.order-prompt {
+  font-size: 0.88rem;
+  color: #555;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+/* ── Options (ordering choices) ─────────── */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .options-grid { grid-template-columns: 1fr; }
+}
+
+.option {
+  padding: 11px 14px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg);
+  border: 1px solid var(--opt-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.option:hover { filter: brightness(0.95); }
+
+.option.selected {
+  background-color: var(--opt-selected-bg);
+  color: var(--opt-selected-text);
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 13px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+.submit-bar {
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid #ddd;
+  position: sticky;
+  bottom: 0;
+}
+
+.exam-info-box {
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  color: #555;
+  background: #f5f5f5;
+  padding: 10px 14px;
+  border-radius: 6px;
+  text-align: left;
+}
+
+/* ── Review Section ────────────────────── */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 16px;
+  text-align: left;
+}
+.status-correct   { color: green;   font-weight: bold; }
+.status-wrong     { color: #d32f2f; font-weight: bold; }
+.status-unanswered{ color: #f57c00; font-weight: bold; }
+
+/* Correct sequence arrangement */
+.correct-arrangement {
+  background: #e8f5e9;
+  border-left: 3px solid var(--accent-color);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin: 8px 0;
+}
+
+.arranged-sentence {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 7px;
+  font-size: 0.91rem;
+  line-height: 1.4;
+}
+.arranged-sentence:last-child { margin-bottom: 0; }
+
+.step-num {
+  background: var(--accent-color);
+  color: white;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.step-label {
+  color: var(--accent-color);
+  font-weight: bold;
+  flex-shrink: 0;
+  min-width: 28px;
+}
+
+.explanation {
+  background: #f1f8e9;
+  padding: 10px 14px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE    = "English Parajumble Quiz";
+const APP_SUBTITLE = "Arrange the sentences in the correct order";
+const DEFAULT_CONFIG = {"totalTime": 600, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "This paradox—wanting intimacy but fearing it—often leaves individuals feeling profoundly isolated.",
+      "B": "Human beings naturally crave connection, yet they frequently build walls to protect their vulnerabilities.",
+      "C": "Consequently, authentic relationships become elusive, replaced by temporary comforts that fail to satisfy.",
+      "D": "To cope with this isolation, they seek superficial validation from external sources rather than genuine bonds."
+    },
+    "options_en": [
+      "B, D, A, C",
+      "B, A, D, C",
+      "A, C, B, D",
+      "D, B, A, C"
+    ],
+    "explanation_en": "Sentence B introduces the topic of craving connection but building walls. Sentence A explicitly references \"This paradox\" mentioned in B and describes its result (isolation). Sentence D explains how people cope with that isolation, and Sentence C concludes with the ultimate consequence of those coping mechanisms.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "However, this period of rapid expansion masked underlying structural weaknesses within the banking sector.",
+      "B": "The post-war economic boom brought unprecedented prosperity and widespread industrial growth to the nation.",
+      "C": "When the speculative bubble finally burst, it triggered a financial crisis of unprecedented magnitude.",
+      "D": "In an effort to sustain the momentum, policymakers deregulated financial markets, encouraging risky investments."
+    },
+    "options_en": [
+      "B, D, A, C",
+      "B, A, D, C",
+      "D, C, B, A",
+      "A, B, C, D"
+    ],
+    "explanation_en": "Sentence B introduces the post-war economic boom. Sentence D logically follows chronologically, explaining how policymakers took action to sustain the boom's momentum through risky investments. Sentence A introduces a contrast (\"However\"), pointing out that this entire period of expansion had hidden structural weaknesses. Finally, Sentence C concludes the sequence with the inevitable result: the speculative bubble bursts.",
+    "correctIndex": 0
+  },
+  {
+    "id": 3,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "These observations have challenged long-held theories about the fundamental nature of cosmic expansion.",
+      "B": "Recent data from the James Webb Space Telescope has revealed galaxies existing much earlier than previously thought possible.",
+      "C": "Consequently, cosmologists are now tasked with revising their models of the early universe.",
+      "D": "Among the most puzzling findings are fully formed supermassive black holes located at the centers of these nascent galaxies."
+    },
+    "options_en": [
+      "B, D, A, C",
+      "A, C, B, D",
+      "B, A, C, D",
+      "D, B, A, C"
+    ],
+    "explanation_en": "Sentence B introduces the new telescope data regarding early galaxies. Sentence D adds a specific, puzzling detail to those findings (supermassive black holes). Sentence A states the impact of \"These observations\" on existing theories, and Sentence C provides the logical conclusion (cosmologists must revise their models).",
+    "correctIndex": 0
+  },
+  {
+    "id": 4,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "The introduction of this non-native species initially seemed harmless, perhaps even beneficial for pest control.",
+      "B": "It wasn't until native bird populations began a steep decline that ecologists realized the true extent of the ecological disruption.",
+      "C": "As a result, massive conservation efforts are now required to restore the delicate balance of the island's ecosystem.",
+      "D": "Without natural predators to keep their numbers in check, the invasive species rapidly multiplied and dominated the food chain."
+    },
+    "options_en": [
+      "A, B, D, C",
+      "A, D, B, C",
+      "D, A, B, C",
+      "B, C, A, D"
+    ],
+    "explanation_en": "Sentence A introduces the initial perception of the non-native species. Sentence D explains what happened next chronologically—rapid multiplication due to a lack of predators. Sentence B reveals the delayed realization of the damage caused by this multiplication, and Sentence C concludes with the resulting conservation efforts required.",
+    "correctIndex": 1
+  },
+  {
+    "id": 5,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "This stylistic shift was met with intense criticism from traditionalists who valued structured, objective realism.",
+      "B": "The modernist movement sought to break away from nineteenth-century conventions by embracing fragmented narratives.",
+      "C": "Ultimately, however, this avant-garde approach paved the way for contemporary literature as we know it today.",
+      "D": "Authors began to focus heavily on the subjective experiences of characters, utilizing the stream-of-consciousness technique."
+    },
+    "options_en": [
+      "B, D, A, C",
+      "B, A, D, C",
+      "A, C, B, D",
+      "D, B, A, C"
+    ],
+    "explanation_en": "Sentence B introduces the modernist movement's goals. Sentence D provides specific examples of how authors achieved those goals (subjective experiences, stream-of-consciousness). Sentence A references \"This stylistic shift\" described in D and notes the backlash, while Sentence C offers the final historical outcome.",
+    "correctIndex": 0
+  },
+  {
+    "id": 6,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "Despite these advancements, ethical concerns regarding data privacy and algorithmic bias remain largely unresolved.",
+      "B": "Machine learning algorithms have achieved remarkable accuracy in tasks ranging from medical diagnosis to language translation.",
+      "C": "If these foundational issues are ignored, the widespread deployment of such systems could exacerbate existing societal inequalities.",
+      "D": "This rapid progress has led many industry leaders to proclaim the dawn of a new industrial revolution."
+    },
+    "options_en": [
+      "B, A, D, C",
+      "D, C, B, A",
+      "B, D, A, C",
+      "A, B, C, D"
+    ],
+    "explanation_en": "Sentence B outlines the achievements in machine learning. Sentence D comments on the industry reaction to \"This rapid progress.\" Sentence A introduces a contrast, highlighting unresolved ethical concerns \"Despite these advancements.\" Sentence C concludes by warning of the consequences if \"these foundational issues\" are ignored.",
+    "correctIndex": 2
+  },
+  {
+    "id": 7,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "The deciphering of these ancient inscriptions provided historians with unprecedented insights into trade routes of the era.",
+      "B": "For decades, the true purpose of the sprawling ruins discovered beneath the desert sands remained a mystery.",
+      "C": "It was only after a small, clay tablet was unearthed in a hidden chamber that the puzzle began to piece together.",
+      "D": "This revelation completely altered our understanding of how early civilizations interacted and exchanged resources."
+    },
+    "options_en": [
+      "C, A, D, B",
+      "B, A, D, C",
+      "A, C, B, D",
+      "B, C, A, D"
+    ],
+    "explanation_en": "Sentence B establishes a long-standing mystery regarding ancient ruins. Sentence C introduces the breakthrough discovery (the clay tablet). Sentence A explains the immediate result of deciphering the tablet's inscriptions, and Sentence D concludes with the broader historical impact of \"This revelation.\"",
+    "correctIndex": 3
+  },
+  {
+    "id": 8,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "The new CEO decided to implement a comprehensive restructuring plan to improve overall efficiency.",
+      "B": "Employees were initially apprehensive about the changes, fearing potential layoffs and departmental mergers.",
+      "C": "Within six months, however, productivity soared and the company reported a significant increase in profits.",
+      "D": "To ease their concerns, the management held weekly town hall meetings to guarantee transparency and open communication."
+    },
+    "options_en": [
+      "A, B, C, D",
+      "A, B, D, C",
+      "B, A, C, D",
+      "D, B, A, C"
+    ],
+    "explanation_en": "Sentence A introduces the CEO's new restructuring plan. Sentence B shows the employees' negative reaction to the plan. Sentence D explains management's response to ease \"their concerns\" (referring to the employees). Sentence C provides the positive final outcome six months later.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "We reached the train station with barely five minutes to spare before departure.",
+      "B": "The alarm clock failed to go off this morning, throwing our entire travel schedule into chaos.",
+      "C": "We frantically packed our bags and rushed to catch a taxi in the pouring rain.",
+      "D": "Thankfully, the train was delayed, giving us enough time to catch our breath and find our seats."
+    },
+    "options_en": [
+      "B, A, C, D",
+      "C, B, A, D",
+      "A, B, C, D",
+      "B, C, A, D"
+    ],
+    "explanation_en": "Sentence B introduces the initiating problem (alarm failing). Sentence C describes the immediate reaction (frantic packing and rushing). Sentence A gives the chronological next step (reaching the station). Sentence D concludes the sequence with the fortunate outcome of the delayed train.",
+    "correctIndex": 3
+  },
+  {
+    "id": 10,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "The dog happily ate the bone and wagged its tail.",
+      "B": "John bought a large bone from the butcher shop.",
+      "C": "He called his dog to the backyard and threw the bone on the grass.",
+      "D": "He brought it home to give to his pet golden retriever."
+    },
+    "options_en": [
+      "B, D, C, A",
+      "B, C, D, A",
+      "D, B, A, C",
+      "A, B, C, D"
+    ],
+    "explanation_en": "Sentence B is the starting point, establishing that John bought a bone. Sentence D follows chronologically as he brings the bone home. Sentence C describes his action of giving the bone to the dog, and Sentence A concludes the story with the dog's happy reaction.",
+    "correctIndex": 0
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_para';
+const TIMER_KEY   = 'quiz_end_time_para';
+const ANSWERS_KEY = 'quiz_answers_para';
+
+// =========================================
+// 2. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp  = new Date().toLocaleString();
+  const payload    = { time: timestamp, name, score: score.toFixed(2), total, percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (e) {
+    console.error("Score submission failed:", e);
+    return false;
+  }
+};
+
+// =========================================
+// 3. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+// ── Quiz Screen ────────────────────────────────────────────────────────────
+const Quiz = ({ questions, config, onComplete }) => {
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  const [userAnswers, setUserAnswers] = useState(() => {
+    try { const s = localStorage.getItem(ANSWERS_KEY); return s ? JSON.parse(s) : {}; }
+    catch (e) { return {}; }
+  });
+
+  const answersRef = useRef(userAnswers);
+  useEffect(() => { answersRef.current = userAnswers; }, [userAnswers]);
+  useEffect(() => { localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers)); }, [userAnswers]);
+
+  // Timer (absolute timestamp based)
+  useEffect(() => {
+    let targetTime;
+    const stored = localStorage.getItem(TIMER_KEY);
+    if (stored) {
+      targetTime = parseInt(stored, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const tick = () => {
+      const left = Math.max(0, Math.floor((targetTime - Date.now()) / 1000));
+      setTimeLeft(left);
+      if (left <= 0) { onComplete(answersRef.current); return true; }
+      return false;
+    };
+
+    if (tick()) return;
+    const timer = setInterval(() => { if (tick()) clearInterval(timer); }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const toggleOption = (qIdx, optIdx) => {
+    setUserAnswers(prev => {
+      const next = { ...prev };
+      if (next[qIdx] === optIdx) delete next[qIdx];
+      else next[qIdx] = optIdx;
+      return next;
+    });
+  };
+
+  const fmt = (s) => {
+    const m = Math.floor(s / 60), sec = s % 60;
+    return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+  };
+
+  const answeredCount = Object.keys(userAnswers).length;
+
+  return (
+    <div className="main-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+
+      {/* Sticky Header */}
+      <div className="sticky-header">
+        <div className="timer-box">⏱ {fmt(timeLeft)}</div>
+        <div className="progress-info">
+          {answeredCount} / {questions.length} answered
+        </div>
+      </div>
+
+      {/* Questions */}
+      <div style={{ padding: '20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const selected  = userAnswers[idx];
+          const sentences = q.sentences || {};
+
+          return (
+            <div key={q.id} className="question-container">
+              {/* Question heading */}
+              <div className="question-text">Q{idx + 1}. {q.question_en}</div>
+
+              {/* Sentences A, B, C, D */}
+              <div className="sentences-box">
+                {['A', 'B', 'C', 'D'].filter(l => sentences[l]).map(letter => (
+                  <div key={letter} className="sentence-row">
+                    <span className="sentence-label">{letter}</span>
+                    <span className="sentence-text">{sentences[letter]}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Ordering MCQ options */}
+              <div className="order-prompt">Choose the correct order:</div>
+              <div className="options-grid">
+                {q.options_en.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option${selected === optIdx ? ' selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', flexShrink: 0 }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Submit Bar */}
+      <div className="submit-bar">
+        <button onClick={() => onComplete(userAnswers)}>Submit Exam</button>
+      </div>
+    </div>
+  );
+};
+
+// ── Result Screen ──────────────────────────────────────────────────────────
+const Result = ({ questions, userAnswers, config, studentName, onRetake }) => {
+  const [status, setStatus] = useState("Sending data...");
+  const [score,  setScore]  = useState(0);
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let s = 0;
+    questions.forEach((q, i) => {
+      const u = userAnswers[i];
+      if (u !== undefined) s += (u === q.correctIndex ? config.marksCorrect : config.marksWrong);
+    });
+    setScore(s);
+    submitScoreToSheet(studentName, s, totalPossible)
+      .then(ok => setStatus(ok ? "✅ Score saved to sheet!" : "⚠️ Saved locally (connection failed)"));
+  }, []);
+
+  const percentage = totalPossible > 0 ? ((score / totalPossible) * 100).toFixed(1) : 0;
+
+  return (
+    <div className="main-wrapper">
+      {/* Score Card */}
+      <div className="card">
+        <h2 style={{ color: 'var(--accent-color)' }}>Result Summary</h2>
+        <div style={{ fontSize: '2.2rem', color: 'var(--accent-color)', fontWeight: 'bold', margin: '10px 0' }}>
+          {score.toFixed(1)}
+          <span style={{ fontSize: '1rem', color: '#666' }}> / {totalPossible}</span>
+        </div>
+        <div style={{ fontSize: '1.1rem', color: '#333', marginBottom: '8px' }}>
+          Score: <strong>{percentage}%</strong>
+        </div>
+        <p style={{ margin: '5px 0' }}>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: status.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>{status}</p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      {/* Detailed Review */}
+      <div style={{ padding: '20px' }}>
+        <h3 style={{ color: 'var(--accent-color)' }}>Detailed Review</h3>
+        {questions.map((q, idx) => {
+          const u         = userAnswers[idx];
+          const attempted = u !== undefined;
+          const correct   = attempted && u === q.correctIndex;
+          const cls = attempted ? (correct ? 'status-correct' : 'status-wrong') : 'status-unanswered';
+          const txt = attempted
+            ? (correct ? `Correct (+${config.marksCorrect})` : `Wrong (${config.marksWrong})`)
+            : 'Skipped';
+
+          const sentences       = q.sentences || {};
+          const correctOrderStr = q.options_en[q.correctIndex] || '';
+          const correctLetters  = correctOrderStr.split(',').map(s => s.trim()).filter(Boolean);
+
+          return (
+            <div key={q.id} className="review-item">
+              <p style={{ fontWeight: '600', marginBottom: '6px' }}>Q{idx + 1}: {q.question_en}</p>
+
+              {/* All sentences */}
+              <div className="sentences-box mini">
+                {['A', 'B', 'C', 'D'].filter(l => sentences[l]).map(letter => (
+                  <div key={letter} className="sentence-row">
+                    <span className="sentence-label">{letter}</span>
+                    <span className="sentence-text">{sentences[letter]}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className={cls} style={{ marginBottom: '4px' }}>Status: {txt}</p>
+              <p style={{ marginBottom: '4px' }}>
+                Correct Order: <strong style={{ color: 'green' }}>{correctOrderStr}</strong>
+              </p>
+              {attempted && (
+                <p style={{ marginBottom: '8px', color: correct ? 'green' : '#d32f2f' }}>
+                  Your Order: {q.options_en[u]}
+                </p>
+              )}
+
+              {/* Correct sequence with full sentences */}
+              {correctLetters.length > 0 && (
+                <div className="correct-arrangement">
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px', color: 'var(--accent-color)', fontSize: '0.92rem' }}>
+                    ✅ Correct Sequence:
+                  </div>
+                  {correctLetters.map((letter, i) => (
+                    <div key={i} className="arranged-sentence">
+                      <span className="step-num">{i + 1}</span>
+                      <span className="step-label">({letter})</span>
+                      <span>{sentences[letter] || ''}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {q.explanation_en && (
+                <div className="explanation">
+                  <strong>Explanation:</strong> {q.explanation_en}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ── App Root ───────────────────────────────────────────────────────────────
+const App = () => {
+  const session = useMemo(() => {
+    try { const s = localStorage.getItem(SESSION_KEY); return s ? JSON.parse(s) : null; }
+    catch (e) { return null; }
+  }, []);
+
+  const [screen,      setScreen]      = useState(session?.isActive ? 'QUIZ' : 'LANDING');
+  const [name,        setName]        = useState(session?.name || '');
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name }));
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = (window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0)
+      ? window.__PREPARSED_JSON__
+      : [];
+    const lim = DEFAULT_CONFIG.maxQuestions;
+    return lim > 0 ? all.slice(0, lim) : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) { alert("Please enter your name."); return; }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (ans) => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers(ans);
+    setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div
+      className="main-wrapper"
+      style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}
+    >
+      {screen === 'LANDING' && (
+        <div className="card">
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+
+          <div className="exam-info-box">
+            <strong>Exam Details</strong><br />
+            Questions: {questions.length} &nbsp;|&nbsp;
+            Time: {Math.floor(DEFAULT_CONFIG.totalTime / 60)} min &nbsp;|&nbsp;
+            +{DEFAULT_CONFIG.marksCorrect} / {DEFAULT_CONFIG.marksWrong}
+          </div>
+
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>Student Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleStart()}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '11px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem' }}
+            />
+          </div>
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz questions={questions} config={DEFAULT_CONFIG} onComplete={handleComplete} />
+      )}
+      {screen === 'RESULT' && (
+        <Result
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+  </script>
+</body>
+</html>
