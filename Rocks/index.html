@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz App</title>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        :root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select your language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime":480,"marksCorrect":2,"marksWrong":-0.5,"maxQuestions":0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = `1.
+প্রশ্ন: এই নথি অনুযায়ী শিলার আসল বয়স নির্ণয়ের জন্য সবচেয়ে উপযুক্ত পদ্ধতি কোনটি?
+(A) Carbon Dating (Carbon-14)
+(B) Radiometric Dating (Uranium-Lead / Potassium-Argon)
+(C) শুধুমাত্র জন্মসনদ/Certificate দেখে
+(D) শিলার রঙ দেখে অনুমান
+উত্তর: (B)
+ব্যাখ্যা: নথিতে বলা হয়েছে Carbon Dating সাধারণত জীবন্ত/জৈব বস্তুর জন্য ভালো, কিন্তু শিলা/খুব পুরনো নমুনার “আসল বয়স” মাপতে Radiometric Dating (যেমন Uranium-Lead, Potassium-Argon) ব্যবহৃত হয়।
+Question: According to the document, which method is most suitable for determining the true age of rocks?
+(A) Carbon Dating (Carbon-14)
+(B) Radiometric Dating (Uranium-Lead / Potassium-Argon)
+(C) Only by checking a birth certificate/certificate
+(D) By guessing from the rock’s color
+Answer: (B)
+Explanation: The document states that Carbon Dating is generally for living/organic materials, whereas the true age of rocks is determined using Radiometric Dating methods such as Uranium–Lead or Potassium–Argon.
+
+2.
+প্রশ্ন: নথি অনুযায়ী Carbon Dating (Carbon-14) পদ্ধতির প্রধান সীমাবদ্ধতা কোনটি?
+(A) এটি শুধুই খুব পুরনো ও শক্ত শিলার জন্য কাজ করে
+(B) এটি জীবন্ত/জৈব বস্তুর বয়স নির্ণয়ে ব্যবহৃত হয়, খুব পুরনো/শিলার ক্ষেত্রে ভালো কাজ করে না
+(C) এটি Uranium-Lead পদ্ধতির আরেক নাম
+(D) এটি শিলার দানার (Crystals) আকার দেখে বয়স বলে
+উত্তর: (B)
+ব্যাখ্যা: নথিতে উল্লেখ আছে Carbon-14 ডেটিং সাধারণত গাছ, হাড়, কাঠ ইত্যাদি জৈব বস্তুর জন্য; খুব পুরনো বা শিলার বয়স নির্ণয়ে এটি কার্যকর নয়।
+Question: As per the document, what is the main limitation of Carbon Dating (Carbon-14)?
+(A) It works only for very old, hard rocks
+(B) It is used for living/organic materials and does not work well for very old rocks
+(C) It is another name for the Uranium–Lead method
+(D) It determines age by crystal size
+Answer: (B)
+Explanation: The document notes that Carbon-14 dating is mainly for organic remains (plants, bones, wood) and is not effective for very old rocks.
+
+3.
+প্রশ্ন: নথি অনুযায়ী Magma এবং Lava-এর সঠিক পার্থক্য কোনটি?
+(A) Magma = মাটির উপরে; Lava = মাটির নিচে
+(B) Magma = মাটির নিচে; Lava = মাটির উপরে বের হলে
+(C) Magma = পাললিক; Lava = রূপান্তরিত
+(D) Magma = ঠান্ডা শিলা; Lava = শুধুই বালি
+উত্তর: (B)
+ব্যাখ্যা: নথিতে বলা হয়েছে গলিত শিলা মাটির নিচে থাকলে Magma, আর আগ্নেয়গিরি দিয়ে বাইরে বের হলে সেটিই Lava নামে পরিচিত।
+Question: According to the document, what is the correct distinction between magma and lava?
+(A) Magma = on the surface; Lava = underground
+(B) Magma = underground; Lava = the same molten rock once it erupts onto the surface
+(C) Magma = sedimentary; Lava = metamorphic
+(D) Magma = cold rock; Lava = only sand
+Answer: (B)
+Explanation: The document defines magma as molten rock beneath the Earth’s surface, and lava as the same molten material once it comes out onto the surface through a volcano.
+
+4.
+প্রশ্ন: নথি অনুযায়ী বহির্মুখী (Extrusive) আগ্নেয় শিলার টেক্সচার সাধারণত Fine-grained/Glassy হওয়ার মূল কারণ কী?
+(A) এটি খুব ধীরে ঠান্ডা হয়
+(B) এটি দ্রুত ঠান্ডা হয়, তাই দানা/ক্রিস্টাল বড় হওয়ার সময় পায় না
+(C) এতে কেবল জীবাশ্ম থাকে
+(D) এটি কেবল রাসায়নিকভাবে জমাট বাঁধে
+উত্তর: (B)
+ব্যাখ্যা: নথিতে বলা আছে Extrusive শিলা বাতাসের সংস্পর্শে দ্রুত ঠান্ডা হয়, ফলে বড় ক্রিস্টাল তৈরি হওয়ার সময় কম থাকে এবং টেক্সচার Fine/Glassy হয়।
+Question: As per the document, why do extrusive igneous rocks commonly have a fine-grained/glassy texture?
+(A) They cool very slowly
+(B) They cool rapidly, so crystals don’t get enough time to grow large
+(C) They contain only fossils
+(D) They form only by chemical precipitation
+Answer: (B)
+Explanation: The document explains that extrusive rocks cool rapidly at/near the surface, leaving insufficient time for large crystals to form, producing fine-grained or glassy textures.
+
+5.
+প্রশ্ন: নথিতে প্রদত্ত তথ্য অনুযায়ী কোন জোড়াটি “Crust Type” অনুযায়ী সঠিকভাবে মেলে?
+(A) Basalt → Continental crust; Granite → Oceanic crust
+(B) Basalt → Oceanic crust; Granite → Continental crust
+(C) Pumice → Continental crust; Gabbro → Oceanic crust (শুধু এটিই নিশ্চিত)
+(D) Obsidian → Continental crust; Peridotite → Oceanic crust (শুধু এটিই নিশ্চিত)
+উত্তর: (B)
+ব্যাখ্যা: নথিতে উল্লেখ আছে Oceanic crust মূলত Basalt দিয়ে এবং Continental crust মূলত Granite দিয়ে গঠিত।
+Question: Based on the document, which pair correctly matches rock type with crust type?
+(A) Basalt → Continental crust; Granite → Oceanic crust
+(B) Basalt → Oceanic crust; Granite → Continental crust
+(C) Pumice → Continental crust; Gabbro → Oceanic crust (only this is certain)
+(D) Obsidian → Continental crust; Peridotite → Oceanic crust (only this is certain)
+Answer: (B)
+Explanation: The document states that oceanic crust is mainly basaltic, while continental crust is mainly granitic.
+
+6.
+প্রশ্ন: নথি অনুযায়ী “Plutonic Bodies” প্রসঙ্গে Laccolith-এর সঠিক বর্ণনা কোনটি?
+(A) শিলাস্তরের সমান্তরালে পাতলা চাদরের মতো জমাট (Sill)
+(B) উল্লম্বভাবে স্তর কেটে দেয়ালের মতো জমাট (Dyke)
+(C) ম্যাগমা ওপরের স্তরকে ধাক্কা দিয়ে গম্বুজ/Dome-এর মতো ফুলিয়ে তোলে, কিন্তু বাইরে বের হয় না
+(D) ভাঁজযুক্ত শিলাস্তরে ঢেউয়ের মতো জমাট (Phacolith)
+উত্তর: (C)
+ব্যাখ্যা: নথিতে Laccolith-কে মাশরুম/গম্বুজ আকৃতির বলা হয়েছে—ম্যাগমা উপরের স্তরকে ফুলিয়ে তোলে কিন্তু ফেটে বের হতে পারে না।
+Question: According to the document, which description correctly defines a laccolith among plutonic bodies?
+(A) A thin, sheet-like body parallel to layers (sill)
+(B) A vertical, wall-like body cutting across layers (dyke)
+(C) Magma pushes up overlying layers into a dome-like form but does not erupt to the surface
+(D) A wavy body formed in folded rocks (phacolith)
+Answer: (C)
+Explanation: The document describes a laccolith as a dome/mushroom-shaped intrusion where magma uplifts the overlying strata but does not break through to the surface.
+
+7.
+প্রশ্ন: নথি অনুযায়ী Lopolith-এর আকৃতি ও গঠন সম্পর্কে সঠিকটি কোনটি?
+(A) উত্তল (Convex) গম্বুজের মতো; ওপরের স্তরকে উঁচু করে
+(B) অবতল (Concave) বাটি/সসার-এর মতো; নিচের অংশ নেমে যায় এমন গর্তে জমাট
+(C) পাতলা চাদরের মতো; কেবল অনুভূমিকভাবে থাকে
+(D) কেবল ভাঁজের উঁচু অংশে (Anticline) জমাট
+উত্তর: (B)
+ব্যাখ্যা: নথিতে Lopolith-কে সসার/বাটির মতো অবতল (Concave) আকৃতির বলা হয়েছে—এটি এমন গর্তে জমে যার তলা নেমে থাকে।
+Question: As per the document, which statement about a lopolith is correct?
+(A) It is a convex dome that uplifts layers
+(B) It is concave like a bowl/saucer, forming where magma accumulates in a basin-like depression
+(C) It is only a thin horizontal sheet
+(D) It forms only at anticlines
+Answer: (B)
+Explanation: The document defines a lopolith as a concave, saucer/bowl-shaped intrusion that forms in a basin-like structure whose floor subsides.
+
+8.
+প্রশ্ন: নথি অনুযায়ী Phacolith সাধারণত কোথায়/কীভাবে জমাট বাঁধে?
+(A) সমুদ্রতলের গভীর খাদে (Trench)
+(B) ভাঁজযুক্ত শিলাস্তরে (Folded rocks) ঢেউয়ের মতো জমাট; Anticline ও Syncline অঞ্চলের সাথে সম্পর্কিত
+(C) কেবল মহাদেশীয় শেলফে
+(D) কেবল আগ্নেয়গিরির মুখে
+উত্তর: (B)
+ব্যাখ্যা: নথিতে Phacolith-কে ভাঁজযুক্ত শিলাস্তরে ঢেউয়ের মতো জমাট বলা হয়েছে এবং Anticline/Syncline শব্দও উল্লেখ আছে।
+Question: According to the document, where/how does a phacolith typically form?
+(A) In deep ocean trenches
+(B) In folded rock layers as wave-like intrusions, associated with anticlines and synclines
+(C) Only on continental shelves
+(D) Only at volcanic vents
+Answer: (B)
+Explanation: The document describes phacoliths as magma intrusions that accumulate in folded strata in wave-like forms, linked to anticlines and synclines.
+
+9.
+প্রশ্ন: নথি অনুযায়ী Sill বনাম Dyke-এর সঠিক পার্থক্য কোনটি?
+(A) Sill উল্লম্ব; Dyke অনুভূমিক
+(B) Sill শিলাস্তর কেটে যায়; Dyke স্তরের সমান্তরাল
+(C) Sill স্তরের সমান্তরালে (Horizontal/Parallel) জমে; Dyke স্তর কেটে (Vertical/Cuts across) জমে
+(D) দুটোই কেবল সমুদ্রের তলায় তৈরি হয়
+উত্তর: (C)
+ব্যাখ্যা: নথির তুলনামূলক টেবিলে Sill-কে Horizontal/Parallel to layers এবং Dyke-কে Vertical/Cuts across layers বলা হয়েছে।
+Question: As per the document, what is the correct difference between a sill and a dyke?
+(A) Sill is vertical; dyke is horizontal
+(B) Sill cuts across layers; dyke is parallel to layers
+(C) Sill forms parallel to layers (horizontal), while dyke cuts across layers (vertical)
+(D) Both form only on the ocean floor
+Answer: (C)
+Explanation: The document’s comparison table states that sills are parallel to layers (horizontal, sheet-like), whereas dykes are vertical and cut across layers (wall-like).
+
+10.
+প্রশ্ন: নথি অনুযায়ী Composite Volcano সম্পর্কে কোন বক্তব্যটি সবচেয়ে সঠিক?
+(A) লাভা খুব পাতলা; ঢাল চ্যাপ্টা; খুব কম বিস্ফোরণ
+(B) লাভা ঘন/আঠালো; শঙ্কু (Cone) আকৃতি; ভয়ংকর বিস্ফোরণ ঘটাতে পারে
+(C) বিস্ফোরণের পর পাহাড় নিজে ধসে গিয়ে বিশাল গর্ত তৈরি করে—এটাই Composite
+(D) কেবল সমুদ্রের নিচে তৈরি হয়
+উত্তর: (B)
+ব্যাখ্যা: নথিতে Composite Volcano-কে ঘন (Viscous) লাভা, শঙ্কু আকৃতি এবং ভয়ংকর বিস্ফোরণ—এই বৈশিষ্ট্যগুলোর সাথে যুক্ত করা হয়েছে।
+Question: According to the document, which statement best describes a composite volcano?
+(A) Very fluid lava, broad shield-like shape, low explosivity
+(B) Viscous, sticky lava; cone shape; can produce violent eruptions
+(C) The mountain collapses into a huge crater after eruption—this is composite
+(D) Forms only under the sea
+Answer: (B)
+Explanation: The document characterizes composite volcanoes by viscous lava, cone-shaped profiles, and potentially very explosive eruptions.
+
+11.
+প্রশ্ন: নথি অনুযায়ী Caldera গঠনের ঘটনাক্রম কোনটি?
+(A) পাতলা লাভা দূরে ছড়িয়ে ঢাল চ্যাপ্টা হয়
+(B) ম্যাগমা বাইরে না বেরিয়ে গম্বুজ তৈরি করে
+(C) অত্যন্ত শক্তিশালী বিস্ফোরণের পর লাভা বের হলে পুরো পাহাড় নিজের গহ্বরে ধসে পড়ে বিশাল গর্ত তৈরি করে
+(D) দুটি প্লেট পাশ কাটিয়ে গেলে গর্ত তৈরি হয়
+উত্তর: (C)
+ব্যাখ্যা: নথিতে বলা হয়েছে Caldera সবচেয়ে ভয়ংকর; বিস্ফোরণের পরে লাভা বের হয়ে গেলে পাহাড় নিজেই ধসে পড়ে বিশাল গর্ত (Caldera) তৈরি করে।
+Question: According to the document, which sequence best explains caldera formation?
+(A) Fluid lava spreads far, forming a broad shield
+(B) Magma intrudes and forms a dome without erupting
+(C) An extremely powerful eruption empties the magma, after which the volcano collapses into its own cavity forming a huge depression
+(D) A trench forms when plates slide past each other
+Answer: (C)
+Explanation: The document explains that a caldera forms when a very powerful eruption occurs and, after magma/lava is expelled, the volcano collapses inward to create a massive crater-like depression.
+
+12.
+প্রশ্ন: নথি অনুযায়ী Pangaea এবং Panthalassa সম্পর্কে সঠিকটি কোনটি?
+(A) Pangaea = “সমস্ত জল”; Panthalassa = “সমস্ত ভূমি”
+(B) Pangaea ছিল একক সুপার-মহাদেশ; Panthalassa ছিল তাকে ঘিরে থাকা বিশাল মহাসাগর
+(C) Pangaea ছিল 7টি আলাদা মহাদেশ; Panthalassa ছিল 5টি আলাদা মহাসাগর
+(D) দুটোই আধুনিক সমুদ্রস্রোতের নাম
+উত্তর: (B)
+ব্যাখ্যা: নথিতে Pangaea-কে একক সুপার-কন্টিনেন্ট এবং Panthalassa-কে Pangaea-কে ঘিরে থাকা এক বিশাল মহাসাগর বলা হয়েছে।
+Question: According to the document, which statement about Pangaea and Panthalassa is correct?
+(A) Pangaea = “all water”; Panthalassa = “all land”
+(B) Pangaea was a single supercontinent; Panthalassa was the vast ocean surrounding it
+(C) Pangaea was 7 separate continents; Panthalassa was 5 separate oceans
+(D) Both are names of modern ocean currents
+Answer: (B)
+Explanation: The document states that Pangaea was one supercontinent, and Panthalassa was the single huge ocean around it.
+
+13.
+প্রশ্ন: নথি অনুযায়ী Wegener-এর “Jigsaw Fit” প্রমাণের সবচেয়ে ক্লাসিক উদাহরণ কোনটি?
+(A) ইউরোপ ও এশিয়া
+(B) দক্ষিণ আমেরিকা ও আফ্রিকা
+(C) অস্ট্রেলিয়া ও অ্যান্টার্কটিকা
+(D) ভারত ও আর্কটিক
+উত্তর: (B)
+ব্যাখ্যা: নথিতে বলা হয়েছে বিশ্ব মানচিত্রে দক্ষিণ আমেরিকা ও আফ্রিকার উপকূলরেখা পাজলের টুকরোর মতো খাঁজে খাঁজে মিলে যায়—এটাই Jigsaw Fit।
+Question: In the document, which pair is the classic example used for Wegener’s “Jigsaw Fit” evidence?
+(A) Europe and Asia
+(B) South America and Africa
+(C) Australia and Antarctica
+(D) India and the Arctic
+Answer: (B)
+Explanation: The document highlights that the coastlines of South America and Africa fit together like puzzle pieces, supporting the jigsaw-fit evidence.
+
+14.
+প্রশ্ন: নথি অনুযায়ী Mesosaurus জীবাশ্ম-প্রমাণ থেকে কোন সিদ্ধান্তটি সবচেয়ে যুক্তিসংগত?
+(A) Mesosaurus সমুদ্রের নোনা পানিতে সহজেই বাঁচত, তাই সাঁতরে পার হয়েছে
+(B) দক্ষিণ আমেরিকা ও আফ্রিকা একসময় যুক্ত ছিল
+(C) Mesosaurus কেবল আর্কটিক মহাসাগরে ছিল
+(D) জীবাশ্ম প্রমাণ মহাদেশীয় সঞ্চরণকে খণ্ডন করে
+উত্তর: (B)
+ব্যাখ্যা: নথিতে বলা হয়েছে Mesosaurus নোনা পানিতে বাঁচতে পারত না, তবু তার জীবাশ্ম দক্ষিণ আমেরিকা ও আফ্রিকায় পাওয়া যায়—তাই দুই মহাদেশ একসময় যুক্ত ছিল বলে যুক্তি দাঁড়ায়।
+Question: Based on the document’s Mesosaurus fossil evidence, which conclusion is most reasonable?
+(A) Mesosaurus lived easily in salty seawater, so it swam across
+(B) South America and Africa were once connected
+(C) Mesosaurus existed only in the Arctic Ocean
+(D) Fossil evidence disproves continental drift
+Answer: (B)
+Explanation: The document states Mesosaurus could not live in salty water, yet fossils are found in both South America and Africa, implying the continents were once joined.
+
+15.
+প্রশ্ন: নথি অনুযায়ী “Placer Deposits” প্রমাণে ঘানা (Ghana) ও ব্রাজিল (Brazil) প্রসঙ্গটি কী বোঝায়?
+(A) ঘানার সোনা স্থানীয় শিলাতেই তৈরি হয়
+(B) ঘানার উপকূলে সোনা আছে কিন্তু উৎস শিলা/খনি নেই; ব্রাজিলে উৎস শিলা আছে—ইঙ্গিত করে দু’টি অঞ্চল একসময় প্রতিবেশী ছিল
+(C) ব্রাজিলে সোনা নেই, শুধু ঘানায় আছে
+(D) এটি কেবল আবহাওয়া পরিবর্তনের প্রমাণ
+উত্তর: (B)
+ব্যাখ্যা: নথিতে বলা হয়েছে ঘানার উপকূলে প্লেসার সোনা পাওয়া যায় কিন্তু উৎস শিলা নেই; উৎস শিলা ব্রাজিলে—তাই ব্রাজিল ও ঘানা একসময় কাছাকাছি ছিল বলে ইঙ্গিত মেলে।
+Question: According to the document, what does the Ghana–Brazil “Placer Deposits” evidence imply?
+(A) Ghana’s gold formed only from local rocks
+(B) Ghana has placer gold but lacks source rocks/mines, while Brazil has the source rocks—implying the regions were once adjacent
+(C) Brazil has no gold, only Ghana does
+(D) It proves only climate change
+Answer: (B)
+Explanation: The document notes placer gold on Ghana’s coast without local source rocks, while source rocks exist in Brazil, suggesting Ghana and Brazil were once neighboring parts of connected landmasses.
+
+16.
+প্রশ্ন: নথি অনুযায়ী Wegener-এর মূল সমস্যা/ভুল কোনটি ছিল?
+(A) তিনি Pangaea-এর ধারণাই দেননি
+(B) তিনি “কেন” মহাদেশ সরে যায়—এই চালিকা-যন্ত্রণা সন্তোষজনকভাবে ব্যাখ্যা করতে পারেননি
+(C) তিনি জীবাশ্ম প্রমাণ দেননি
+(D) তিনি জিগ-স ফিট প্রমাণ অস্বীকার করেছিলেন
+উত্তর: (B)
+ব্যাখ্যা: নথিতে স্পষ্ট বলা আছে Wegener মহাদেশ সঞ্চরণের প্রমাণ দিলেও “কেন” সরে যায় তা ব্যাখ্যা করতে পারেননি; তিনি Polar Fleeing Force ও Tidal Force ভাবলেও সেগুলো অপর্যাপ্ত প্রমাণিত হয়।
+Question: According to the document, what was Wegener’s key mistake/limitation?
+(A) He never proposed the idea of Pangaea
+(B) He could not satisfactorily explain the driving mechanism—why continents move
+(C) He provided no fossil evidence
+(D) He rejected the jigsaw-fit argument
+Answer: (B)
+Explanation: The document states that although Wegener presented evidence, he could not explain the mechanism of drift; his ideas like polar fleeing force and tidal force were found insufficient.
+
+17.
+প্রশ্ন: নথি অনুযায়ী Plate Tectonics তত্ত্বের “আসল মেকানিজম” কোন ধারণার উপর দাঁড়িয়ে আছে?
+(A) নদীর ক্ষয় (Erosion) তত্ত্ব
+(B) Arthur Holmes-এর Convection Current Theory (Mantle-এর সঞ্চালন স্রোত)
+(C) শুধু Polar Fleeing Force
+(D) শুধু Tidal Force
+উত্তর: (B)
+ব্যাখ্যা: নথিতে বলা হয়েছে Plate Tectonics-এর ভিত্তি Arthur Holmes-এর Convection Current Theory—Mantle-এর গরম ম্যাগমার সঞ্চালন স্রোত Lithosphere-এর প্লেটগুলোকে নড়াচড়া করায়।
+Question: According to the document, the “real mechanism” behind Plate Tectonics is based on which idea?
+(A) The theory of river erosion
+(B) Arthur Holmes’s Convection Current Theory (mantle convection)
+(C) Only polar fleeing force
+(D) Only tidal force
+Answer: (B)
+Explanation: The document states Plate Tectonics rests on Arthur Holmes’s convection-current concept, where mantle convection drives the movement of lithospheric plates.
+
+18.
+প্রশ্ন: নথি অনুযায়ী Convergent Plate Boundary-তে কোন ঘটনা/ফলাফলটি বর্ণিত?
+(A) প্লেট দূরে সরে যায় এবং নতুন ভূত্বক তৈরি হয়
+(B) ভারী প্লেট নিচে ঢুকে যায় (Subduction) এবং গলে যায়; হালকা প্লেট ওপরে উঠে পাহাড় তৈরি করে
+(C) প্লেট পাশ কাটিয়ে চলে, কিন্তু কোনো কম্পন হয় না
+(D) কেবল মহাদেশীয় শেলফ তৈরি হয়
+উত্তর: (B)
+ব্যাখ্যা: নথিতে Convergent Boundary-তে সংঘর্ষ, Subduction, গলন, এবং পাহাড় গঠনের কথা বলা হয়েছে (উদাহরণ হিসেবে হিমালয় উল্লেখ আছে)।
+Question: According to the document, what happens at a convergent plate boundary?
+(A) Plates move apart and new crust forms
+(B) The heavier plate subducts and melts; the lighter plate rises to form mountains
+(C) Plates slide past with no shaking
+(D) Only continental shelves form
+Answer: (B)
+Explanation: The document describes convergent boundaries as collision zones with subduction and melting of the heavier plate, while the lighter plate is uplifted to form mountains (e.g., the Himalayas).
+
+19.
+প্রশ্ন: নথি অনুযায়ী Seafloor Spreading-এর প্রমাণ হিসেবে কোন পর্যবেক্ষণটি উল্লেখ আছে?
+(A) উপকূলের কাছে শিলাগুলো নবীন, আর মাঝখানে প্রাচীন
+(B) মাঝখানের (ridge-এর) শিলাগুলো নবীন (Young), আর উপকূলের শিলাগুলো প্রবীণ (Old)
+(C) সব জায়গার শিলার বয়স সমান
+(D) শুধু মহাদেশীয় ভূত্বকে এই প্রমাণ দেখা যায়
+উত্তর: (B)
+ব্যাখ্যা: নথিতে বলা হয়েছে সমুদ্রতলের মাঝখানে ফাটল/রিজ বরাবর নতুন মাটি তৈরি হয়; তাই মাঝখানের শিলা নবীন এবং উপকূলের দিকে পুরনো শিলা পাওয়া যায়।
+Question: According to the document, which observation is cited as evidence for seafloor spreading?
+(A) Rocks are young near coasts and old at the center
+(B) Rocks are youngest at the center (near the ridge) and older toward the coasts
+(C) Rock ages are uniform everywhere
+(D) This evidence appears only in continental crust
+Answer: (B)
+Explanation: The document states new crust forms at the mid-ocean ridge, making rocks there young, while rocks closer to continental margins are older.
+
+20.
+প্রশ্ন: নথি অনুযায়ী Coral Bleaching কীভাবে ঘটে?
+(A) প্রবাল বেশি আলো পেলে কালো হয়ে যায়
+(B) সমুদ্রের জল খুব গরম/দূষিত হলে প্রবাল চাপের কারণে Zooxanthellae বের করে দেয়; প্রবাল সাদা হয়ে যায় এবং খাবার না পেয়ে মরতে পারে
+(C) প্রবাল বালিতে ঢেকে গেলে সাথে সাথে হীরা হয়ে যায়
+(D) কম লবণাক্ততায় প্রবাল আরও রঙিন হয়
+উত্তর: (B)
+ব্যাখ্যা: নথিতে বলা হয়েছে জল বেশি গরম (Global Warming) বা দূষিত হলে প্রবাল Zooxanthellae হারায়, ফলে সাদা (White) হয়ে যায় এবং খাদ্য/অক্সিজেন-সহায়তা কমে গিয়ে মারা যেতে পারে—এটাই Coral Bleaching।
+Question: According to the document, how does coral bleaching occur?
+(A) Corals turn black when they get too much sunlight
+(B) When seawater becomes too warm/polluted, corals expel zooxanthellae under stress; they turn white and may die due to lack of food support
+(C) Corals turn into diamond when covered by sand
+(D) Corals become more colorful in low salinity
+Answer: (B)
+Explanation: The document explains that warming or pollution stresses corals, causing them to lose zooxanthellae; they become white and can die because the symbiotic support for food/oxygen is lost.`;
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE
+// =========================================
+const parseQuizText = (text) => {
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+      // NEW PARAJUMBLE FORMAT
+      const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+      qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+
+      const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+      if (optSectionMatch) {
+        optsEn = optSectionMatch[1]
+          .split('\n')
+          .map(l => l.trim())
+          .filter(l => l.length > 0)
+          // Clean prefixes like "A.", "B.", "(A)", "1." etc to avoid double labels like "A. A. Text"
+          .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+      }
+
+      const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+      const correctValue = ansMatch ? ansMatch[1].trim() : "";
+      
+      correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+      if (correctIndex === -1) correctIndex = 0;
+
+      const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+      expEn = expMatch ? expMatch[1].trim() : "";
+    
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: "",
+        options_bn: optsEn,
+        explanation_bn: "",
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+
+    } else {
+      // OLD FORMAT FALLBACK (Bilingual GK)
+      
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      // HELPER: Remove Answer/Explanation parts to avoid matching them as Option E/F
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  // Ref to hold answers for auto-submission
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  // Timer Logic with Persistence
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      // Set new end time
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []); // Run once on mount
+
+  // Save Answers on Change
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  // Load Session Logic
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  // Sync Session
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = parseQuizText(DEFAULT_RAW_TEXT);
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     // Clear Session
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+    </script>
+</body>
+</html>
