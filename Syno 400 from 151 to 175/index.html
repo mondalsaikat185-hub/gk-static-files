@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>English Vocabulary Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  --bg-main: #e8f5e9;
+  --bg-paper: #fffde7;
+  --bg-filler: #fff3e0;
+  --text-color: #000000;
+  --accent-color: #2e7d32;
+  --opt-default-bg: #fce4ec;
+  --opt-border: #f8bbd0;
+  --opt-selected-bg: #d32f2f;
+  --opt-selected-text: #ffffff;
+  --timer-color: #c62828;
+  --vocab-word-color: #1565c0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 1000px;
+  background-color: var(--bg-filler);
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 90%;
+  max-width: 420px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+.progress-info {
+  font-size: 0.85rem;
+  color: #555;
+  background: rgba(255,255,255,0.8);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+/* Question Cards */
+.question-container {
+  background-color: var(--bg-paper);
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 16px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 14px;
+  color: var(--text-color);
+  line-height: 1.5;
+}
+
+/* Highlighted vocab word within question */
+.vocab-word {
+  color: var(--vocab-word-color);
+  font-style: italic;
+  font-weight: 800;
+}
+
+/* Options — 2 columns on desktop */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+.option {
+  padding: 11px 14px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg);
+  border: 1px solid var(--opt-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+.option:hover { filter: brightness(0.95); }
+
+.option.selected {
+  background-color: var(--opt-selected-bg);
+  color: var(--opt-selected-text);
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 13px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Submit bar */
+.submit-bar {
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid #ddd;
+  position: sticky;
+  bottom: 0;
+}
+
+/* Exam details box on landing */
+.exam-info-box {
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  color: #555;
+  background: #f5f5f5;
+  padding: 10px 14px;
+  border-radius: 6px;
+  text-align: left;
+}
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 16px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px 14px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE    = "English Vocabulary Quiz";
+const APP_SUBTITLE = "Synonyms, Antonyms, Idioms & More";
+const DEFAULT_CONFIG = {"totalTime": 300, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_en": "What is the synonym of DIFFIDENT?",
+    "options_en": [
+      "Confident",
+      "Shy",
+      "Arrogant",
+      "Bold"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_en": "What is the synonym of DIMINISH?",
+    "options_en": [
+      "Expand",
+      "Reduce",
+      "Enhance",
+      "Magnify"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_en": "What is the synonym of DISPUTE?",
+    "options_en": [
+      "Agreement",
+      "Harmony",
+      "Argument",
+      "Settlement"
+    ],
+    "explanation_en": "",
+    "correctIndex": 2
+  },
+  {
+    "id": 4,
+    "question_en": "What is the synonym of DOCILE?",
+    "options_en": [
+      "Stubborn",
+      "Submissive",
+      "Defiant",
+      "Aggressive"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 5,
+    "question_en": "What is the synonym of FASTEN?",
+    "options_en": [
+      "Loosen",
+      "Detach",
+      "Secure",
+      "Release"
+    ],
+    "explanation_en": "",
+    "correctIndex": 2
+  },
+  {
+    "id": 6,
+    "question_en": "What is the synonym of FEROCIOUS?",
+    "options_en": [
+      "Gentle",
+      "Fierce",
+      "Tame",
+      "Mild"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 7,
+    "question_en": "What is the synonym of FICKLE?",
+    "options_en": [
+      "Constant",
+      "Capricious",
+      "Stable",
+      "Loyal"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_en": "What is the synonym of FICTITIOUS?",
+    "options_en": [
+      "Real",
+      "Authentic",
+      "Imaginary",
+      "Genuine"
+    ],
+    "explanation_en": "",
+    "correctIndex": 2
+  },
+  {
+    "id": 9,
+    "question_en": "What is the synonym of FLIMSY?",
+    "options_en": [
+      "Sturdy",
+      "Fragile",
+      "Strong",
+      "Robust"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 10,
+    "question_en": "What is the synonym of FORMER?",
+    "options_en": [
+      "Current",
+      "Future",
+      "Previous",
+      "Latter"
+    ],
+    "explanation_en": "",
+    "correctIndex": 2
+  },
+  {
+    "id": 11,
+    "question_en": "What is the synonym of FRUGAL?",
+    "options_en": [
+      "Extravagant",
+      "Wasteful",
+      "Thrifty",
+      "Generous"
+    ],
+    "explanation_en": "",
+    "correctIndex": 2
+  },
+  {
+    "id": 12,
+    "question_en": "What is the synonym of GARRULOUS?",
+    "options_en": [
+      "Silent",
+      "Talkative",
+      "Reserved",
+      "Concise"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 13,
+    "question_en": "What is the synonym of GLEE?",
+    "options_en": [
+      "Sorrow",
+      "Joy",
+      "Gloom",
+      "Despair"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_en": "What is the synonym of GUILE?",
+    "options_en": [
+      "Honesty",
+      "Deceit",
+      "Innocence",
+      "Sincerity"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 15,
+    "question_en": "What is the synonym of HASTE?",
+    "options_en": [
+      "Delay",
+      "Hurry",
+      "Slowness",
+      "Caution"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 16,
+    "question_en": "What is the synonym of HUMANE?",
+    "options_en": [
+      "Cruel",
+      "Compassionate",
+      "Brutal",
+      "Unkind"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_en": "What is the synonym of IMPEDE?",
+    "options_en": [
+      "Hinder",
+      "Assist",
+      "Facilitate",
+      "Advance"
+    ],
+    "explanation_en": "",
+    "correctIndex": 0
+  },
+  {
+    "id": 18,
+    "question_en": "What is the synonym of INCITE?",
+    "options_en": [
+      "Calm",
+      "Pacify",
+      "Provoke",
+      "Soothe"
+    ],
+    "explanation_en": "",
+    "correctIndex": 2
+  },
+  {
+    "id": 19,
+    "question_en": "What is the synonym of INCREDIBLE?",
+    "options_en": [
+      "Plausible",
+      "Unbelievable",
+      "Likely",
+      "Possible"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 20,
+    "question_en": "What is the synonym of INDOLENT?",
+    "options_en": [
+      "Active",
+      "Energetic",
+      "Lazy",
+      "Diligent"
+    ],
+    "explanation_en": "",
+    "correctIndex": 2
+  },
+  {
+    "id": 21,
+    "question_en": "What is the synonym of INEPT?",
+    "options_en": [
+      "Skillful",
+      "Incompetent",
+      "Expert",
+      "Adroit"
+    ],
+    "explanation_en": "",
+    "correctIndex": 1
+  },
+  {
+    "id": 22,
+    "question_en": "What is the synonym of INNOCUOUS?",
+    "options_en": [
+      "Harmful",
+      "Toxic",
+      "Harmless",
+      "Deadly"
+    ],
+    "explanation_en": "",
+    "correctIndex": 2
+  },
+  {
+    "id": 23,
+    "question_en": "What is the synonym of INTEGRATION?",
+    "options_en": [
+      "Separation",
+      "Division",
+      "Unification",
+      "Segregation"
+    ],
+    "explanation_en": "",
+    "correctIndex": 2
+  },
+  {
+    "id": 24,
+    "question_en": "What is the synonym of KEEN?",
+    "options_en": [
+      "Eager",
+      "Reluctant",
+      "Apathetic",
+      "Dull"
+    ],
+    "explanation_en": "",
+    "correctIndex": 0
+  },
+  {
+    "id": 25,
+    "question_en": "What is the synonym of LAVISH?",
+    "options_en": [
+      "Extravagant",
+      "Meager",
+      "Sparse",
+      "Poor"
+    ],
+    "explanation_en": "",
+    "correctIndex": 0
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_vocab';
+const TIMER_KEY   = 'quiz_end_time_vocab';
+const ANSWERS_KEY = 'quiz_answers_vocab';
+
+// =========================================
+// 2. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp  = new Date().toLocaleString();
+  const payload    = { time: timestamp, name, score: score.toFixed(2), total, percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (e) {
+    console.error("Score submission failed:", e);
+    return false;
+  }
+};
+
+// =========================================
+// 3. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+// ── Quiz Screen ────────────────────────────────────────────────────────────
+const Quiz = ({ questions, config, onComplete }) => {
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  const [userAnswers, setUserAnswers] = useState(() => {
+    try { const s = localStorage.getItem(ANSWERS_KEY); return s ? JSON.parse(s) : {}; }
+    catch (e) { return {}; }
+  });
+
+  const answersRef = useRef(userAnswers);
+  useEffect(() => { answersRef.current = userAnswers; }, [userAnswers]);
+  useEffect(() => { localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers)); }, [userAnswers]);
+
+  // Timer (absolute timestamp based)
+  useEffect(() => {
+    let targetTime;
+    const stored = localStorage.getItem(TIMER_KEY);
+    if (stored) {
+      targetTime = parseInt(stored, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const tick = () => {
+      const left = Math.max(0, Math.floor((targetTime - Date.now()) / 1000));
+      setTimeLeft(left);
+      if (left <= 0) { onComplete(answersRef.current); return true; }
+      return false;
+    };
+
+    if (tick()) return;
+    const timer = setInterval(() => { if (tick()) clearInterval(timer); }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const toggleOption = (qIdx, optIdx) => {
+    setUserAnswers(prev => {
+      const next = { ...prev };
+      if (next[qIdx] === optIdx) delete next[qIdx];
+      else next[qIdx] = optIdx;
+      return next;
+    });
+  };
+
+  const fmt = (s) => {
+    const m = Math.floor(s / 60), sec = s % 60;
+    return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+  };
+
+  const answeredCount = Object.keys(userAnswers).length;
+
+  return (
+    <div className="main-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+
+      {/* Sticky Header */}
+      <div className="sticky-header">
+        <div className="timer-box">⏱ {fmt(timeLeft)}</div>
+        <div className="progress-info">
+          {answeredCount} / {questions.length} answered
+        </div>
+      </div>
+
+      {/* Questions */}
+      <div style={{ padding: '20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const selected = userAnswers[idx];
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {q.question_en}</div>
+              <div className="options-grid">
+                {q.options_en.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option${selected === optIdx ? ' selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Submit Bar */}
+      <div className="submit-bar">
+        <button onClick={() => onComplete(userAnswers)}>Submit Exam</button>
+      </div>
+    </div>
+  );
+};
+
+// ── Result Screen ──────────────────────────────────────────────────────────
+const Result = ({ questions, userAnswers, config, studentName, onRetake }) => {
+  const [status, setStatus] = useState("Sending data...");
+  const [score,  setScore]  = useState(0);
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let s = 0;
+    questions.forEach((q, i) => {
+      const u = userAnswers[i];
+      if (u !== undefined) s += (u === q.correctIndex ? config.marksCorrect : config.marksWrong);
+    });
+    setScore(s);
+    submitScoreToSheet(studentName, s, totalPossible)
+      .then(ok => setStatus(ok ? "✅ Score saved to sheet!" : "⚠️ Saved locally (connection failed)"));
+  }, []);
+
+  const percentage = totalPossible > 0 ? ((score / totalPossible) * 100).toFixed(1) : 0;
+
+  return (
+    <div className="main-wrapper">
+      <div className="card">
+        <h2 style={{ color: 'var(--accent-color)' }}>Result Summary</h2>
+        <div style={{ fontSize: '2.2rem', color: 'var(--accent-color)', fontWeight: 'bold', margin: '10px 0' }}>
+          {score.toFixed(1)}
+          <span style={{ fontSize: '1rem', color: '#666' }}> / {totalPossible}</span>
+        </div>
+        <div style={{ fontSize: '1.1rem', color: '#333', marginBottom: '8px' }}>
+          Score: <strong>{percentage}%</strong>
+        </div>
+        <p style={{ margin: '5px 0' }}>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: status.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>{status}</p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3 style={{ color: 'var(--accent-color)' }}>Detailed Review</h3>
+        {questions.map((q, idx) => {
+          const u         = userAnswers[idx];
+          const attempted = u !== undefined;
+          const correct   = attempted && u === q.correctIndex;
+          const cls = attempted ? (correct ? 'status-correct' : 'status-wrong') : 'status-unanswered';
+          const txt = attempted ? (correct ? `Correct (+${config.marksCorrect})` : `Wrong (${config.marksWrong})`) : 'Skipped';
+          return (
+            <div key={q.id} className="review-item">
+              <p style={{ fontWeight: '600', marginBottom: '6px' }}>Q{idx + 1}: {q.question_en}</p>
+              <p className={cls} style={{ marginBottom: '4px' }}>Status: {txt}</p>
+              <p style={{ marginBottom: '4px' }}>
+                Correct Answer: <strong style={{ color: 'green' }}>{q.options_en[q.correctIndex]}</strong>
+              </p>
+              {attempted && (
+                <p style={{ marginBottom: '4px', color: correct ? 'green' : '#d32f2f' }}>
+                  Your Answer: {q.options_en[u]}
+                </p>
+              )}
+              {q.explanation_en && (
+                <div className="explanation">
+                  <strong>Explanation:</strong> {q.explanation_en}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ── App Root ───────────────────────────────────────────────────────────────
+const App = () => {
+  const session = useMemo(() => {
+    try { const s = localStorage.getItem(SESSION_KEY); return s ? JSON.parse(s) : null; }
+    catch (e) { return null; }
+  }, []);
+
+  const [screen,      setScreen]      = useState(session?.isActive ? 'QUIZ' : 'LANDING');
+  const [name,        setName]        = useState(session?.name || '');
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name }));
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = (window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0)
+      ? window.__PREPARSED_JSON__
+      : [];
+    const lim = DEFAULT_CONFIG.maxQuestions;
+    return lim > 0 ? all.slice(0, lim) : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) { alert("Please enter your name."); return; }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (ans) => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers(ans);
+    setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div
+      className="main-wrapper"
+      style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}
+    >
+      {screen === 'LANDING' && (
+        <div className="card">
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+
+          <div className="exam-info-box">
+            <strong>Exam Details</strong><br />
+            Questions: {questions.length} &nbsp;|&nbsp;
+            Time: {Math.floor(DEFAULT_CONFIG.totalTime / 60)} min &nbsp;|&nbsp;
+            +{DEFAULT_CONFIG.marksCorrect} / {DEFAULT_CONFIG.marksWrong}
+          </div>
+
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>Student Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleStart()}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '11px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem' }}
+            />
+          </div>
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz questions={questions} config={DEFAULT_CONFIG} onComplete={handleComplete} />
+      )}
+      {screen === 'RESULT' && (
+        <Result
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+  </script>
+</body>
+</html>
