@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "মহাকর্ষ বল এবং ইলেকট্রোস্ট্যাটিক বলের মধ্যে তুলনামূলক পার্থক্যের ক্ষেত্রে নিচের কোনটি সঠিক?",
+    "options_bn": [
+      "উভয় বলই শুধুমাত্র আকর্ষণধর্মী",
+      "মহাকর্ষ বল ইলেকট্রোস্ট্যাটিক বলের চেয়ে অনেক বেশি শক্তিশালী",
+      "উভয় বলই বর্গ-ব্যস্তানুপাতিক নিয়ম (Inverse Square Law) মেনে চলে",
+      "ইলেকট্রোস্ট্যাটিক বল ভরের কারণে সৃষ্টি হয়"
+    ],
+    "explanation_bn": "প্রদত্ত তথ্য অনুযায়ী, মহাকর্ষ এবং ইলেকট্রোস্ট্যাটিক বল উভয়ই অ-সংস্পর্শী, সংরক্ষণশীল এবং বর্গ-ব্যস্তানুপাতিক নিয়ম মেনে চলে। তবে ইলেকট্রোস্ট্যাটিক বল অনেক বেশি শক্তিশালী এবং এটি আকর্ষণ ও বিকর্ষণ উভয়ই হতে পারে।",
+    "question_en": "Which of the following is correct regarding the comparative difference between gravitational force and electrostatic force?",
+    "options_en": [
+      "Both forces are only attractive",
+      "Gravitational force is much stronger than electrostatic force",
+      "Both forces follow the inverse square law",
+      "Electrostatic force is caused by mass"
+    ],
+    "explanation_en": "According to the document, both gravitational and electrostatic forces are non-contact, conservative, and follow the inverse square law. However, electrostatic force is much stronger and can be both attractive and repulsive.",
+    "correctIndex": 2
+  },
+  {
+    "id": 2,
+    "question_bn": "কেপলারের ক্ষেত্রফলের সূত্র অনুযায়ী, একটি গ্রহ যখন সূর্যের সবচেয়ে কাছে (অনুসূর বা Perihelion) থাকে, তখন তার গতিবেগের কী পরিবর্তন ঘটে এবং কোন রাশিটি সংরক্ষিত থাকে?",
+    "options_bn": [
+      "গতিবেগ কমে যায় এবং রৈখিক ভরবেগ সংরক্ষিত থাকে",
+      "গতিবেগ বৃদ্ধি পায় এবং কৌণিক ভরবেগ সংরক্ষিত থাকে",
+      "গতিবেগ একই থাকে এবং ভর সংরক্ষিত থাকে",
+      "গতিবেগ বৃদ্ধি পায় এবং চাপ সংরক্ষিত থাকে"
+    ],
+    "explanation_bn": "কেপলারের দ্বিতীয় সূত্র (ক্ষেত্রফলের সূত্র) অনুযায়ী, কৌণিক ভরবেগ সংরক্ষিত থাকে। এর ফলে গ্রহ সূর্যের কাছে এলে (অনুসূর) দ্রুত ঘোরে এবং দূরে গেলে ধীরে ঘোরে।",
+    "question_en": "According to Kepler's law of areas, what happens to the velocity of a planet when it is closest to the Sun (perihelion), and which quantity remains conserved?",
+    "options_en": [
+      "Velocity decreases and linear momentum is conserved",
+      "Velocity increases and angular momentum is conserved",
+      "Velocity remains constant and mass is conserved",
+      "Velocity increases and pressure is conserved"
+    ],
+    "explanation_en": "According to Kepler's second law (law of areas), angular momentum is conserved. As a result, the planet moves faster when it is near the sun (perihelion) and slower when it is far.",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_bn": "হেনরি ক্যাভেন্ডিশ 1798 সালে মহাকর্ষীয় ধ্রুবক (G) এর যে মানটি পরিমাপ করেন, সেই মান ও তার SI একক কোনটি?",
+    "options_bn": [
+      "6.67 × 10⁻¹¹ Nm²/kg²",
+      "9.8 m/s²",
+      "6.67 × 10¹¹ N/m²",
+      "1.013 × 10⁵ Pa"
+    ],
+    "explanation_bn": "মহাকর্ষীয় ধ্রুবক G-এর মান 6.67 × 10⁻¹¹ Nm²/kg², যা 1798 সালে হেনরি ক্যাভেন্ডিশ প্রথম পরিমাপ করেন।",
+    "question_en": "What is the value and SI unit of the gravitational constant (G) measured by Henry Cavendish in 1798?",
+    "options_en": [
+      "6.67 × 10⁻¹¹ Nm²/kg²",
+      "9.8 m/s²",
+      "6.67 × 10¹¹ N/m²",
+      "1.013 × 10⁵ Pa"
+    ],
+    "explanation_en": "The value of the gravitational constant G is 6.67 × 10⁻¹¹ Nm²/kg², which was first measured by Henry Cavendish in 1798.",
+    "correctIndex": 0
+  },
+  {
+    "id": 4,
+    "question_bn": "পৃথিবীর আকৃতি নিখুঁত গোলক না হওয়ার কারণে বিভিন্ন স্থানে অভিকর্ষজ ত্বরণের (g) মানে তারতম্য দেখা যায়। নিচের কোন বিবৃতিটি সঠিক?",
+    "options_bn": [
+      "পৃথিবীর কেন্দ্রে g এর মান সর্বোচ্চ হয়",
+      "বিষুবরেখায় ব্যাসার্ধ বেশি হওয়ার কারণে g এর মান কম হয়",
+      "উচ্চতায় উঠলে g এর মান বৃদ্ধি পায়",
+      "মেরু অঞ্চলে ব্যাসার্ধ বেশি হওয়ার কারণে g এর মান বেশি হয়"
+    ],
+    "explanation_bn": "বিষুবরেখার কাছে পৃথিবী একটু ফোলা, তাই ব্যাসার্ধ (R) বেশি হওয়ায় সেখানে g কম হয়। অন্যদিকে মেরুতে পৃথিবী চ্যাপ্টা হওয়ায় R কম, তাই g বেশি হয়। পৃথিবীর কেন্দ্রে g শূন্য।",
+    "question_en": "Due to the Earth not being a perfect sphere, the value of acceleration due to gravity (g) varies at different places. Which of the following statements is correct?",
+    "options_en": [
+      "The value of g is highest at the center of the Earth",
+      "The value of g is less at the equator because the radius is larger",
+      "The value of g increases with altitude",
+      "The value of g is higher at the poles because the radius is larger"
+    ],
+    "explanation_en": "The Earth is slightly bulging at the equator, so the radius (R) is larger, making g lower. At the poles, the Earth is flattened (smaller R), so g is higher. At the Earth's center, g is zero.",
+    "correctIndex": 1
+  },
+  {
+    "id": 5,
+    "question_bn": "একজন কুলি মাথায় বোঝা নিয়ে সমতলে হাঁটলে বা কেন্দ্রমুখী বল দ্বারা বৃত্তাকার পথে ঘুরলে পদার্থবিজ্ঞানের দৃষ্টিকোণ থেকে সম্পাদিত কাজ শূন্য হয়। এর মূল গাণিতিক কারণ কী?",
+    "options_bn": [
+      "সরণ সম্পূর্ণ শূন্য হয়",
+      "প্রযুক্ত বল শূন্য হয়",
+      "বল এবং সরণের মধ্যবর্তী কোণ 180 ডিগ্রি হয়",
+      "বল এবং সরণের মধ্যবর্তী কোণ 90 ডিগ্রি হয়"
+    ],
+    "explanation_bn": "কাজ (W) = F × S × cos θ। কুলি সমতলে হাঁটলে বা কেন্দ্রমুখী বলের ক্ষেত্রে বল এবং সরণ পরস্পর লম্ব (90 ডিগ্রি কোণে) কাজ করে, তাই cos 90° = 0 হওয়ার কারণে মোট কাজ শূন্য হয়।",
+    "question_en": "From the perspective of physics, the work done is zero when a coolie walks on a horizontal plane with a load on his head or an object moves in a circular path by centripetal force. What is the main mathematical reason for this?",
+    "options_en": [
+      "Displacement is completely zero",
+      "The applied force is zero",
+      "The angle between the force and displacement is 180 degrees",
+      "The angle between the force and displacement is 90 degrees"
+    ],
+    "explanation_en": "Work (W) = F × S × cos θ. When a coolie walks horizontally or in the case of centripetal force, the force and displacement are perpendicular to each other (90-degree angle), so cos 90° = 0, making the total work zero.",
+    "correctIndex": 3
+  },
+  {
+    "id": 6,
+    "question_bn": "কোনো বস্তুর ভরবেগ (p) যদি দ্বিগুণ করা হয়, তবে বস্তুর ভর অপরিবর্তিত থাকলে তার গতিশক্তির (KE) কী পরিবর্তন ঘটবে?",
+    "options_bn": [
+      "গতিশক্তি দ্বিগুণ হবে",
+      "গতিশক্তি অর্ধেক হয়ে যাবে",
+      "গতিশক্তি চারগুণ হবে",
+      "গতিশক্তি অপরিবর্তিত থাকবে"
+    ],
+    "explanation_bn": "গতিশক্তি এবং ভরবেগের সূত্র হলো KE = p² / (2m)। তাই ভরবেগ (p) দ্বিগুণ করা হলে গতিশক্তি 2 এর বর্গ অর্থাৎ চারগুণ বৃদ্ধি পাবে।",
+    "question_en": "If the momentum (p) of an object is doubled while its mass remains constant, what will be the change in its kinetic energy (KE)?",
+    "options_en": [
+      "Kinetic energy will be doubled",
+      "Kinetic energy will be halved",
+      "Kinetic energy will become four times",
+      "Kinetic energy will remain unchanged"
+    ],
+    "explanation_en": "The formula relating kinetic energy and momentum is KE = p² / (2m). Therefore, if the momentum (p) is doubled, the kinetic energy increases by the square of 2, which is four times.",
+    "correctIndex": 2
+  },
+  {
+    "id": 7,
+    "question_bn": "1663 সালে প্রকাশিত ব্লেজ প্যাসকালের সূত্র অনুযায়ী হাইড্রলিক লিফট কাজ করে। এই ব্যবস্থায় একটি আবদ্ধ অসংকোচনীয় তরলে কোনটি সর্বদা সমানভাবে সর্বদিকে সঞ্চালিত থাকে?",
+    "options_bn": [
+      "বল (Force)",
+      "ঘনত্ব (Density)",
+      "চাপ (Pressure)",
+      "ক্ষেত্রফল (Area)"
+    ],
+    "explanation_bn": "প্যাসকালের সূত্র অনুযায়ী, একটি আবদ্ধ ও অসংকোচনীয় তরলে যেকোনো বিন্দুতে চাপ পরিবর্তন হলে তা সমানভাবে সর্বদিকে সঞ্চালিত হয়। অর্থাৎ F1/A1 = F2/A2, যেখানে চাপ সর্বত্র সমান।",
+    "question_en": "Hydraulic lifts work according to Blaise Pascal's law published in 1663. In this system, what is always transmitted equally in all directions in an enclosed incompressible fluid?",
+    "options_en": [
+      "Force",
+      "Density",
+      "Pressure",
+      "Area"
+    ],
+    "explanation_en": "According to Pascal's law, if the pressure changes at any point in an enclosed, incompressible fluid, it is transmitted equally in all directions. That is, F1/A1 = F2/A2, where pressure is equal everywhere.",
+    "correctIndex": 2
+  },
+  {
+    "id": 8,
+    "question_bn": "নদীর জলের তুলনায় সমুদ্রের জলে জাহাজ কম ডোবে। এর প্রধান কারণ কী এবং আপেক্ষিক ঘনত্বের একক কী?",
+    "options_bn": [
+      "সমুদ্রের জলের ঘনত্ব কম; একক পাস্কাল",
+      "সমুদ্রের জলে লবণের কারণে ঘনত্ব বেশি; এর কোনো একক নেই",
+      "নদীর জলের ঘনত্ব বেশি; একক kg/m³",
+      "নদীর জলে প্লবতা বেশি; এর কোনো একক নেই"
+    ],
+    "explanation_bn": "সমুদ্রের জলে লবণ থাকায় এর ঘনত্ব নদীর জলের চেয়ে বেশি, তাই প্লবতা বেশি হয় এবং জাহাজ কম ডোবে। আপেক্ষিক ঘনত্ব হলো দুটি একই রাশির অনুপাত, তাই এর কোনো একক নেই।",
+    "question_en": "A ship sinks less in seawater compared to river water. What is the main reason for this, and what is the unit of relative density?",
+    "options_en": [
+      "Seawater has lower density; the unit is Pascal",
+      "Seawater has higher density due to salt; it has no unit",
+      "River water has higher density; the unit is kg/m³",
+      "River water has higher buoyancy; it has no unit"
+    ],
+    "explanation_en": "Seawater contains salt, making its density higher than river water, which results in higher buoyancy and the ship sinks less. Relative density is the ratio of two similar quantities, so it has no unit.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "ড্যানিয়েল বার্নোলির 1738 সালের নীতি অনুযায়ী বিমানের ডানা কীভাবে কাজ করে?",
+    "options_bn": [
+      "ডানার উপরের অংশে বায়ু দ্রুত প্রবাহিত হয় ফলে চাপ কমে এবং নিচে ধীর প্রবাহিত হওয়ায় চাপ বাড়ে",
+      "ডানার উপরের অংশে বায়ু ধীর প্রবাহিত হয় ফলে চাপ কমে যায়",
+      "বায়ুর গতিবেগ এবং চাপ সর্বত্র স্থির থাকে, কেবল ভর পরিবর্তিত হয়",
+      "ডানার উপরের অংশে বায়ুর গতিবেগ এবং চাপ উভয়ই বৃদ্ধি পায়"
+    ],
+    "explanation_bn": "বার্নোলির নীতি অনুযায়ী, তরল বা বায়ুর গতিবেগ বাড়লে চাপ কমে। বিমানের ডানার উপরের অংশে বায়ু দ্রুত প্রবাহিত হওয়ায় চাপ কমে যায় এবং নিচের অংশে ধীর প্রবাহিত হওয়ায় চাপ বেশি থাকে, যা বিমানকে উপরে তোলে।",
+    "question_en": "According to Daniel Bernoulli's 1738 principle, how do aeroplane wings work?",
+    "options_en": [
+      "Air flows faster above the wing creating lower pressure, and slower below creating higher pressure",
+      "Air flows slower above the wing creating lower pressure",
+      "Air velocity and pressure remain constant everywhere, only mass changes",
+      "Both air velocity and pressure increase above the wing"
+    ],
+    "explanation_en": "According to Bernoulli's principle, an increase in the speed of a fluid or air occurs simultaneously with a decrease in pressure. Air flows faster over the top of the airplane wing creating low pressure, and slower underneath creating high pressure, which lifts the plane.",
+    "correctIndex": 0
+  },
+  {
+    "id": 10,
+    "question_bn": "কেপলারের পর্যায়কালের সূত্র (তৃতীয় সূত্র) অনুযায়ী সূর্যকে আবর্তনকারী কোনো গ্রহের পর্যায়কালের (T) সাথে তার কক্ষপথের অর্ধ-মুখ্য অক্ষের (r) সম্পর্ক কী?",
+    "options_bn": [
+      "T ∝ r³",
+      "T² ∝ r³",
+      "T³ ∝ r²",
+      "T ∝ r²"
+    ],
+    "explanation_bn": "কেপলারের তৃতীয় সূত্র বলে যে সূর্যকে আবর্তনকারী যেকোনো গ্রহের পর্যায়কালের বর্গ (T²), তার কক্ষপথের অর্ধ-মুখ্য অক্ষের ঘনফলের (r³) সমানুপাতিক।",
+    "question_en": "According to Kepler's Law of Time Period (Third Law), what is the relationship between the time period (T) of a planet orbiting the Sun and the semi-major axis of its orbit (r)?",
+    "options_en": [
+      "T ∝ r³",
+      "T² ∝ r³",
+      "T³ ∝ r²",
+      "T ∝ r²"
+    ],
+    "explanation_en": "Kepler's third law states that the square of the time period (T²) of any planet orbiting the sun is directly proportional to the cube of the semi-major axis (r³) of its orbit.",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "মাইক্রোফোন এবং জেনারেটরে যথাক্রমে কোন ধরণের শক্তির রূপান্তর ঘটে?",
+    "options_bn": [
+      "শব্দ শক্তি থেকে তড়িৎ শক্তি; যান্ত্রিক শক্তি থেকে তড়িৎ শক্তি",
+      "তড়িৎ শক্তি থেকে শব্দ শক্তি; যান্ত্রিক শক্তি থেকে তড়িৎ শক্তি",
+      "যান্ত্রিক শক্তি থেকে তড়িৎ শক্তি; শব্দ শক্তি থেকে তড়িৎ শক্তি",
+      "তড়িৎ শক্তি থেকে শব্দ শক্তি; তড়িৎ শক্তি থেকে যান্ত্রিক শক্তি"
+    ],
+    "explanation_bn": "চার্টে দেওয়া তথ্য অনুযায়ী, মাইক্রোফোন শব্দ শক্তিকে তড়িৎ শক্তিতে রূপান্তর করে এবং জেনারেটর যান্ত্রিক শক্তিকে তড়িৎ শক্তিতে রূপান্তর করে।",
+    "question_en": "Which types of energy conversions take place in a microphone and a generator respectively?",
+    "options_en": [
+      "Sound energy to electrical energy; Mechanical energy to electrical energy",
+      "Electrical energy to sound energy; Mechanical energy to electrical energy",
+      "Mechanical energy to electrical energy; Sound energy to electrical energy",
+      "Electrical energy to sound energy; Electrical energy to mechanical energy"
+    ],
+    "explanation_en": "According to the chart provided, a microphone converts sound energy into electrical energy, and a generator converts mechanical energy into electrical energy.",
+    "correctIndex": 0
+  },
+  {
+    "id": 12,
+    "question_bn": "একটি বস্তুকে উপরের দিকে ছুঁড়ে দিলে তার সর্বোচ্চ উচ্চতায় শক্তির অবস্থা কেমন হয়?",
+    "options_bn": [
+      "গতিশক্তি সর্বোচ্চ হয় এবং স্থিতিশক্তি শূন্য হয়",
+      "গতিশক্তি ও স্থিতিশক্তি উভয়ই সর্বোচ্চ হয়",
+      "গতিশক্তি শূন্য হয় এবং স্থিতিশক্তি সর্বোচ্চ হয়",
+      "গতিশক্তি ও স্থিতিশক্তি উভয়ই শূন্য হয়"
+    ],
+    "explanation_bn": "সর্বোচ্চ বিন্দুতে বস্তুর বেগ শূন্য হয়ে যায়, তাই গতিশক্তি (KE = ½mv²) শূন্য হয়। তবে উচ্চতা সর্বাধিক থাকায় স্থিতিশক্তি (PE = mgh) সর্বোচ্চ হয়।",
+    "question_en": "When an object is thrown upwards, what is the state of its energy at the highest point?",
+    "options_en": [
+      "Kinetic energy is maximum and potential energy is zero",
+      "Both kinetic and potential energy are maximum",
+      "Kinetic energy is zero and potential energy is maximum",
+      "Both kinetic and potential energy are zero"
+    ],
+    "explanation_en": "At the highest point, the velocity of the object becomes zero, so kinetic energy (KE = ½mv²) is zero. However, since the height is maximum, the potential energy (PE = mgh) is maximum.",
+    "correctIndex": 2
+  },
+  {
+    "id": 13,
+    "question_bn": "ক্ষমতার ব্যবহারিক একক হর্সপাওয়ার (HP) এবং ওয়াট (W) এর মধ্যে সম্পর্ক কী এবং বাল্বের ফিলামেন্টে ব্যবহৃত টাংস্টেনের গলনাঙ্ক কত?",
+    "options_bn": [
+      "1 HP = 1000 W; গলনাঙ্ক 100°C",
+      "1 HP = 746 W; গলনাঙ্ক 3422°C",
+      "1 HP = 1013 W; গলনাঙ্ক 3422°C",
+      "1 HP = 746 kW; গলনাঙ্ক 1000°C"
+    ],
+    "explanation_bn": "ক্ষমতার একক হর্সপাওয়ার যেখানে 1 HP = 746 ওয়াট। বাল্বের ফিলামেন্ট টাংস্টেন দিয়ে তৈরি কারণ এর গলনাঙ্ক পৃথিবীর সব ধাতুর মধ্যে সর্বোচ্চ, যা 3422°C।",
+    "question_en": "What is the relationship between the practical unit of power, horsepower (HP), and Watt (W), and what is the melting point of Tungsten used in bulb filaments?",
+    "options_en": [
+      "1 HP = 1000 W; melting point 100°C",
+      "1 HP = 746 W; melting point 3422°C",
+      "1 HP = 1013 W; melting point 3422°C",
+      "1 HP = 746 kW; melting point 1000°C"
+    ],
+    "explanation_en": "The unit of power is horsepower where 1 HP = 746 Watts. Bulb filaments are made of tungsten because its melting point is the highest among all metals on Earth, which is 3422°C.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "ভর ও ওজনের মধ্যে মৌলিক পার্থক্য বিবেচনা করে, 60 কেজি ভরের কোনো মানুষকে পৃথিবীর পৃষ্ঠ থেকে চাঁদে নিয়ে গেলে তার ভর এবং ওজনের কী পরিবর্তন হবে?",
+    "options_bn": [
+      "ভর এবং ওজন উভয়ই পৃথিবীর 1/6 ভাগ হয়ে যাবে",
+      "ওজন একই থাকবে, কিন্তু ভর পৃথিবীর 1/6 ভাগ হবে",
+      "ভর 60 কেজিই থাকবে, কিন্তু ওজন পৃথিবীর 1/6 ভাগ হয়ে যাবে",
+      "ভর এবং ওজন উভয়ই শূন্য হয়ে যাবে"
+    ],
+    "explanation_bn": "ভর বস্তুর নিজস্ব গুণ, যা স্থানভেদে বদলায় না (সর্বত্র 60 কেজি)। কিন্তু ওজন হলো আকর্ষণ বল (W=mg), যেহেতু চাঁদে অভিকর্ষজ ত্বরণ (g) পৃথিবীর 1/6 ভাগ, তাই ওজন কমে 1/6 ভাগ হবে।",
+    "question_en": "Considering the fundamental difference between mass and weight, what will be the change in mass and weight if a 60 kg person is taken from the Earth's surface to the Moon?",
+    "options_en": [
+      "Both mass and weight will become 1/6th of Earth's",
+      "Weight will remain the same, but mass will become 1/6th of Earth's",
+      "Mass will remain 60 kg, but weight will become 1/6th of Earth's",
+      "Both mass and weight will become zero"
+    ],
+    "explanation_en": "Mass is the intrinsic property of an object, which does not change with location (remains 60 kg everywhere). But weight is the force of gravity (W=mg), and since the acceleration due to gravity (g) on the Moon is 1/6th of Earth's, the weight decreases to 1/6th.",
+    "correctIndex": 2
+  },
+  {
+    "id": 15,
+    "question_bn": "একটি হাতির পায়ের তুলনায় একটি হিল পরা পায়ে মাটিতে বেশি চাপ অনুভূত হতে পারে। পদার্থবিজ্ঞানের কোন সূত্রের সাহায্যে এটি ব্যাখ্যা করা যায়?",
+    "options_bn": [
+      "চাপ ক্ষেত্রফলের সমানুপাতিক",
+      "চাপ ক্ষেত্রফলের ব্যস্তানুপাতিক",
+      "বল ক্ষেত্রফলের ব্যস্তানুপাতিক",
+      "চাপ বেগের সমানুপাতিক"
+    ],
+    "explanation_bn": "চাপ (P) = বল (F) / ক্ষেত্রফল (A)। সূত্র অনুযায়ী, চাপ ক্ষেত্রফলের ব্যস্তানুপাতিক। হিলের ক্ষেত্রফল হাতির পায়ের তুলনায় খুব কম হওয়ায় চাপ অনেক বেশি হয়।",
+    "question_en": "More pressure can be felt on the ground under a high-heeled foot compared to an elephant's foot. By which principle of physics can this be explained?",
+    "options_en": [
+      "Pressure is directly proportional to area",
+      "Pressure is inversely proportional to area",
+      "Force is inversely proportional to area",
+      "Pressure is directly proportional to velocity"
+    ],
+    "explanation_en": "Pressure (P) = Force (F) / Area (A). According to the formula, pressure is inversely proportional to the area. Since the area of a heel is very small compared to an elephant's foot, the pressure is much higher.",
+    "correctIndex": 1
+  },
+  {
+    "id": 16,
+    "question_bn": "ঘর্ষণ বল দ্বারা কৃত কাজ সর্বদা ঋণাত্মক (Negative) হয়। এটি ঘটার গাণিতিক কারণ কী?",
+    "options_bn": [
+      "বল এবং সরণ একই দিকে কাজ করে (কোণ 0°)",
+      "বল এবং সরণ পরস্পর লম্বভাবে কাজ করে (কোণ 90°)",
+      "বল এবং সরণ পরস্পরের বিপরীত দিকে কাজ করে (কোণ 180°)",
+      "ঘর্ষণ বলের প্রভাবে বস্তুর কোনো সরণ ঘটে না"
+    ],
+    "explanation_bn": "কাজের সূত্র W = F × S × cos θ। ঘর্ষণ বল সর্বদা বস্তুর গতির বিপরীত দিকে কাজ করে। তাই বল ও সরণের মধ্যবর্তী কোণ 180° হয় এবং cos 180° = -1 হওয়ার কারণে কাজ ঋণাত্মক হয়।",
+    "question_en": "The work done by friction force is always negative. What is the mathematical reason for this to happen?",
+    "options_en": [
+      "Force and displacement act in the same direction (angle 0°)",
+      "Force and displacement act perpendicularly (angle 90°)",
+      "Force and displacement act in opposite directions (angle 180°)",
+      "No displacement occurs under the influence of friction force"
+    ],
+    "explanation_en": "The formula for work is W = F × S × cos θ. Frictional force always acts opposite to the direction of motion. So the angle between force and displacement is 180°, and since cos 180° = -1, the work is negative.",
+    "correctIndex": 2
+  },
+  {
+    "id": 17,
+    "question_bn": "পৃথিবীর মুক্তিবেগ (Escape Velocity) প্রায় 11.2 কিমি/সেকেন্ড। এই বেগ সম্পর্কে নিচের কোন ধারণাটি সঠিক?",
+    "options_bn": [
+      "এটি হলো সেই বেগ যা দিলে বস্তু সর্বোচ্চ উচ্চতায় গিয়ে আবার পৃথিবীতে ফিরে আসে",
+      "এটি হলো সেই ন্যূনতম বেগ যা দিলে বস্তু পৃথিবীর মহাকর্ষ কাটিয়ে চিরতরে চলে যেতে পারে",
+      "এটি হলো পৃথিবীর চারদিকে স্যাটেলাইটের ঘোরার বেগ",
+      "এটি হলো পৃথিবীর কেন্দ্রে পৌঁছানোর বেগ"
+    ],
+    "explanation_bn": "মুক্তিবেগ বা Escape Velocity হলো সেই ন্যূনতম বেগ যা প্রয়োগ করলে কোনো বস্তু পৃথিবীর মহাকর্ষীয় টান কাটিয়ে মহাকাশে চলে যায় এবং আর পৃথিবীতে ফিরে আসে না। পৃথিবীর ক্ষেত্রে এটি 11.2 কিমি/সেকেন্ড।",
+    "question_en": "The escape velocity of the Earth is approximately 11.2 km/s. Which of the following concepts about this velocity is correct?",
+    "options_en": [
+      "It is the velocity that allows an object to reach the highest point and fall back to Earth",
+      "It is the minimum velocity required for an object to permanently overcome Earth's gravity",
+      "It is the orbiting speed of a satellite around the Earth",
+      "It is the speed to reach the center of the Earth"
+    ],
+    "explanation_en": "Escape velocity is the minimum velocity required for an object to overcome Earth's gravitational pull and go into space, never to return. For Earth, it is 11.2 km/s.",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "বল (F) এবং বেগের (v) সাথে ক্ষমতার (P) সম্পর্কটি পদার্থবিজ্ঞানে কীভাবে প্রকাশ করা হয়?",
+    "options_bn": [
+      "P = F / v",
+      "P = v / F",
+      "P = F × v",
+      "P = F × v²"
+    ],
+    "explanation_bn": "ক্ষমতা (P) = কাজ (W) / সময় (t)। আবার, কাজ = বল (F) × সরণ (S)। তাই P = (F × S) / t। যেহেতু সরণ/সময় = বেগ (v), তাই ক্ষমতা P = F × v।",
+    "question_en": "How is the relationship between power (P) with force (F) and velocity (v) expressed in physics?",
+    "options_en": [
+      "P = F / v",
+      "P = v / F",
+      "P = F × v",
+      "P = F × v²"
+    ],
+    "explanation_en": "Power (P) = Work (W) / Time (t). Also, Work = Force (F) × Displacement (S). So P = (F × S) / t. Since Displacement/Time = Velocity (v), power P = F × v.",
+    "correctIndex": 2
+  },
+  {
+    "id": 19,
+    "question_bn": "গ্রহগুলি সূর্যের চারদিকে নির্দিষ্ট সময় পর পর উপবৃত্তাকার পথে আবর্তন করে। এই ধরনের নির্দিষ্ট সময় অন্তর পুনরাবৃত্তি হওয়া গতিকে কী বলে?",
+    "options_bn": [
+      "রৈখিক গতি (Rectilinear Motion)",
+      "পর্যাবৃত্ত গতি (Periodic Motion)",
+      "দোলগতি (Oscillatory Motion)",
+      "আপেক্ষিক গতি (Relative Motion)"
+    ],
+    "explanation_bn": "চার্টে দেওয়া গতির প্রকারভেদ অনুযায়ী, নির্দিষ্ট সময় পর পর একই পথের পুনরাবৃত্তি ঘটলে তাকে পর্যাবৃত্ত গতি বা Periodic Motion বলা হয়, যেমন গ্রহের কক্ষপথ।",
+    "question_en": "Planets orbit the sun in elliptical paths at regular time intervals. What is this type of motion repeating after a specific time called?",
+    "options_en": [
+      "Rectilinear Motion",
+      "Periodic Motion",
+      "Oscillatory Motion",
+      "Relative Motion"
+    ],
+    "explanation_en": "According to the types of motion given in the chart, if a path is repeated after a specific interval of time, it is called Periodic Motion, such as planetary orbits.",
+    "correctIndex": 1
+  },
+  {
+    "id": 20,
+    "question_bn": "কাজ (Work) হলো একটি স্কেলার রাশি যার SI একক জুল (Joule)। একটি ক্রেন যদি একটি ভারী পাথরকে কেবল শূন্যে স্থিরভাবে তুলে ধরে থাকে, তবে পদার্থবিজ্ঞান অনুযায়ী কাজের পরিমাণ কত হবে?",
+    "options_bn": [
+      "ধনাত্মক কাজ",
+      "ঋণাত্মক কাজ",
+      "কাজের পরিমাণ অসীম",
+      "শূন্য কাজ"
+    ],
+    "explanation_bn": "পদার্থবিজ্ঞানে কাজ (Work) সম্পন্ন হতে হলে বল প্রয়োগের পাশাপাশি বস্তুর সরণ হতে হবে। ক্রেন পাথরটি স্থিরভাবে ধরে রাখলে সরণ শূন্য হয়, তাই কাজের পরিমাণও শূন্য হয়।",
+    "question_en": "Work is a scalar quantity with the SI unit Joule (J). If a crane simply holds a heavy stone stationary in the air, what will be the amount of work done according to physics?",
+    "options_en": [
+      "Positive work",
+      "Negative work",
+      "Infinite work",
+      "Zero work"
+    ],
+    "explanation_en": "In physics, for work to be done, there must be displacement of the object along with the application of force. When the crane holds the stone stationary, the displacement is zero, hence the work done is zero.",
+    "correctIndex": 3
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
