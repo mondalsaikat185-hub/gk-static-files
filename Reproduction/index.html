@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "অ্যামিবা এবং লিশম্যানিয়ার দ্বিখণ্ডন (Binary Fission) প্রক্রিয়ার মধ্যে মূল পার্থক্য কোনটি?",
+    "options_bn": [
+      "অ্যামিবা শুধুমাত্র একটি নির্দিষ্ট অক্ষে বিভাজিত হয়, যেখানে লিশম্যানিয়া যেকোনো দিক থেকে বিভাজিত হতে পারে।",
+      "অ্যামিবা যেকোনো দিক থেকে বিভাজিত হতে পারে, কিন্তু লিশম্যানিয়া একটি নির্দিষ্ট অক্ষ বরাবর বিভাজিত হয়।",
+      "অ্যামিবা দ্বিখণ্ডন করে না, বহুখণ্ডন করে, কিন্তু লিশম্যানিয়া দ্বিখণ্ডন করে।",
+      "অ্যামিবার বিভাজনের সময় সাইটোপ্লাজম বিভক্ত হয় না, কিন্তু লিশম্যানিয়ার ক্ষেত্রে হয়।"
+    ],
+    "explanation_bn": "নোটে স্পষ্টভাবে উল্লেখ আছে যে, অ্যামিবা যেকোনো দিক থেকে বিভাজিত হতে পারে (any orientation), কিন্তু লিশম্যানিয়া একটি নির্দিষ্ট অক্ষ বরাবর বিভাজিত হয় (particular orientation)।",
+    "question_en": "What is the main difference between the binary fission processes of Amoeba and Leishmania?",
+    "options_en": [
+      "Amoeba divides only along a specific axis, whereas Leishmania can divide in any orientation.",
+      "Amoeba can divide in any orientation, but Leishmania divides along a particular axis.",
+      "Amoeba does not undergo binary fission, it undergoes multiple fission, but Leishmania undergoes binary fission.",
+      "The cytoplasm does not divide during Amoeba's fission, but it does in Leishmania."
+    ],
+    "explanation_en": "The notes clearly state that Amoeba can divide in any orientation, but Leishmania divides along a particular orientation/axis.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "গর্ভাবস্থায় নাভিরজ্জুর ধমনী (Umbilical Artery) সম্পর্কে নিচের কোন উক্তিটি সঠিক?",
+    "options_bn": [
+      "এটি প্লাসেন্টা থেকে শিশুর শরীরে অক্সিজেনযুক্ত রক্ত বহন করে।",
+      "এটি শিশু থেকে প্লাসেন্টায় অক্সিজেন ও পুষ্টি বহন করে।",
+      "এটি শিশু থেকে প্লাসেন্টায় বিকারগ্রস্ত রক্ত বা বর্জ্য বহন করে।",
+      "এটি মায়ের শরীর থেকে সরাসরি শিশুর মস্তিষ্কে রক্ত সরবরাহ করে।"
+    ],
+    "explanation_bn": "সাধারণত ধমনী অক্সিজেনযুক্ত রক্ত বহন করে, কিন্তু নাভিরজ্জুর ধমনী ব্যতিক্রম; এটি শিশু থেকে প্লাসেন্টায় বিকারগ্রস্ত রক্ত ও বর্জ্য বহন করে।",
+    "question_en": "Which of the following statements is correct regarding the umbilical artery during pregnancy?",
+    "options_en": [
+      "It carries oxygenated blood from the placenta to the child.",
+      "It carries oxygen and nutrients from the child to the placenta.",
+      "It carries deoxygenated blood or waste from the child to the placenta.",
+      "It supplies blood directly from the mother's body to the child's brain."
+    ],
+    "explanation_en": "Generally, arteries carry oxygenated blood, but the umbilical artery is an exception; it carries deoxygenated blood and waste from the child to the placenta.",
+    "correctIndex": 2
+  },
+  {
+    "id": 3,
+    "question_bn": "প্লাজমোডিয়ামের বহুখণ্ডন প্রক্রিয়ায় কোষ বিভাজনের সঠিক পর্যায়ক্রম কোনটি?",
+    "options_bn": [
+      "মেরোজোইট → স্কিজন্ট → কন্যা নিউক্লিয়াস",
+      "স্কিজন্ট → কন্যা নিউক্লিয়াস → মেরোজোইট",
+      "কন্যা নিউক্লিয়াস → মেরোজোইট → স্কিজন্ট",
+      "মেরোজোইট → কন্যা নিউক্লিয়াস → স্কিজন্ট"
+    ],
+    "explanation_bn": "প্লাজমোডিয়াম প্রথমে স্কিজন্ট নামক বড় কোষ তৈরি করে, এর নিউক্লিয়াস বিভাজিত হয়ে কন্যা নিউক্লিয়াস তৈরি হয় এবং প্রতিটি নিউক্লিয়াস সাইটোপ্লাজম নিয়ে মেরোজোইট তৈরি করে।",
+    "question_en": "What is the correct sequence of cell division in the multiple fission process of Plasmodium?",
+    "options_en": [
+      "Merozoite → Schizont → Daughter Nuclei",
+      "Schizont → Daughter Nuclei → Merozoite",
+      "Daughter Nuclei → Merozoite → Schizont",
+      "Merozoite → Daughter Nuclei → Schizont"
+    ],
+    "explanation_en": "Plasmodium first creates a large cell called Schizont, its nucleus divides to form daughter nuclei, and each nucleus takes some cytoplasm to form a merozoite.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "প্রদত্ত উদ্ভিদের তালিকা থেকে শুধুমাত্র একলিঙ্গ (Unisexual) ফুলের সঠিক সেটটি চিহ্নিত করুন।",
+    "options_bn": [
+      "পেঁপে, শসা, তরমুজ, করলা",
+      "জবা, সূর্যমুখী, পেঁপে, তরমুজ",
+      "টমেটো, মরিচ, পেটুনিয়া, গোলাপ",
+      "লিলি, টিউলিপ, খরমুজ, জবা"
+    ],
+    "explanation_bn": "নোটে একলিঙ্গ ফুলের উদাহরণ হিসেবে পেঁপে, শসা, তরমুজ, খরমুজ এবং করলার কথা উল্লেখ করা হয়েছে। জবা, সূর্যমুখী, টমেটো, পেটুনিয়া হলো উভলিঙ্গ ফুল।",
+    "question_en": "Identify the correct set of exclusively unisexual flowers from the given list of plants.",
+    "options_en": [
+      "Papaya, Cucumber, Watermelon, Bitter gourd",
+      "Hibiscus, Sunflower, Papaya, Watermelon",
+      "Tomato, Chilli, Petunia, Rose",
+      "Lily, Tulip, Muskmelon, Hibiscus"
+    ],
+    "explanation_en": "The notes mention papaya, cucumber, watermelon, muskmelon, and bitter gourd as examples of unisexual flowers. Hibiscus, sunflower, tomato, and petunia are bisexual.",
+    "correctIndex": 0
+  },
+  {
+    "id": 5,
+    "question_bn": "পার্থেনোকার্পিক ফল এবং পার্থেনোজেনেসিসের মধ্যে সম্পর্ক অনুযায়ী সঠিক জোড়টি নির্বাচন করুন।",
+    "options_bn": [
+      "আপেল — পার্থেনোকার্পিক ফল, কেঁচো — পার্থেনোজেনেসিস",
+      "নারকেল — পার্থেনোকার্পিক ফল, ব্যাঙ — পার্থেনোজেনেসিস",
+      "কলা — পার্থেনোকার্পিক ফল, মৌমাছি — পার্থেনোজেনেসিস",
+      "কাজু বাদাম — পার্থেনোকার্পিক ফল, গিরগিটি — পার্থেনোজেনেসিস"
+    ],
+    "explanation_bn": "নিষেক ছাড়া তৈরি বীজহীন ফল হলো পার্থেনোকার্পিক (যেমন কলা), আর নিষেক ছাড়া ডিম্বাণু থেকে নতুন জীব তৈরি হওয়া হলো পার্থেনোজেনেসিস (যেমন মৌমাছি)।",
+    "question_en": "Select the correct pair according to the relationship between parthenocarpic fruits and parthenogenesis.",
+    "options_en": [
+      "Apple — Parthenocarpic fruit, Earthworm — Parthenogenesis",
+      "Coconut — Parthenocarpic fruit, Frog — Parthenogenesis",
+      "Banana — Parthenocarpic fruit, Honey bee — Parthenogenesis",
+      "Cashew nut — Parthenocarpic fruit, Lizard — Parthenogenesis"
+    ],
+    "explanation_en": "A seedless fruit formed without fertilization is parthenocarpic (e.g., banana), and a new organism formed from an unfertilized ovum is parthenogenesis (e.g., honey bee).",
+    "correctIndex": 2
+  },
+  {
+    "id": 6,
+    "question_bn": "মানব প্রজনন তন্ত্রের সঠিক ধাপগুলো ক্রমানুসারে সাজান।",
+    "options_bn": [
+      "গেমেটোজেনেসিস → ফার্টিলাইজেশন → ইনসেমিনেশন → ইমপ্লান্টেশন → গেস্টেশন → পার্টুরিশন",
+      "গেমেটোজেনেসিস → ইনসেমিনেশন → ফার্টিলাইজেশন → ইমপ্লান্টেশন → গেস্টেশন → পার্টুরিশন",
+      "ইনসেমিনেশন → গেমেটোজেনেসিস → ফার্টিলাইজেশন → গেস্টেশন → ইমপ্লান্টেশন → পার্টুরিশন",
+      "ফার্টিলাইজেশন → গেমেটোজেনেসিস → ইনসেমিনেশন → ইমপ্লান্টেশন → পার্টুরিশন → গেস্টেশন"
+    ],
+    "explanation_bn": "মানব প্রজনন তন্ত্রের 6টি ধাপ হলো: গেমেটোজেনেসিস, ইনসেমিনেশন, ফার্টিলাইজেশন, ইমপ্লান্টেশন, গেস্টেশন এবং সবশেষে পার্টুরিশন।",
+    "question_en": "Arrange the steps of the human reproductive system in the correct chronological order.",
+    "options_en": [
+      "Gametogenesis → Fertilisation → Insemination → Implantation → Gestation → Parturition",
+      "Gametogenesis → Insemination → Fertilisation → Implantation → Gestation → Parturition",
+      "Insemination → Gametogenesis → Fertilisation → Gestation → Implantation → Parturition",
+      "Fertilisation → Gametogenesis → Insemination → Implantation → Parturition → Gestation"
+    ],
+    "explanation_en": "The 6 steps of the human reproductive system are: Gametogenesis, Insemination, Fertilisation, Implantation, Gestation, and finally Parturition.",
+    "correctIndex": 1
+  },
+  {
+    "id": 7,
+    "question_bn": "প্ল্যানেরিয়ার রিজেনারেশন (Regeneration) প্রক্রিয়ায় হারানো অংশ পুনরায় তৈরি করার জন্য কোন বিশেষ ধরনের কোষ সক্রিয় ভূমিকা পালন করে?",
+    "options_bn": [
+      "স্কিজন্ট কোষ (Schizont cells)",
+      "নিওব্লাস্ট কোষ (Neoblast cells)",
+      "মেরোজোইট (Merozoite)",
+      "স্পোরাঞ্জিয়াম (Sporangium)"
+    ],
+    "explanation_bn": "নোটে উল্লেখ আছে, প্ল্যানেরিয়ার শরীর কাটলে কাটা স্থানে বিশেষ নিওব্লাস্ট কোষ (Neoblast cells) সক্রিয় হয় এবং দ্রুত বিভাজিত হয়ে হারানো অংশ তৈরি করে।",
+    "question_en": "Which specific type of cell plays an active role in recreating lost parts during the regeneration process of Planaria?",
+    "options_en": [
+      "Schizont cells",
+      "Neoblast cells",
+      "Merozoite",
+      "Sporangium"
+    ],
+    "explanation_en": "The notes mention that when a Planaria's body is cut, special Neoblast cells become active at the cut site and divide rapidly to recreate the lost part.",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_bn": "মহিলাদের ডিম্বাণু উপস্থিতি এবং মাসিক সম্পর্কে কোনটি সঠিক তথ্য?",
+    "options_bn": [
+      "12 বছর বয়সে ডিম্বাশয়ে ডিম্বাণু তৈরি শুরু হয় এবং নিষেক না হলে মাসিক হয়।",
+      "একটি মেয়ে জন্মের সময়েই ডিম্বাশয়ে ডিম্বাণু নিয়ে জন্মায় এবং 12 বছর বয়সে তা পরিণত হতে শুরু করে।",
+      "মেনার্কি হলো 40-50 বছর বয়সে মাসিক বন্ধ হয়ে যাওয়ার পর্যায়।",
+      "জরায়ুমুখের ক্যান্সার মাসিকের কারণে হয় এবং এটি 11-12 বছর বয়সে শুরু হয়।"
+    ],
+    "explanation_bn": "একটি মেয়ে জন্মের সময়েই ডিম্বাণু নিয়ে জন্মায়। 12 বছর বয়স থেকে এগুলো পরিণত হতে শুরু করে এবং গর্ভধারণ না হলে মাসিকের মাধ্যমে তা ঝরে পড়ে।",
+    "question_en": "Which is the correct information about female ovule presence and menstruation?",
+    "options_en": [
+      "Ovules start forming in the ovary at the age of 12, and menstruation occurs if not fertilized.",
+      "A female is born with ovules in her ovaries at birth, and they start to mature at the age of 12.",
+      "Menarche is the stage where menstruation stops permanently at the age of 40-50.",
+      "Cervical cancer is caused by menstruation and starts at the age of 11-12."
+    ],
+    "explanation_en": "A female is born with ovules present in her ovaries. They start maturing at the age of 12, and if no pregnancy occurs, the uterine lining sheds as menstruation.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "রাইজোপাসের স্পোর গঠনের ক্ষেত্রে 'বব-এবং-স্টিক' (Bob and stick) গোলাকার কাঠামোটিকে কী বলা হয়?",
+    "options_bn": [
+      "নিওব্লাস্ট (Neoblast)",
+      "স্কিজন্ট (Schizont)",
+      "স্পোরাঞ্জিয়াম (Sporangium)",
+      "মেরোজোইট (Merozoite)"
+    ],
+    "explanation_bn": "রাইজোপাসের শরীরে স্পোর গঠনকারী বব-এবং-স্টিকের মতো গোলাকার কাঠামোটিকে স্পোরাঞ্জিয়াম বলা হয়।",
+    "question_en": "In the spore formation of Rhizopus, what is the 'bob and stick' spherical structure called?",
+    "options_en": [
+      "Neoblast",
+      "Schizont",
+      "Sporangium",
+      "Merozoite"
+    ],
+    "explanation_en": "The bob-and-stick-like spherical structure in Rhizopus that forms spores is called a Sporangium.",
+    "correctIndex": 2
+  },
+  {
+    "id": 10,
+    "question_bn": "যদি একটি সুন্দর গোলাপ গাছকে একটি বনজ গোলাপ গাছের কাণ্ডে গ্রাফট করা হয়, তবে নতুন গাছে কী বৈশিষ্ট্য দেখা যাবে?",
+    "options_bn": [
+      "গ্রাফট করা অংশে বনজ গোলাপ ফুটবে, কিন্তু শিকড় সুন্দর গোলাপের মতো হবে।",
+      "গ্রাফট করা অংশে সুন্দর গোলাপ ফুটবে, কিন্তু শিকড় বনজ গোলাপের হবে।",
+      "পুরো গাছটিই সম্পূর্ণ নতুন ধরনের ফুল ও শিকড় তৈরি করবে।",
+      "গ্রাফটিংয়ের ফলে গাছটি ফল ধারণ করতে শুরু করবে।"
+    ],
+    "explanation_bn": "নোটে বলা হয়েছে যে গ্রাফট করলে মূল সুন্দর গোলাপ ফোটে গ্রাফট করা অংশে, কিন্তু গাছের শিকড় বনজ গোলাপেরই থেকে যায়।",
+    "question_en": "If a beautiful rose plant is grafted onto the stem of a wild rose plant, what characteristics will be seen in the new plant?",
+    "options_en": [
+      "Wild roses will bloom on the grafted part, but the roots will be like the beautiful rose.",
+      "Beautiful roses will bloom on the grafted part, but the roots will belong to the wild rose.",
+      "The entire plant will develop a completely new type of flowers and roots.",
+      "The plant will start bearing fruit as a result of grafting."
+    ],
+    "explanation_en": "The notes mention that through grafting, beautiful roses bloom on the grafted part, but the roots remain those of the wild rose.",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "আপেল এবং নারকেলের ফলের ধরন সম্পর্কে যথাক্রমে কোনটি সঠিক?",
+    "options_bn": [
+      "আপেল হলো ড্রুপ ফল এবং নারকেল হলো মিথ্যা ফল।",
+      "আপেল হলো মিথ্যা ফল এবং নারকেল হলো ড্রুপ ফল।",
+      "উভয়ই পার্থেনোকার্পিক ফলের উদাহরণ।",
+      "আপেল হলো পার্থেনোকার্পিক ফল এবং নারকেল হলো মিথ্যা ফল।"
+    ],
+    "explanation_bn": "আপেল হলো মিথ্যা ফল (False Fruit) যা ডিম্বাশয় ছাড়া অন্য অংশ থেকে তৈরি হয়, আর নারকেল হলো ড্রুপ ফল (Drupe) যার শক্ত খোলস আছে।",
+    "question_en": "Which is correct respectively regarding the fruit types of apple and coconut?",
+    "options_en": [
+      "Apple is a drupe fruit and coconut is a false fruit.",
+      "Apple is a false fruit and coconut is a drupe fruit.",
+      "Both are examples of parthenocarpic fruits.",
+      "Apple is a parthenocarpic fruit and coconut is a false fruit."
+    ],
+    "explanation_en": "Apple is a False Fruit (developed from parts other than the ovary), and coconut is a Drupe fruit (having a hard shell).",
+    "correctIndex": 1
+  },
+  {
+    "id": 12,
+    "question_bn": "ল্যাবরেটরিতে কৃত্রিম অঙ্গজ প্রজননের মাধ্যমে কোন ধরনের উদ্ভিদের চাষ প্রধানত করা হয় যার দাম অনেক বেশি?",
+    "options_bn": [
+      "ঔষধি উদ্ভিদ যেমন তুলসী",
+      "ফলজ উদ্ভিদ যেমন আম ও আঙুর",
+      "সৌন্দর্যবর্ধনকারী উদ্ভিদ যেমন স্নেক প্ল্যান্ট",
+      "সবজি উদ্ভিদ যেমন টমেটো ও করলা"
+    ],
+    "explanation_bn": "টিস্যু কালচার (কৃত্রিম অঙ্গজ প্রজনন) মূলত সৌন্দর্যবর্ধনকারী উদ্ভিদ (ornamental plants) যেমন স্নেক প্ল্যান্টের ক্ষেত্রে ব্যবহার হয়, যার দাম অনেক বেশি।",
+    "question_en": "Which type of plant is primarily cultivated through artificial vegetative propagation in the laboratory, having a high market value?",
+    "options_en": [
+      "Medicinal plants like Tulsi",
+      "Fruit-bearing plants like Mango and Grapes",
+      "Ornamental plants like Snake Plant",
+      "Vegetable plants like Tomato and Bitter gourd"
+    ],
+    "explanation_en": "Tissue culture (artificial vegetative propagation) is primarily used for ornamental plants like the Snake Plant, which have a high market value.",
+    "correctIndex": 2
+  },
+  {
+    "id": 13,
+    "question_bn": "স্পাইরোগাইরার খণ্ডীভবন (Fragmentation) সম্পর্কে নিচের কোন উক্তিটি সঠিক?",
+    "options_bn": [
+      "এটি একটি এককোষী শৈবাল যা শুধুমাত্র নির্দিষ্ট অক্ষে ভেঙে যায়।",
+      "পানির প্রবাহ বা যান্ত্রিক চাপে এর কোষ-শৃঙ্খল ভেঙে টুকরো হয় এবং প্রতিটি টুকরো নতুন স্পাইরোগাইরায় পরিণত হয়।",
+      "এটি লাল শৈবালের একটি প্রজাতি যা মুকুলোদ্গমের মাধ্যমেও প্রজনন করে।",
+      "এর প্রতিটি টুকরো থেকে নতুন জীব তৈরি হওয়ার জন্য নিষেকের প্রয়োজন হয়।"
+    ],
+    "explanation_bn": "নোটে বলা হয়েছে, স্পাইরোগাইরা একটি বহুকোষী দীর্ঘ সুতার মতো কোষ-শৃঙ্খলে তৈরি। পানির প্রবাহ বা যান্ত্রিক চাপে এটি ভেঙে যায় এবং টুকরোগুলো বিভাজন ও বৃদ্ধির মাধ্যমে নতুন জীবে পরিণত হয়।",
+    "question_en": "Which of the following statements is correct regarding fragmentation in Spirogyra?",
+    "options_en": [
+      "It is a unicellular algae that breaks only along a specific axis.",
+      "Due to water flow or mechanical pressure, its cell chain breaks into fragments, and each fragment develops into a new Spirogyra.",
+      "It is a species of red algae that also reproduces through budding.",
+      "Fertilization is required for each of its fragments to form a new organism."
+    ],
+    "explanation_en": "The notes state that Spirogyra is made of a multicellular long thread-like chain of cells. Due to water flow or mechanical pressure, it breaks, and the fragments develop into new organisms through division and growth.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "পরাগায়নের মাধ্যম অনুযায়ী অ্যানিমোফিলি (Anemophily), হাইড্রোফিলি (Hydrophily) এবং এন্টোমোফিলি (Entomophily) বলতে যথাক্রমে কী বোঝায়?",
+    "options_bn": [
+      "বায়ু, জল এবং পোকামাকড়",
+      "জল, বায়ু এবং পোকামাকড়",
+      "পোকামাকড়, জল এবং বায়ু",
+      "বায়ু, পোকামাকড় এবং জল"
+    ],
+    "explanation_bn": "অ্যানিমোফিলি হলো বায়ু দ্বারা, হাইড্রোফিলি হলো জল দ্বারা এবং এন্টোমোফিলি হলো পোকামাকড় দ্বারা পরাগায়ন।",
+    "question_en": "According to the medium of pollination, what do Anemophily, Hydrophily, and Entomophily refer to respectively?",
+    "options_en": [
+      "Wind, Water, and Insects",
+      "Water, Wind, and Insects",
+      "Insects, Water, and Wind",
+      "Wind, Insects, and Water"
+    ],
+    "explanation_en": "Anemophily is pollination by wind, Hydrophily by water, and Entomophily by insects.",
+    "correctIndex": 0
+  },
+  {
+    "id": 15,
+    "question_bn": "'পার্থেনোজেনেসিস' (Parthenogenesis) শব্দের উৎপত্তিগত অর্থ এবং এর প্রকৃত প্রক্রিয়ার সাথে কোন বিকল্পটি সবচেয়ে বেশি সামঞ্জস্যপূর্ণ?",
+    "options_bn": [
+      "\"পার্থে\" মানে \"কুমারী\" এবং \"জেনেসিস\" মানে \"জন্ম\"; এটি নিষেক ছাড়াই ডিম্বাণু থেকে জীব সৃষ্টির প্রক্রিয়া।",
+      "\"পার্থে\" মানে \"বীজহীন\" এবং \"জেনেসিস\" মানে \"ফল\"; এটি নিষেক ছাড়া ফল তৈরির প্রক্রিয়া।",
+      "\"পার্থে\" মানে \"বহু\" এবং \"জেনেসিস\" মানে \"খণ্ডন\"; এটি একটি কোষ থেকে অনেক জীব সৃষ্টির প্রক্রিয়া।",
+      "\"পার্থে\" মানে \"কৃত্রিম\" এবং \"জেনেসিস\" মানে \"নিষেক\"; এটি ল্যাবরেটরিতে ভ্রূণ তৈরির প্রক্রিয়া।"
+    ],
+    "explanation_bn": "নোট অনুযায়ী, \"পার্থে\" (Parthe) মানে \"কুমারী\" এবং \"জেনেসিস\" (Genesis) মানে \"জন্ম\"। এটি এমন একটি অযৌন প্রক্রিয়া যেখানে নিষেক ছাড়াই একটি ডিম্বাণু থেকে সম্পূর্ণ নতুন জীব তৈরি হয়।",
+    "question_en": "Which option is most consistent with the etymological meaning of the word 'Parthenogenesis' and its actual process?",
+    "options_en": [
+      "\"Parthe\" means \"virgin\" and \"Genesis\" means \"birth\"; it is the process of creating an organism from an unfertilized ovum.",
+      "\"Parthe\" means \"seedless\" and \"Genesis\" means \"fruit\"; it is the process of creating fruits without fertilization.",
+      "\"Parthe\" means \"multiple\" and \"Genesis\" means \"fission\"; it is the process of creating many organisms from one cell.",
+      "\"Parthe\" means \"artificial\" and \"Genesis\" means \"fertilization\"; it is the process of creating an embryo in the laboratory."
+    ],
+    "explanation_en": "According to the notes, \"Parthe\" means \"virgin\" and \"Genesis\" means \"birth\". It is an asexual process where a completely new organism is formed from an ovum without fertilization.",
+    "correctIndex": 0
+  },
+  {
+    "id": 16,
+    "question_bn": "মহিলাদের প্রজনন চক্রের পর্যায়গুলোর ক্ষেত্রে 'মেনার্কি' (Menarche) এবং 'মেনোপজ' (Menopause) সম্পর্কে সঠিক তথ্য কোনটি?",
+    "options_bn": [
+      "মেনার্কি 11-12 বছর বয়সে শুরু হয়, এবং মেনোপজ হলো 40-50 বছর বয়সে মাসিক স্থায়ীভাবে বন্ধ হয়ে যাওয়া।",
+      "মেনার্কি 40-50 বছর বয়সে শুরু হয়, এবং মেনোপজ 11-12 বছর বয়সে শুরু হয়।",
+      "মেনার্কি হলো ডিম্বাশয়ে ডিম্বাণু তৈরির প্রক্রিয়া, এবং মেনোপজ হলো জরায়ুর দেয়াল পুরু হওয়ার প্রক্রিয়া।",
+      "মেনার্কি এবং মেনোপজ উভয় প্রক্রিয়াই হিউম্যান প্যাপিলোমা ভাইরাস (HPV) দ্বারা নিয়ন্ত্রিত হয়।"
+    ],
+    "explanation_bn": "নোটে স্পষ্টভাবে বলা হয়েছে, মেনার্কি হলো প্রথম মাসিক শুরু হওয়ার পর্যায় যা 11-12 বছর বয়সে হয়, আর মেনোপজ হলো 40-50 বছর বয়সে মাসিক স্থায়ীভাবে বন্ধ হয়ে যাওয়া।",
+    "question_en": "Which is the correct information about 'Menarche' and 'Menopause' regarding the stages of the female reproductive cycle?",
+    "options_en": [
+      "Menarche starts at the age of 11-12, and menopause is the permanent cessation of menstruation at the age of 40-50.",
+      "Menarche starts at the age of 40-50, and menopause starts at the age of 11-12.",
+      "Menarche is the process of ovule formation in the ovary, and menopause is the thickening of the uterine wall.",
+      "Both menarche and menopause are controlled by the Human Papilloma Virus (HPV)."
+    ],
+    "explanation_en": "The notes clearly state that menarche is the stage of the first menstruation starting at the age of 11-12, and menopause is the permanent cessation of menstruation at the age of 40-50.",
+    "correctIndex": 0
+  },
+  {
+    "id": 17,
+    "question_bn": "টিউবেকটমি (Tubectomy) এবং ভ্যাসেকটমি (Vasectomy) সম্পর্কে সঠিক পার্থক্য কোনটি?",
+    "options_bn": [
+      "টিউবেকটমিতে পুরুষের শুক্রাণু সরবরাহের পথ কাটা হয়, আর ভ্যাসেকটমিতে মহিলার জরায়ু বন্ধ করা হয়।",
+      "টিউবেকটমি মহিলাদের ফ্যালোপিয়ান টিউব বন্ধ করার স্থায়ী পদ্ধতি, আর ভ্যাসেকটমি পুরুষদের শুক্রাণু পথ বন্ধ করার স্থায়ী পদ্ধতি।",
+      "টিউবেকটমি একটি অস্থায়ী পদ্ধতি, আর ভ্যাসেকটমি একটি স্থায়ী পদ্ধতি।",
+      "উভয় পদ্ধতিই শুধুমাত্র মহিলাদের জন্য ব্যবহার করা হয়।"
+    ],
+    "explanation_bn": "টিউবেকটমি মহিলাদের জন্য স্থায়ী গর্ভনিরোধ যেখানে ফ্যালোপিয়ান টিউব কাটা বা বাঁধা হয়। ভ্যাসেকটমি পুরুষদের জন্য যেখানে শুক্রাণু সরবরাহের পথ কাটা হয়।",
+    "question_en": "What is the correct difference between Tubectomy and Vasectomy?",
+    "options_en": [
+      "Tubectomy cuts the male sperm duct, while Vasectomy closes the female uterus.",
+      "Tubectomy is a permanent method of closing fallopian tubes in females, while Vasectomy is a permanent method of blocking the sperm duct in males.",
+      "Tubectomy is a temporary method, while Vasectomy is a permanent method.",
+      "Both methods are used only for females."
+    ],
+    "explanation_en": "Tubectomy is a permanent contraceptive method for females where the fallopian tubes are cut or tied. Vasectomy is for males where the sperm supply duct is cut.",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "কালা আজার এবং জরায়ুমুখের ক্যান্সার (Cervical Cancer) সৃষ্টির জন্য দায়ী জীবাণু যথাক্রমে কোনটি?",
+    "options_bn": [
+      "প্লাজমোডিয়াম এবং HIV",
+      "লিশম্যানিয়া এবং HPV",
+      "অ্যামিবা এবং প্লাজমোডিয়াম",
+      "লিশম্যানিয়া এবং HIV"
+    ],
+    "explanation_bn": "কালা আজার রোগ ঘটায় লিশম্যানিয়া নামক প্রোটোজোয়া এবং জরায়ুমুখের ক্যান্সারের জন্য দায়ী হিউম্যান প্যাপিলোমা ভাইরাস (HPV)।",
+    "question_en": "Which are the pathogens responsible for Kala Azar and Cervical Cancer respectively?",
+    "options_en": [
+      "Plasmodium and HIV",
+      "Leishmania and HPV",
+      "Amoeba and Plasmodium",
+      "Leishmania and HIV"
+    ],
+    "explanation_en": "Kala Azar is caused by a protozoa named Leishmania, and Cervical Cancer is caused by the Human Papilloma Virus (HPV).",
+    "correctIndex": 1
+  },
+  {
+    "id": 19,
+    "question_bn": "প্রজননের প্রয়োজনীয়তা সম্পর্কে নিচের কোন উক্তিটি সর্বাপেক্ষা সঠিক?",
+    "options_bn": [
+      "এটি একটি জীবের নিজস্ব বেঁচে থাকার জন্য অত্যাবশ্যকীয়।",
+      "এটি জীবের নিজস্ব বেঁচে থাকার জন্য আবশ্যক নয়, তবে পুরো প্রজাতির অস্তিত্ব টিকিয়ে রাখার জন্য অপরিহার্য।",
+      "এটি শুধুমাত্র উচ্চশ্রেণীর জীবদের বেঁচে থাকার জন্য প্রয়োজন।",
+      "এটি কোনো জীবের জন্যই আবশ্যক নয়।"
+    ],
+    "explanation_bn": "নোটে স্পষ্টভাবে বলা হয়েছে যে, প্রজনন কোনো একটি জীবের নিজের বেঁচে থাকার জন্য অত্যাবশ্যকীয় নয়, কিন্তু প্রজাতির অস্তিত্ব টিকিয়ে রাখার জন্য অপরিহার্য।",
+    "question_en": "Which of the following statements is most accurate regarding the necessity of reproduction?",
+    "options_en": [
+      "It is essential for the survival of an individual organism itself.",
+      "It is not essential for the survival of an individual, but vital for maintaining the existence of the entire species.",
+      "It is only necessary for the survival of higher organisms.",
+      "It is not essential for any organism at all."
+    ],
+    "explanation_en": "The notes explicitly state that reproduction is not essential for an individual organism's own survival, but it is indispensable for keeping the species in existence.",
+    "correctIndex": 1
+  },
+  {
+    "id": 20,
+    "question_bn": "ব্রায়োফিলাম (Bryophyllum) উদ্ভিদের অঙ্গজ প্রজনন কোন অংশের মাধ্যমে ঘটে?",
+    "options_bn": [
+      "কাণ্ড (Stem)",
+      "শিকড় (Root)",
+      "পাতার কিনারার মুকুল (Leaf margin buds)",
+      "ফুল (Flower)"
+    ],
+    "explanation_bn": "নোটে উল্লেখ করা হয়েছে যে ব্রায়োফিলাম উদ্ভিদের পাতার কিনারে মুকুল তৈরি হয় যা মাটিতে পড়লে নতুন গাছ হয়।",
+    "question_en": "Through which part does the vegetative propagation of the Bryophyllum plant occur?",
+    "options_en": [
+      "Stem",
+      "Root",
+      "Leaf margin buds",
+      "Flower"
+    ],
+    "explanation_en": "The notes mention that buds are formed on the leaf margins of the Bryophyllum plant, which grow into new plants when they fall on the soil.",
+    "correctIndex": 2
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
