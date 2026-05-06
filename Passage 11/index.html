@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>English Comprehension Practice</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  --bg-main: #e8f5e9;
+  --bg-paper: #fffde7;
+  --bg-filler: #fff3e0;
+  --text-color: #000000;
+  --accent-color: #2e7d32;
+  --opt-default-bg: #fce4ec;
+  --opt-border: #f8bbd0;
+  --opt-selected-bg: #d32f2f;
+  --opt-selected-text: #ffffff;
+  --timer-color: #c62828;
+  --passage-accent: #1565c0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  background-color: var(--bg-filler);
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 90%;
+  max-width: 420px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Quiz Layout — stacks on mobile, side-by-side on desktop */
+.quiz-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 20px;
+  flex: 1;
+}
+
+@media (min-width: 768px) {
+  .quiz-layout.has-passage {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .quiz-layout.has-passage .passage-pane {
+    width: 50%;
+    position: sticky;
+    top: 70px;
+    max-height: calc(100vh - 90px);
+    overflow-y: auto;
+  }
+
+  .quiz-layout.has-passage .questions-pane {
+    width: 50%;
+    overflow-y: auto;
+  }
+}
+
+/* Passage Area */
+.passage-pane {
+  margin-bottom: 20px;
+}
+
+.passage-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 5px solid var(--passage-accent);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.passage-title {
+  font-weight: bold;
+  font-size: 1rem;
+  color: var(--passage-accent);
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+}
+
+.passage-text {
+  white-space: pre-wrap;
+  line-height: 1.75;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.97rem;
+  color: #222;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper);
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 16px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 14px;
+  color: var(--text-color);
+  line-height: 1.5;
+}
+
+/* Options */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.option {
+  padding: 11px 14px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg);
+  border: 1px solid var(--opt-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+  line-height: 1.4;
+}
+
+.option:hover { filter: brightness(0.95); }
+
+.option.selected {
+  background-color: var(--opt-selected-bg);
+  color: var(--opt-selected-text);
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 13px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+.btn-passage {
+  background-color: var(--passage-accent) !important;
+  width: auto !important;
+  padding: 6px 16px !important;
+  font-size: 14px !important;
+}
+.btn-passage:hover { background-color: #0d47a1 !important; }
+
+/* Submit bar at bottom */
+.submit-bar {
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid #ddd;
+  position: sticky;
+  bottom: 0;
+}
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 16px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px 14px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+  line-height: 1.5;
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "English Comprehension Practice";
+const APP_SUBTITLE = "Read the passage and answer the questions";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+
+window.__PREPARSED_JSON__ = [{"id": 1, "question_en": "What is the primary focus of the passage?", "options_en": ["The technological advancements in ocean filtration systems", "The ecological and health impacts of microplastic pollution", "The chemical composition of synthetic clothing fibers", "The decline of apex predators in marine ecosystems"], "explanation_en": "The passage comprehensively discusses how microplastics enter marine ecosystems, affect marine life through biomagnification, and pose potential health risks to humans. While it mentions filtration systems and synthetic fibers, these are supporting details rather than the primary focus.", "correctIndex": 1}, {"id": 2, "question_en": "Based on the passage, how does biomagnification primarily affect marine predators?", "options_en": ["It causes them to mistake plastics for plankton.", "It allows them to absorb nutrients more efficiently from smaller fish.", "It results in a concentrated accumulation of ingested microplastics in their bodies.", "It forces them to migrate to deeper waters like the Mariana Trench."], "explanation_en": "The passage states that as particles move up the trophic levels, predators accumulate a significantly higher concentration of microplastics. This process of concentrated accumulation within their bodies is explicitly defined as biomagnification.", "correctIndex": 2}, {"id": 3, "question_en": "According to the passage, which of the following is NOT mentioned as a source of microplastics?", "options_en": ["The breakdown of larger plastic waste", "Synthetic fibers from washed clothing", "Microbeads found in personal care products", "Industrial agricultural runoff"], "explanation_en": "The first paragraph lists the degradation of larger plastic debris, microbeads in personal care products, and synthetic fibers from clothing as primary sources of microplastics. Industrial agricultural runoff is never mentioned in the text as a contributing factor.", "correctIndex": 3}, {"id": 4, "question_en": "In the context of the second paragraph, what does the term \"chemical sponges\" imply about microplastics?", "options_en": ["They are highly absorbent materials originally designed to clean ocean water.", "They dissolve rapidly when exposed to harmful organic pollutants.", "They have the capacity to soak up and retain toxic pollutants from the ocean.", "They physically expand in the stomachs of marine animals, causing starvation."], "explanation_en": "The passage notes that microplastics act as chemical sponges by absorbing harmful organic pollutants from the surrounding seawater. This implies they soak up and hold onto toxic substances rather than cleaning the water or rapidly dissolving.", "correctIndex": 2}, {"id": 5, "question_en": "Why do small marine organisms initially consume microplastics?", "options_en": ["They are attracted to the chemical pollutants attached to the plastics.", "They deceptively look like the organisms' natural food sources.", "They are forced to eat them due to a lack of available plankton.", "They use the plastics to aid in the digestion of other materials."], "explanation_en": "The text explicitly states that small marine organisms inadvertently consume these fragments. They do this because the plastics bear a deceptive resemblance to plankton, leading the animals to mistake them for legitimate sustenance.", "correctIndex": 1}, {"id": 6, "question_en": "What can be inferred about the current understanding of microplastic impacts on human health?", "options_en": ["It is completely understood and heavily documented by medical professionals.", "It is entirely harmless and poses no significant economic or health threats.", "It is still being researched, though early findings indicate potential cellular harm.", "It only affects humans who live in coastal communities near marine ecosystems."], "explanation_en": "The passage mentions that the long-term effects on human health remain the subject of rigorous scientific investigation. However, preliminary research already suggests potential risks related to cellular damage, indicating that understanding is still developing but shows early signs of harm.", "correctIndex": 2}, {"id": 7, "question_en": "Which of the following best describes the author's attitude toward the microplastic crisis?", "options_en": ["Dismissive and unconcerned about the long-term effects", "Cautiously optimistic about natural ocean regeneration", "Objective but urgent regarding the need for comprehensive solutions", "Highly critical of small marine organisms for ingesting plastics"], "explanation_en": "The author presents factual, objective information about the ecological crisis without relying on overly emotional language. However, by emphasizing that a transition toward a circular economy is essential, the author clearly conveys an urgent need for comprehensive solutions.", "correctIndex": 2}, {"id": 8, "question_en": "Which of the following is a direct biological consequence of toxic compounds leaching into an animal's tissues, as mentioned in the text?", "options_en": ["Increased reproductive success", "Enhanced immune system function", "Severe endocrine disruption", "Accelerated physical growth"], "explanation_en": "The second paragraph specifies what happens when toxic compounds leach into an animal's tissues. It explicitly states this leads to severe endocrine disruption, compromised immune systems, and diminished reproductive success.", "correctIndex": 2}, {"id": 9, "question_en": "According to the final paragraph, what is a necessary step to halt the spread of microplastic pollutants?", "options_en": ["Banning the consumption of all marine apex predators", "Transitioning to a circular economy that minimizes single-use applications", "Developing synthetic foods to replace declining plankton populations", "Focusing exclusively on water filtration without changing manufacturing habits"], "explanation_en": "The author argues that mitigation strategies must focus on fundamentally redesigning our relationship with synthetic materials. Specifically, transitioning towards a circular economy where single-use applications are strictly minimized is described as essential to halting the spread.", "correctIndex": 1}, {"id": 10, "question_en": "What does the phrase \"enter the marine food web at its very foundation\" suggest about the microplastic problem?", "options_en": ["The pollution is mostly restricted to the ocean floor and bottom-dwelling species.", "The issue starts with the smallest organisms, which eventually affects the entire ecosystem.", "The plastics are deliberately buried in the ocean substrate by human industries.", "The contamination only affects plankton and krill, leaving larger predators safe."], "explanation_en": "The foundation of a marine food web refers to the base level of producers and primary consumers. When plastics enter at this foundational level, they are eventually passed up the chain to larger predators, impacting the entire ecosystem.", "correctIndex": 1}];
+window.__PASSAGE_TEXT__ = "The proliferation of microplastics in our world's oceans has evolved from a marginal environmental concern into a pervasive ecological crisis. These minuscule fragments, typically measuring less than five millimeters in length, originate from a variety of sources, including the degradation of larger plastic debris, microbeads in personal care products, and synthetic fibers shed from clothing during the washing process. Because they are ubiquitous and highly durable, microplastics have infiltrated virtually every marine ecosystem, from the sunlit surface waters to the profound, largely unexplored depths of the Mariana Trench. The primary threat posed by these synthetic particles lies in their deceptive resemblance to plankton and other foundational food sources. Small marine organisms, such as krill and small fish, inadvertently consume these indigestible fragments, mistaking them for legitimate sustenance. Consequently, the plastics enter the marine food web at its very foundation.\n\nAs these particles move up the trophic levels, a phenomenon known as biomagnification occurs. Predators that consume multiple smaller organisms accumulate a significantly higher concentration of microplastics within their own bodies. This accumulation is not merely a matter of physical obstruction in the digestive tracts of marine life, though that alone causes widespread starvation and mortality. Microplastics also act as chemical sponges, absorbing harmful organic pollutants from the surrounding seawater. When ingested, these toxic compounds can leach into the animal's tissues, leading to severe endocrine disruption, compromised immune systems, and diminished reproductive success. The indirect consequences ripple throughout the ecosystem, threatening the stability of species populations and altering complex predator-prey dynamics.\n\nFurthermore, the economic and health implications for human populations are becoming increasingly apparent. As apex predators in many marine food webs, humans are unwittingly consuming these plastic-laden aquatic species. While the long-term effects of microplastic ingestion on human health remain the subject of rigorous scientific investigation, preliminary research suggests potential risks related to cellular damage and inflammatory responses. Addressing this multifaceted crisis requires a comprehensive, international approach. Mitigation strategies must focus not only on developing advanced filtration technologies to capture microplastics before they reach waterways but also on fundamentally redesigning our relationship with synthetic materials. A transition towards a circular economy, where plastics are perpetually recycled and single-use applications are strictly minimized, is essential to halting the insidious spread of these pollutants.";
+
+// PERSISTENCE KEYS
+const SESSION_KEY  = 'quiz_session_v1_passage';
+const TIMER_KEY    = 'quiz_end_time_passage';
+const ANSWERS_KEY  = 'quiz_answers_passage';
+
+// =========================================
+// 2. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp  = new Date().toLocaleString();
+  const payload    = { time: timestamp, name, score: score.toFixed(2), total, percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (e) {
+    console.error("Score submission failed:", e);
+    return false;
+  }
+};
+
+// =========================================
+// 3. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+// ── Quiz Screen ────────────────────────────────────────────────────────────
+const Quiz = ({ questions, passage, config, onComplete }) => {
+  const [timeLeft,    setTimeLeft]    = useState(0);
+  const [showPassage, setShowPassage] = useState(true);
+
+  const [userAnswers, setUserAnswers] = useState(() => {
+    try { const s = localStorage.getItem(ANSWERS_KEY); return s ? JSON.parse(s) : {}; }
+    catch (e) { return {}; }
+  });
+
+  const answersRef = useRef(userAnswers);
+  useEffect(() => { answersRef.current = userAnswers; }, [userAnswers]);
+  useEffect(() => { localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers)); }, [userAnswers]);
+
+  // Timer
+  useEffect(() => {
+    let targetTime;
+    const stored = localStorage.getItem(TIMER_KEY);
+    if (stored) {
+      targetTime = parseInt(stored, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const tick = () => {
+      const left = Math.max(0, Math.floor((targetTime - Date.now()) / 1000));
+      setTimeLeft(left);
+      if (left <= 0) { onComplete(answersRef.current); return true; }
+      return false;
+    };
+
+    if (tick()) return;
+    const timer = setInterval(() => { if (tick()) clearInterval(timer); }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const toggleOption = (qIdx, optIdx) => {
+    setUserAnswers(prev => {
+      const next = { ...prev };
+      if (next[qIdx] === optIdx) delete next[qIdx];
+      else next[qIdx] = optIdx;
+      return next;
+    });
+  };
+
+  const fmt = (s) => {
+    const m = Math.floor(s / 60), sec = s % 60;
+    return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+  };
+
+  const hasPassage = passage && passage.trim().length > 0;
+
+  return (
+    <div className="main-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+
+      {/* Sticky Header */}
+      <div className="sticky-header">
+        <div className="timer-box">⏱ {fmt(timeLeft)}</div>
+        <div>
+          {hasPassage && (
+            <button
+              className="btn-passage"
+              onClick={() => setShowPassage(p => !p)}
+            >
+              {showPassage ? '📕 Hide Passage' : '📖 Show Passage'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Quiz Layout */}
+      <div className={`quiz-layout${hasPassage && showPassage ? ' has-passage' : ''}`}>
+
+        {/* Passage Pane */}
+        {hasPassage && showPassage && (
+          <div className="passage-pane">
+            <div className="passage-container">
+              <div className="passage-title">📄 Passage</div>
+              <div className="passage-text">{passage}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Questions Pane */}
+        <div className="questions-pane">
+          {questions.map((q, idx) => {
+            const selected = userAnswers[idx];
+            return (
+              <div key={q.id} className="question-container">
+                <div className="question-text">Q{idx + 1}. {q.question_en}</div>
+                <div className="options-grid">
+                  {q.options_en.map((opt, optIdx) => (
+                    <div
+                      key={optIdx}
+                      onClick={() => toggleOption(idx, optIdx)}
+                      className={`option${selected === optIdx ? ' selected' : ''}`}
+                    >
+                      <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                        {String.fromCharCode(65 + optIdx)}.
+                      </span>
+                      {opt}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+      </div>
+
+      {/* Submit Bar */}
+      <div className="submit-bar">
+        <button onClick={() => onComplete(userAnswers)}>Submit Exam</button>
+      </div>
+    </div>
+  );
+};
+
+// ── Result Screen ──────────────────────────────────────────────────────────
+const Result = ({ questions, userAnswers, config, studentName, onRetake }) => {
+  const [status, setStatus] = useState("Sending data...");
+  const [score,  setScore]  = useState(0);
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let s = 0;
+    questions.forEach((q, i) => {
+      const u = userAnswers[i];
+      if (u !== undefined) s += (u === q.correctIndex ? config.marksCorrect : config.marksWrong);
+    });
+    setScore(s);
+    submitScoreToSheet(studentName, s, totalPossible)
+      .then(ok => setStatus(ok ? "✅ Score saved to sheet!" : "⚠️ Saved locally (connection failed)"));
+  }, []);
+
+  return (
+    <div className="main-wrapper">
+      <div className="card">
+        <h2 style={{ color: 'var(--accent-color)' }}>Result Summary</h2>
+        <div style={{ fontSize: '2.2rem', color: 'var(--accent-color)', fontWeight: 'bold', margin: '10px 0' }}>
+          {score.toFixed(1)}
+          <span style={{ fontSize: '1rem', color: '#666' }}> / {totalPossible}</span>
+        </div>
+        <p style={{ margin: '5px 0' }}>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: status.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>{status}</p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3 style={{ color: 'var(--accent-color)' }}>Detailed Review</h3>
+        {questions.map((q, idx) => {
+          const u          = userAnswers[idx];
+          const attempted  = u !== undefined;
+          const correct    = attempted && u === q.correctIndex;
+          const cls  = attempted ? (correct ? 'status-correct' : 'status-wrong') : 'status-unanswered';
+          const txt  = attempted ? (correct ? `Correct (+${config.marksCorrect})` : `Wrong (${config.marksWrong})`) : 'Skipped';
+          return (
+            <div key={q.id} className="review-item">
+              <p style={{ fontWeight: '600', marginBottom: '6px' }}>Q{idx + 1}: {q.question_en}</p>
+              <p className={cls} style={{ marginBottom: '4px' }}>Status: {txt}</p>
+              <p style={{ marginBottom: '4px' }}>
+                Correct Answer: <strong style={{ color: 'green' }}>{q.options_en[q.correctIndex]}</strong>
+              </p>
+              {attempted && (
+                <p style={{ marginBottom: '4px', color: correct ? 'green' : '#d32f2f' }}>
+                  Your Answer: {q.options_en[u]}
+                </p>
+              )}
+              <div className="explanation">
+                <strong>Explanation:</strong> {q.explanation_en || 'N/A'}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ── App Root ───────────────────────────────────────────────────────────────
+const App = () => {
+  const session = useMemo(() => {
+    try { const s = localStorage.getItem(SESSION_KEY); return s ? JSON.parse(s) : null; }
+    catch (e) { return null; }
+  }, []);
+
+  const [screen,      setScreen]      = useState(session?.isActive ? 'QUIZ' : 'LANDING');
+  const [name,        setName]        = useState(session?.name || '');
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name }));
+  }, [screen, name]);
+
+  const { questions, passage } = useMemo(() => {
+    const qs  = (window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0)
+      ? window.__PREPARSED_JSON__
+      : [];
+    const p   = window.__PASSAGE_TEXT__ || "";
+    const lim = DEFAULT_CONFIG.maxQuestions;
+    return { questions: (lim > 0 ? qs.slice(0, lim) : qs), passage: p };
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) { alert("Please enter your name."); return; }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (ans) => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers(ans);
+    setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div
+      className="main-wrapper"
+      style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}
+    >
+      {screen === 'LANDING' && (
+        <div className="card">
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>Student Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleStart()}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '11px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem' }}
+            />
+          </div>
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz
+          questions={questions}
+          passage={passage}
+          config={DEFAULT_CONFIG}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+  </script>
+</body>
+</html>
