@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "প্রদত্ত নথি অনুযায়ী, একই ঋতুতে কলকাতার তুলনায় শিলংয়ে কেন প্রায় 10°C তাপমাত্রার পার্থক্য দেখা যায় এবং এই তাপমাত্রা হ্রাসের হার কত?",
+    "options_bn": [
+      "শিলং নিরক্ষরেখা থেকে অনেক দূরে অবস্থিত; প্রতি 1000m উচ্চতায় 1°C",
+      "শিলং অনেক বেশি উচ্চতায় অবস্থিত; প্রতি 1000m উচ্চতায় 6.5°C",
+      "শিলং বৃষ্টিচ্ছায় অঞ্চলে অবস্থিত; প্রতি 165m উচ্চতায় 6.5°C",
+      "কলকাতা মহাদেশীয় প্রভাব (Continentality) অনুভব করে; প্রতি 165m উচ্চতায় 1°C"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, উচ্চতা বাড়লে বায়ুমণ্ডল পাতলা হয় এবং তাপ ধরে রাখার ক্ষমতা কমে। প্রতি 1000m উচ্চতায় 6.5°C তাপমাত্রা কমে (Normal Lapse Rate), যার কারণে বেশি উচ্চতায় অবস্থিত হওয়ায় শিলং ও কলকাতার মধ্যে 10°C পার্থক্য থাকে।",
+    "question_en": "According to the document, why does Shillong experience a temperature difference of about 10°C compared to Kolkata in the same season, and what is the rate of this temperature drop?",
+    "options_en": [
+      "Shillong is further from the equator; 1°C per 1000m",
+      "Shillong is at a higher altitude; 6.5°C per 1000m",
+      "Shillong is in a rain shadow zone; 6.5°C per 165m",
+      "Kolkata experiences continentality; 1°C per 165m"
+    ],
+    "explanation_en": "According to the text, as altitude increases, the atmosphere becomes thinner and its capacity to hold heat decreases. The temperature drops by 6.5°C per 1000m of altitude (Normal Lapse Rate), which is why Shillong, being at a higher altitude, is about 10°C cooler than Kolkata.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "দক্ষিণ-পশ্চিম মৌসুমি বায়ু রাজস্থানের ওপর দিয়ে গেলেও সেখানে বেশি বৃষ্টিপাত হয় না, আবার এই একই মৌসুমে করমণ্ডল উপকূলও শুষ্ক থাকে। নথি অনুযায়ী, এই দুটি ঘটনার পেছনের সাধারণ ভৌগোলিক কারণ কী?",
+    "options_bn": [
+      "দুটি অঞ্চলই উঁচু পর্বতের অনুবাত ঢালে (Rain Shadow Zone) অবস্থিত।",
+      "দুটি অঞ্চলই চরম মহাদেশীয় জলবায়ুর (Continentality) প্রভাব অনুভব করে।",
+      "উভয় ক্ষেত্রেই আর্দ্র বায়ু ভৌগোলিক বৈশিষ্ট্যের (আরাবল্লী এবং করমণ্ডল উপকূলের) সমান্তরালে (parallel) প্রবাহিত হয়।",
+      "দুটি অঞ্চলই Easterly Jet Streams-এর তীব্র প্রভাবে পড়ে।"
+    ],
+    "explanation_bn": "নথি অনুযায়ী, আরব সাগরের শাখা আরাবল্লী পর্বতের সমান্তরালে প্রবাহিত হওয়ায় রাজস্থানে বাধা পায় না এবং বৃষ্টি হয় না। একইভাবে, বঙ্গোপসাগর শাখা করমণ্ডল উপকূলের সমান্তরালে প্রবাহিত হয় বলে সেখানেও দক্ষিণ-পশ্চিম মৌসুমের সময় বৃষ্টি হয় না।",
+    "question_en": "The Arabian Sea branch of the monsoon passes over Rajasthan without causing much rain, whereas the Coromandel Coast remains dry during the SW monsoon. What is the common geographical reason for these two phenomena according to the text?",
+    "options_en": [
+      "Both are situated in the Leeward side (Rain Shadow Zone) of high mountains.",
+      "Both regions experience the effect of extreme continentality.",
+      "In both cases, the rain-bearing winds blow parallel to the geographical features (Aravalli and Coromandel Coast).",
+      "Both regions fall under the strong influence of the Easterly Jet Streams."
+    ],
+    "explanation_en": "As per the text, the Arabian Sea branch blows parallel to the Aravalli hills, passing over Rajasthan without causing rain. Similarly, the Bay of Bengal branch flows parallel to the Coromandel Coast, leaving it dry during the SW monsoon.",
+    "correctIndex": 2
+  },
+  {
+    "id": 3,
+    "question_bn": "গ্রীষ্মকালে ITCZ 20-25°N অক্ষাংশের দিকে সরে যায়। এই পরিবর্তনটি কীভাবে দক্ষিণ-পশ্চিম মৌসুমি বায়ুর আগমনে প্রধান ভূমিকা পালন করে?",
+    "options_bn": [
+      "এটি একটি High Pressure জোন তৈরি করে যা বাতাসকে নিরক্ষরেখার দিকে ঠেলে দেয়।",
+      "এটি বাতাসকে ওপরে তুলে শূন্যস্থান বা ভ্যাকুয়ামের মতো কাজ করে, ফলে সৃষ্ট তীব্র Low Pressure সমুদ্র থেকে বাতাসকে টেনে আনে।",
+      "এটি ভারতীয় উপমহাদেশে Westerly Jet Streams-কে নিয়ে আসে।",
+      "এটি দক্ষিণ গোলার্ধের South-East Trade Winds-কে দুর্বল করে দেয়।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে যে, ITCZ হলো একটি বিশাল ভ্যাকুয়াম ক্লিনারের মতো। এটি যেখানে যায়, সেখানকার বায়ু ওপরে উঠে গিয়ে তীব্র Low Pressure তৈরি করে, যা শূন্যস্থান পূরণের জন্য আশেপাশের (সমুদ্রের) বাতাসকে ভারতের দিকে ছুটে আসতে বাধ্য করে।",
+    "question_en": "During the summer season, the ITCZ shifts to 20-25°N latitude. How does this shift primarily facilitate the onset of the SW Monsoon?",
+    "options_en": [
+      "It creates a High Pressure zone that pushes winds towards the equator.",
+      "It acts as a vacuum by causing air to rise, creating a severe Low Pressure zone that pulls in winds from the sea.",
+      "It brings the Westerly Jet Streams into the Indian subcontinent.",
+      "It weakens the South-East Trade Winds in the southern hemisphere."
+    ],
+    "explanation_en": "The document explains that the ITCZ acts like a giant vacuum cleaner. Wherever it moves, air rises, creating a severe Low Pressure area that forces air from the sea to rush in to fill the void, pulling the monsoon winds toward India.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "মে-জুন মাসে উত্তর ভারতে প্রবাহিত উষ্ণ ও শুষ্ক স্থানীয় বায়ু 'লু' তাপ স্থানান্তরের কোন নির্দিষ্ট প্রক্রিয়ার ফলে সৃষ্টি হয়?",
+    "options_bn": [
+      "Convection (পরিচলন)",
+      "Conduction (পরিবহন)",
+      "Radiation (বিকিরণ)",
+      "Advection (অ্যাডভেকশন)"
+    ],
+    "explanation_bn": "নথিতে স্পষ্টভাবে উল্লেখ করা হয়েছে যে, লু হলো একটি উত্তপ্ত বায়ু যা Advection অর্থাৎ তাপের অনুভূমিক স্থানান্তর (horizontal transfer of heat) প্রক্রিয়ায় তৈরি হয়।",
+    "question_en": "The hot and dry local wind 'Lu' blowing in North India during May-June is a result of which specific heat transfer process?",
+    "options_en": [
+      "Convection",
+      "Conduction",
+      "Radiation",
+      "Advection"
+    ],
+    "explanation_en": "The text explicitly mentions that 'Lu' is an extremely hot wind created through the process of Advection, which is the horizontal transfer of heat.",
+    "correctIndex": 3
+  },
+  {
+    "id": 5,
+    "question_bn": "দক্ষিণ-পশ্চিম মৌসুমি বায়ু মূলত কোন বায়ুপ্রবাহ থেকে উদ্ভূত এবং এর দিক পরিবর্তনের কারণ কী?",
+    "options_bn": [
+      "North-East Trade Winds; যা Easterly Jet Stream দ্বারা বিক্ষিপ্ত হয়।",
+      "South-East Trade Winds; যা উত্তর গোলার্ধে Coriolis Force-এর কারণে ডানদিকে বেঁকে যায়।",
+      "Westerlies; যা তিব্বত মালভূমির কারণে বামদিকে বেঁকে যায়।",
+      "South-West Trade Winds; যা ITCZ দ্বারা ত্বরান্বিত হয়।"
+    ],
+    "explanation_bn": "দক্ষিণ গোলার্ধের South-East Trade Winds নিরক্ষরেখা পার হয়ে উত্তর গোলার্ধে প্রবেশ করলে পৃথিবীর আহ্নিক গতির কারণে সৃষ্ট Coriolis Force-এর প্রভাবে ডান দিকে বেঁকে যায় এবং দক্ষিণ-পশ্চিম দিক থেকে ভারতে প্রবেশ করে।",
+    "question_en": "The South-West Monsoon is originally derived from which wind system, and what causes its change in direction?",
+    "options_en": [
+      "North-East Trade Winds; deflected by the Easterly Jet Stream.",
+      "South-East Trade Winds; deflected to the right in the Northern Hemisphere due to the Coriolis Force.",
+      "Westerlies; deflected to the left by the Tibetan Plateau.",
+      "South-West Trade Winds; accelerated by the Inter-Tropical Convergence Zone."
+    ],
+    "explanation_en": "The South-East Trade Winds from the southern hemisphere cross the equator and enter the northern hemisphere, where the Coriolis Force (due to Earth's rotation) deflects them to the right, transforming them into the South-West Monsoon.",
+    "correctIndex": 1
+  },
+  {
+    "id": 6,
+    "question_bn": "প্রদত্ত নথি অনুযায়ী, ভারতের জলবায়ুতে Easterly Jet Stream এবং Westerly Jet Stream-এর ভূমিকা কী?",
+    "options_bn": [
+      "Easterly Jet পশ্চিমী ঝঞ্ঝা নিয়ে আসে; Westerly Jet মৌসুমি বায়ু আগমনে সাহায্য করে।",
+      "Easterly Jet মৌসুমি বায়ু আগমনে অনুকূল পরিস্থিতি তৈরি করে এবং মেঘ ফাটার সাথে যুক্ত; Westerly Jet শীতকালে নাতিশীতোষ্ণ ঘূর্ণবাত নিয়ে আসে।",
+      "Easterly Jet এল নিনো (El Nino) সৃষ্টি করে; Westerly Jet লা নিনা (La Nina) সৃষ্টি করে।",
+      "উভয় Jet stream-ই পশ্চিমঘাট পর্বতে বৃষ্টিচ্ছায় অঞ্চল তৈরি করার জন্য দায়ী।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে যে 15°N অক্ষাংশে Easterly Jet মৌসুমি বায়ুর আগমন ও Cloud Burst-এর সাথে যুক্ত। অন্যদিকে, Westerly Jet Stream শীতকালে ভূমধ্যসাগর থেকে পশ্চিমী ঝঞ্ঝা (Temperate Cyclone) ভারতের দিকে বয়ে নিয়ে আসে।",
+    "question_en": "Based on the provided document, what are the respective roles of the Easterly Jet Stream and the Westerly Jet Stream in India's climate?",
+    "options_en": [
+      "Easterly Jet brings Western Cyclonic Disturbances; Westerly Jet aids SW Monsoon onset.",
+      "Easterly Jet aids SW Monsoon onset and is linked to cloudbursts; Westerly Jet brings Temperate Cyclones in winter.",
+      "Easterly Jet causes El Nino; Westerly Jet causes La Nina.",
+      "Both Jet streams are responsible for creating the Rain Shadow Zone in the Western Ghats."
+    ],
+    "explanation_en": "The text states that the Easterly Jet established at 15°N aids in creating favorable conditions for the monsoon onset and is linked to Cloudbursts. The Westerly Jet Stream, however, is responsible for bringing the Western Cyclonic Disturbances (Temperate Cyclones) during winter.",
+    "correctIndex": 1
+  },
+  {
+    "id": 7,
+    "question_bn": "সমতল অঞ্চলে \"Break in Monsoon\" বা বর্ষা বিরতির প্রধান কারণ কী এবং এর ফলস্বরূপ কী ঘটে?",
+    "options_bn": [
+      "Coriolis force দুর্বল হয়ে যাওয়া; যার ফলে সর্বত্র খরা দেখা দেয়।",
+      "Monsoon Trough (ITCZ)-এর হিমালয়ের পাদদেশে সরে যাওয়া; যার ফলে সমতলে বৃষ্টি কমে যায় এবং হিমালয় অঞ্চলে বন্যা দেখা দেয়।",
+      "দক্ষিণ-পশ্চিম মৌসুমের উত্তর-পূর্ব মৌসুমে পরিবর্তন; যার ফলে করমণ্ডল উপকূলে বৃষ্টি হয়।",
+      "El Nino-র তীব্রতা হঠাৎ বেড়ে যাওয়া; যার ফলে Upwelling বন্ধ হয়ে যায়।"
+    ],
+    "explanation_bn": "বর্ষা বিরতি হয় মূলত ITCZ (Monsoon Trough)-এর অবস্থান পরিবর্তনের কারণে। ITCZ সমতল থেকে হিমালয়ের দিকে সরে গেলে সমতলে বৃষ্টি বন্ধ হয়ে যায়, কিন্তু হিমালয় অঞ্চলে অতিবৃষ্টি ও বন্যা দেখা দেয়।",
+    "question_en": "What is the primary cause of a \"Break in Monsoon\" in the plains of India, and what is its associated consequence?",
+    "options_en": [
+      "Weakening of the Coriolis force; resulting in droughts everywhere.",
+      "Shifting of the ITCZ towards the Himalayan foothills; causing decreased rain in plains and floods in Himalayan regions.",
+      "Reversal of the SW monsoon to NE monsoon; causing rain in the Coromandel coast.",
+      "Sudden increase in the intensity of El Nino; causing a halt in upwelling."
+    ],
+    "explanation_en": "A break in the monsoon is primarily caused by the shift of the Monsoon Trough (ITCZ). When it shifts towards the Himalayas, rainfall decreases in the plains but causes heavy rains and floods in the Himalayan regions.",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_bn": "করমণ্ডল উপকূলে গ্রীষ্মকালের পরিবর্তে অক্টোবর-নভেম্বর মাসে কেন সর্বোচ্চ বৃষ্টিপাত হয়?",
+    "options_bn": [
+      "দক্ষিণ-পশ্চিম মৌসুমি বায়ু পূর্বঘাট পর্বতমালা দ্বারা আটকে যায় বলে।",
+      "পশ্চাদগামী উত্তর-পূর্ব মৌসুমি বায়ু বঙ্গোপসাগরের ওপর দিয়ে যাওয়ার সময় আর্দ্রতা গ্রহণ করে এবং এই উপকূলে বৃষ্টি ঘটায়।",
+      "ভূমধ্যসাগর থেকে আসা পশ্চিমী ঝঞ্ঝা সরাসরি তামিলনাড়ুতে আঘাত হানে।",
+      "শীতকালে ITCZ স্থায়ীভাবে চেন্নাইয়ের ওপর অবস্থান করে।"
+    ],
+    "explanation_bn": "পশ্চাদগামী মৌসুম বা NE Monsoon স্থলভাগ থেকে আসে বলে মূলত শুষ্ক থাকে। কিন্তু বঙ্গোপসাগরের ওপর দিয়ে যাওয়ার সময় এটি কিছুটা আর্দ্রতা সংগ্রহ করে এবং তামিলনাড়ুর করমণ্ডল উপকূলে শীতকালে সর্বোচ্চ বৃষ্টিপাত ঘটায়।",
+    "question_en": "Why does the Coromandel Coast receive its maximum rainfall during October-November rather than during the summer?",
+    "options_en": [
+      "The South-West monsoon winds are trapped by the Eastern Ghats.",
+      "The retreating North-East Monsoon picks up moisture while passing over the Bay of Bengal and strikes this coast.",
+      "The Western Cyclonic Disturbances from the Mediterranean Sea reach Tamil Nadu.",
+      "The ITCZ permanently settles over Chennai during winter."
+    ],
+    "explanation_en": "The retreating NE Monsoon normally consists of dry winds coming from the land. However, as it passes over the Bay of Bengal, it picks up moisture and delivers maximum rainfall to the Coromandel Coast during the winter months.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "মৌসুমি বায়ু ফিরে যাওয়ার পর \"October Heat\" বা অক্টোবর তাপের অস্বস্তিকর অবস্থার পেছনের বৈজ্ঞানিক কারণ কী?",
+    "options_bn": [
+      "শুষ্ক মাটির ওপর সরাসরি সূর্যালোক পড়ার কারণে দৈনন্দিন তাপমাত্রা পরিসর 30°C ছাড়িয়ে যায়।",
+      "উত্তর-পূর্ব ব্যাপারী বায়ু পৃথিবীর তাপ বিকিরণকে (Terrestrial Radiation) সম্পূর্ণভাবে আটকে দেয়।",
+      "আকাশ পরিষ্কার থাকায় সরাসরি রোদ আসে এবং ভেজা মাটি থেকে ওঠা জলীয় বাষ্প সেই তাপ ধরে রেখে প্রচণ্ড আর্দ্রতা ও গরম তৈরি করে।",
+      "মেঘ না থাকার ফলে পৃথিবীর তাপ দ্রুত মহাকাশে বেরিয়ে যায় এবং দিনের বেলায় তাপমাত্রা মারাত্মকভাবে বৃদ্ধি পায়।"
+    ],
+    "explanation_bn": "মৌসুমি বায়ু চলে গেলে মেঘ সরে গিয়ে আকাশ পরিষ্কার হয়। কিন্তু জমি তখনো ভেজা থাকায় সেখান থেকে ওঠা বাষ্প তাপ আটকে রাখে। সরাসরি সূর্যালোক এবং এই জলীয় বাষ্পের মিলিত প্রভাবকেই October Heat বলা হয়।",
+    "question_en": "What scientific mechanism explains the discomfort of \"October Heat\" after the monsoon retreats?",
+    "options_en": [
+      "The direct solar radiation on dry soil causes the daily temperature range to exceed 30°C.",
+      "Terrestrial radiation is completely blocked by the incoming North-East Trade winds.",
+      "The clear sky allows direct sunlight, while water vapor from the still-wet ground traps the heat, causing high humidity and temperatures.",
+      "The absence of clouds allows the earth's heat to escape rapidly, causing a sharp spike in day temperatures."
+    ],
+    "explanation_en": "After the monsoon retreats, clouds disappear, allowing direct sunlight to hit the ground. Since the land is still wet, it releases water vapor which traps the heat, creating highly humid and uncomfortably hot conditions known as October Heat.",
+    "correctIndex": 2
+  },
+  {
+    "id": 10,
+    "question_bn": "পশ্চিমী ঝঞ্ঝার (Western Cyclonic Disturbances) প্রভাবে শীতকালীন বৃষ্টির সময় রাতের তাপমাত্রা বৃদ্ধি পায় কেন?",
+    "options_bn": [
+      "এই নাতিশীতোষ্ণ ঘূর্ণবাত ভূমধ্যসাগর থেকে উষ্ণ বাতাস নিয়ে আসে।",
+      "মেঘ থাকার কারণে পৃথিবীর বিকিরিত তাপ (Terrestrial Radiation) মহাকাশে যেতে পারে না এবং প্রতিফলিত হয়ে ফিরে আসে।",
+      "'মাওয়াট' বায়ু বায়ুমণ্ডলে ঘর্ষণ তৈরি করে, ফলে তাপ বৃদ্ধি পায়।",
+      "Westerly Jet stream ঘনীভবনের লীনতাপ সরাসরি ভূমিতে স্থানান্তর করে।"
+    ],
+    "explanation_bn": "পশ্চিমী ঝঞ্ঝা আসার সাথে মেঘ তৈরি হয়। রাতে এই মেঘ পৃথিবীর তাপকে (Terrestrial Radiation) মহাকাশে বের হতে বাধা দেয় এবং তাপ প্রতিফলিত হয়ে ফিরে আসে, যার ফলে রাতের তাপমাত্রা বেড়ে যায়।",
+    "question_en": "Why does the night temperature increase during the winter rainfall caused by Western Cyclonic Disturbances?",
+    "options_en": [
+      "The temperate cyclones bring warm air from the Mediterranean Sea.",
+      "The clouds associated with the disturbance prevent the terrestrial heat from escaping into space, reflecting it back.",
+      "The 'Mahawat' wind generates friction in the atmosphere, increasing heat.",
+      "The Westerly Jet stream transfers latent heat of condensation directly to the ground."
+    ],
+    "explanation_en": "The Western Cyclonic Disturbances bring cloud cover. At night, these clouds trap the Earth's terrestrial radiation, preventing it from escaping into space and reflecting it back, thereby causing an increase in night temperatures.",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "El Nino চলাকালীন প্রশান্ত মহাসাগরে স্বাভাবিক বায়ুমণ্ডলীয় ও সামুদ্রিক সঞ্চালনের কী ধরনের ব্যাঘাত ঘটে?",
+    "options_bn": [
+      "শক্তিশালী NE Trade Winds গরম জল অস্ট্রেলিয়ার দিকে ঠেলে দেয়, ভারতে ভয়াবহ বন্যা ঘটায়।",
+      "দুর্বল NE Trade Winds গরম জলকে পশ্চিমে সরাতে ব্যর্থ হয়, ফলে দক্ষিণ আমেরিকার কাছে গরম জল জমে যায় এবং ভারতের মৌসুমি বায়ু দুর্বল হয়।",
+      "পেরুর উপকূলে শীতল জলের Upwelling বৃদ্ধি পায়, যার ফলে ভারত মহাসাগরের তাপমাত্রা দ্রুত কমে যায়।",
+      "Southern Oscillation Index অত্যন্ত ধনাত্মক হয়ে যায় এবং ITCZ-কে আরও দক্ষিণে টেনে নেয়।"
+    ],
+    "explanation_bn": "El Nino-তে স্বাভাবিক NE Trade Winds দুর্বল হয়ে পড়ে। ফলে গরম জল অস্ট্রেলিয়া বা ভারতের দিকে না গিয়ে দক্ষিণ আমেরিকার পশ্চিম উপকূলের কাছেই জমে থাকে। এর প্রভাবে ভারতে মৌসুমি বায়ু দুর্বল হয় ও খরার ঝুঁকি বাড়ে।",
+    "question_en": "During an El Nino event, how is the normal atmospheric and oceanic circulation in the Pacific Ocean disrupted?",
+    "options_en": [
+      "Strong NE Trade Winds push warm water towards Australia, causing severe floods in India.",
+      "Weak NE Trade Winds fail to push warm water west, causing warm water to accumulate near South America and suppressing the Indian monsoon.",
+      "Upwelling of cold water increases near Peru, causing a rapid drop in temperatures in the Indian Ocean.",
+      "The Southern Oscillation Index becomes strongly positive, pulling the ITCZ further south."
+    ],
+    "explanation_en": "During El Nino, the NE Trade Winds weaken and cannot push the warm water westward. Instead, warm water accumulates near South America (in the east Pacific). This leaves the waters near India relatively cool, weakening the monsoon and increasing drought risks.",
+    "correctIndex": 1
+  },
+  {
+    "id": 12,
+    "question_bn": "Southern Oscillation Index (তাহিতির বায়ুচাপ বিয়োগ ডারউইনের বায়ুচাপ)-এর মান ঋণাত্মক (Negative) হলে তা ভারতের জলবায়ুর জন্য কী নির্দেশ করে?",
+    "options_bn": [
+      "এটি একটি La Nina বছর নির্দেশ করে, যেখানে ভারতে ভয়াবহ বন্যার সম্ভাবনা থাকে।",
+      "এর মানে হলো Easterly Jet Stream শক্তিশালী হবে এবং অকালে বর্ষা আসবে।",
+      "এটি একটি El Nino বছর নির্দেশ করে, যার ফলে ভারতে দুর্বল মৌসুমি বায়ু ও খরার সম্ভাবনা তৈরি হয়।",
+      "এটি একটি স্বাভাবিক বর্ষাকাল নির্দেশ করে যেখানে বৃষ্টিপাতের সুষম বণ্টন থাকে।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে যে, SOI-এর মান ঋণাত্মক হলে সেটি El Nino বছরকে নির্দেশ করে। ভারতের ক্ষেত্রে এর অর্থ হলো দুর্বল মৌসুমি বায়ু এবং খরার সম্ভাবনা।",
+    "question_en": "If the Southern Oscillation Index (Tahiti pressure minus Darwin pressure) yields a negative value, what does it signify for the Indian climate?",
+    "options_en": [
+      "It indicates a La Nina year with a high probability of severe floods in India.",
+      "It means the Easterly Jet Stream will be stronger, causing premature monsoon onset.",
+      "It indicates an El Nino year, which is associated with a weak monsoon and potential drought in India.",
+      "It indicates a normal monsoon year with average rainfall distribution."
+    ],
+    "explanation_en": "The document states that a negative Southern Oscillation Index (SOI) indicates an El Nino year. For India, this signifies a weak monsoon and a higher probability of drought conditions.",
+    "correctIndex": 2
+  },
+  {
+    "id": 13,
+    "question_bn": "Vladimir Koeppen-এর 1884 সালের জলবায়ু শ্রেণিবিভাগে, 'B' গ্রুপটি অন্যান্য গ্রুপ (A, C, D, E) থেকে কীভাবে মৌলিকভাবে আলাদা?",
+    "options_bn": [
+      "এটি একমাত্র গ্রুপ যা সম্পূর্ণভাবে তাপমাত্রার পরিবর্তনের ওপর ভিত্তি করে তৈরি।",
+      "এটি বৃষ্টিপাতের (যেখানে বাষ্পীভবন বৃষ্টির চেয়ে বেশি) ওপর নির্ভরশীল, যেখানে বাকি গ্রুপগুলো মূলত তাপমাত্রার ওপর নির্ভরশীল।",
+      "এটি তার প্রাথমিক অঞ্চল নির্ধারণ করতে বড় হাতের অক্ষরের পরিবর্তে ছোট হাতের অক্ষর ব্যবহার করে।",
+      "এটি কেবলমাত্র মহাদেশীয় প্রভাবযুক্ত উপকূলীয় জলবায়ুকে শ্রেণিবদ্ধ করে।"
+    ],
+    "explanation_bn": "Koeppen-এর শ্রেণিবিভাগে A, C, D এবং E গ্রুপ তাপমাত্রার মানদণ্ডে নির্ধারিত হয়। কিন্তু একমাত্র বড় হাতের B (Dry Climate) গ্রুপটি সম্পূর্ণভাবে বৃষ্টিপাত বা আর্দ্রতার ওপর (বৃষ্টির চেয়ে বাষ্পীভবন বেশি কিনা) নির্ভর করে।",
+    "question_en": "In Vladimir Koeppen's 1884 empirical climate classification, how does the 'B' group fundamentally differ from the A, C, D, and E groups?",
+    "options_en": [
+      "It is the only group based entirely on temperature variations.",
+      "It is determined by precipitation (where evaporation exceeds rainfall), whereas the others depend on temperature.",
+      "It uses small letters instead of capital letters to define its primary zone.",
+      "It exclusively classifies coastal climates affected by continentality."
+    ],
+    "explanation_en": "According to the text, Koeppen's groups A, C, D, and E are classified based on temperature criteria. However, group 'B' (Dry Climate) is unique because it strictly depends on precipitation (where evaporation is greater than rainfall), not temperature.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "কোনো অঞ্চলকে Koeppen-এর \"Dfc\" কোড দ্বারা চিহ্নিত করা হয়েছে। নথি অনুসারে এই অক্ষরগুলো কী নির্দেশ করে এবং ভারতের কোন রাজ্য এই ক্যাটাগরিতে পড়ে?",
+    "options_bn": [
+      "ক্রান্তীয় মৌসুমি জলবায়ু এবং শীতকাল শুষ্ক; কেরালা।",
+      "উষ্ণ নাতিশীতোষ্ণ জলবায়ু এবং শীতকাল শুষ্ক; উত্তরপ্রদেশ।",
+      "শীতল তুষার বন, সারাবছর বৃষ্টি এবং সংক্ষিপ্ত গ্রীষ্ম; অরুণাচল প্রদেশ।",
+      "শুষ্ক চরম মরুভূমি এবং তীব্র দৈনিক তাপমাত্রা পরিসর; রাজস্থান।"
+    ],
+    "explanation_bn": "Dfc কোডে 'D' মানে Cold Snow Forest (শীতলতম মাস -3°C বা তার নিচে), 'f' মানে Full Rainfall (সারা বছর বৃষ্টি), এবং 'c' মানে শীতল বা সংক্ষিপ্ত গ্রীষ্মকাল। ভারতের অরুণাচল প্রদেশ এই জলবায়ু অঞ্চলের অন্তর্গত।",
+    "question_en": "A region is classified under Koeppen's code \"Dfc\". Based on the document, what do these letters signify, and which Indian state falls in this category?",
+    "options_en": [
+      "Tropical Monsoon with winter rain; Kerala.",
+      "Warm Temperate with winter dry; Uttar Pradesh.",
+      "Cold Snow Forest, full rainfall, and short summer; Arunachal Pradesh.",
+      "Dry Hot Desert with extreme diurnal range; Rajasthan."
+    ],
+    "explanation_en": "In the Dfc code, 'D' stands for Cold Snow Forest (coldest month <= -3°C), 'f' indicates Full Rainfall throughout the year, and 'c' means a cool/short summer. Arunachal Pradesh in North-East India falls under this specific classification.",
+    "correctIndex": 2
+  },
+  {
+    "id": 15,
+    "question_bn": "নথিতে তিব্বতকে একটি \"ঠান্ডা মরুভূমি\" (Cold desert) বলার পেছনে তিনটি নির্দিষ্ট ভৌগোলিক কারণ উল্লেখ করা হয়েছে। নিচের কোন বিকল্পটি সেই কারণগুলোকে সঠিকভাবে তুলে ধরে?",
+    "options_bn": [
+      "উচ্চ অক্ষাংশ, El Nino-র উপস্থিতি এবং Westerly Jet streams।",
+      "হিমালয়ের বৃষ্টিচ্ছায় অঞ্চল (Rain Shadow Zone), অধিক উচ্চতা এবং সমুদ্র থেকে দূরত্ব (Continentality)।",
+      "ITCZ-এর মধ্যে অবস্থান, কম উচ্চতা এবং Anabatic বায়ুপ্রবাহ।",
+      "ভূ-বৈচিত্র্যজনিত বৃষ্টিপাত, Katabatic বায়ু এবং দৈনন্দিন তাপমাত্রার কম পরিসর।"
+    ],
+    "explanation_bn": "নথিতে স্পষ্ট বলা হয়েছে যে তিব্বতের মরুভূমি হওয়ার প্রধান তিনটি কারণ হলো: হিমালয়ের ঠিক ওপরে থাকায় Rain Shadow Zone, সমুদ্র থেকে অনেক দূরত্ব (Continentality) এবং অধিক উচ্চতা।",
+    "question_en": "The document attributes Tibet's status as a \"cold desert\" to three specific geographical factors. Which combination correctly represents these factors?",
+    "options_en": [
+      "High latitude, presence of El Nino, and Westerly Jet streams.",
+      "Rain Shadow Zone of the Himalayas, high altitude, and distance from the sea (continentality).",
+      "Location within the ITCZ, low altitude, and anabatic winds.",
+      "Orographic rainfall, Katabatic winds, and low diurnal temperature range."
+    ],
+    "explanation_en": "The text explicitly mentions that Tibet is a cold desert due to three combined factors: it lies in the Rain Shadow Zone just above the Himalayas, it is far from the sea (distance from sea/continentality), and it is located at a high altitude.",
+    "correctIndex": 1
+  },
+  {
+    "id": 16,
+    "question_bn": "নিচের কোন বিবৃতিটি নথিতে বর্ণিত \"Cloudburst\" বা মেঘ ফাটা ঘটনাটিকে সবচেয়ে ভালোভাবে ব্যাখ্যা করে?",
+    "options_bn": [
+      "বায়ুমণ্ডলীয় অতিরিক্ত চাপের কারণে মেঘের ভৌতভাবে ফেটে যাওয়া।",
+      "যখন নির্দিষ্ট পাহাড়ি গঠন মৌসুমি বায়ুকে আটকে দেয়, তখন মেঘ থেকে অত্যন্ত কম সময়ে বিপুল পরিমাণ আর্দ্রতা দ্রুত ঝরে পড়া।",
+      "আরব সাগর এবং বঙ্গোপসাগরের শাখা পাঞ্জাবের ওপর মিলিত হওয়ার ফলে একটানা বৃষ্টিপাত।",
+      "উত্তর-পূর্ব মৌসুমি বায়ু দ্বারা করমণ্ডল উপকূলে হঠাৎ বৃষ্টির সূচনা।"
+    ],
+    "explanation_bn": "Cloudburst মানে মেঘ সত্যি সত্যি ফেটে যাওয়া নয়। পাহাড়ের বিশেষ গঠনে মেঘ আটকে গেলে তা বারবার ঘুরতে থাকে এবং একসাথে অত্যন্ত কম সময়ে অত্যধিক পরিমাণ বৃষ্টি ঝরিয়ে দেয়, এটিকেই Cloudburst বলে।",
+    "question_en": "Which of the following best describes the phenomenon of a \"Cloudburst\" as explained in the text?",
+    "options_en": [
+      "The physical bursting of clouds due to excessive atmospheric pressure.",
+      "The rapid shedding of moisture in a very short time when monsoon winds are trapped by specific mountainous terrain.",
+      "The continuous rainfall caused by the convergence of the Arabian Sea and Bay of Bengal branches over Punjab.",
+      "The sudden onset of rain brought by the North-East monsoon on the Coromandel coast."
+    ],
+    "explanation_en": "A Cloudburst does not mean clouds literally burst. As per the document, it occurs when a specific mountain topography traps the monsoon winds, causing the clouds to circle and rapidly dump all their moisture in a very short amount of time over a small area.",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_bn": "কানাডার উইনিপেগ শহরে গ্রীষ্ম ও শীতের মধ্যে 75°C তাপমাত্রার পার্থক্য দেখা যায়। ভারতে মুম্বইয়ের তুলনায় দিল্লির ক্ষেত্রেও একই ধরনের কিন্তু মৃদু প্রবণতা দেখা যায়। কোন ভৌগোলিক ধারণাটি এটি ব্যাখ্যা করে?",
+    "options_bn": [
+      "দৈনন্দিন তাপমাত্রা পরিসর (Diurnal Range of Temperature)।",
+      "স্বাভাবিক তাপমাত্রা হ্রাসের হার (Normal Lapse Rate)।",
+      "মহাদেশীয় প্রভাব (Continentality), যেখানে সমুদ্র থেকে দূরত্বের কারণে সমুদ্রের নিয়ন্ত্রক প্রভাব থাকে না এবং চরম জলবায়ু দেখা দেয়।",
+      "শীতকালে Katabatic বায়ুর প্রভাবে চরম তাপমাত্রা সৃষ্টি হওয়া।"
+    ],
+    "explanation_bn": "সমুদ্রের জল ধীরে গরম ও ধীরে ঠান্ডা হয় বলে এর আশেপাশের জলবায়ু মধ্যমপন্থী থাকে। কিন্তু সমুদ্র থেকে দূরে অবস্থিত স্থানগুলোতে (যেমন দিল্লি বা উইনিপেগ) এই নিয়ন্ত্রক প্রভাব থাকে না, ফলে চরম জলবায়ু তৈরি হয়। এই ঘটনাটিকেই Continentality বলা হয়।",
+    "question_en": "Winnipeg in Canada experiences a temperature difference of 75°C between summer and winter. In India, cities like Delhi show a similar but milder trend compared to Mumbai. What geographical concept explains this?",
+    "options_en": [
+      "Diurnal Range of Temperature.",
+      "Normal Lapse Rate.",
+      "Continentality, where distance from the sea causes extreme climate due to the absence of the ocean's moderating effect.",
+      "Katabatic wind descent causing extreme winter temperatures."
+    ],
+    "explanation_en": "Oceans heat up and cool down slowly, providing a moderating effect. However, places far from the sea do not benefit from this, leading to extreme summers and extreme winters. The text defines this phenomenon as Continentality.",
+    "correctIndex": 2
+  },
+  {
+    "id": 18,
+    "question_bn": "নিচের কোন প্রি-মৌসুমি বৃষ্টিটি (Pre-Monsoon Shower) নথিতে উল্লেখিত তার স্থানীয় উপকারের সাথে সঠিকভাবে মেলানো হয়েছে?",
+    "options_bn": [
+      "কালবৈশাখী - হিমাচল প্রদেশে আপেল চাষে সাহায্য করে।",
+      "Mango Showers - পশ্চিমবঙ্গে পাট ও চা চাষে উপকার করে।",
+      "Blossom Showers - কেরালা ও কর্ণাটকে কফির ফুল ফোটাতে সাহায্য করে।",
+      "Nor-Westers - রাজস্থানে গম ইত্যাদি রবি ফসলের জন্য উপকারী।"
+    ],
+    "explanation_bn": "Blossom Showers কেরালা ও কর্ণাটকে কফি বাগানের জন্য খুব উপকারী কারণ এটি কফির ফুল ফোটাতে সাহায্য করে। (কালবৈশাখী পাট ও চায়ের জন্য এবং WCD/মাওয়াট রবি ফসলের জন্য উপকারী।)",
+    "question_en": "Which of the following pre-monsoon showers is correctly matched with its local benefit as per the document?",
+    "options_en": [
+      "Kal Baisakhi - Helps in apple cultivation in Himachal Pradesh.",
+      "Mango Showers - Benefits the jute and tea crops in West Bengal.",
+      "Blossom Showers - Helps in the blooming of coffee flowers in Kerala and Karnataka.",
+      "Nor-Westers - Helps in Rabi crops like wheat in Rajasthan."
+    ],
+    "explanation_en": "The document notes that Blossom Showers are highly beneficial for coffee plantations in Kerala and Karnataka because they trigger the blooming of coffee flowers. (Kal Baisakhi helps jute/tea, and Mahawat/WCD helps Rabi crops).",
+    "correctIndex": 2
+  },
+  {
+    "id": 19,
+    "question_bn": "নথিতে ব্যবহৃত উপমা অনুসারে, 'আবহাওয়া' (Weather) থেকে 'জলবায়ু' (Climate) কীভাবে আলাদা?",
+    "options_bn": [
+      "আবহাওয়া হলো 30 বছরের গড় তথ্য, আর জলবায়ু প্রতি ঘণ্টায় বদলায়।",
+      "আবহাওয়া হলো কোনো মানুষের চরিত্রের মতো, আর জলবায়ু হলো তার দৈনন্দিন মেজাজের মতো।",
+      "আবহাওয়া হলো মানুষের সাময়িক মেজাজের মতো, আর জলবায়ু হলো তার দীর্ঘমেয়াদী স্বভাব বা চরিত্রের মতো।",
+      "আবহাওয়া এবং জলবায়ু উভয়ই কোনো স্থানের বায়ুমণ্ডলীয় চাপের সমার্থক শব্দ।"
+    ],
+    "explanation_bn": "নথিতে একটি সহজ উপমা দিয়ে বোঝানো হয়েছে যে, আবহাওয়া হলো একজন মানুষের আজকের মেজাজ (সাময়িক অবস্থা), আর জলবায়ু হলো তার সার্বিক স্বভাব বা চরিত্র (30 বছরের গড় চিত্র)।",
+    "question_en": "Based on the document's analogy, how is 'Climate' differentiated from 'Weather'?",
+    "options_en": [
+      "Weather is the 30-year average data, while Climate changes hourly.",
+      "Weather is described as a person's character, while Climate is their daily mood.",
+      "Weather is the temporary atmospheric state like a person's mood, while Climate is the long-term average picture like their character.",
+      "Weather and Climate are synonymous terms for the atmospheric pressure at any given location."
+    ],
+    "explanation_en": "The text uses an analogy stating that weather is like a person's current mood (temporary), whereas climate is like their character (long-term, 30-year average picture).",
+    "correctIndex": 2
+  },
+  {
+    "id": 20,
+    "question_bn": "পশ্চিমঘাট পর্বতের পশ্চিম দিকে বার্ষিক 3000-4000 mm বৃষ্টিপাত হয়, অথচ পূর্ব দিকে (বিদর্ভ) মাত্র 500-700 mm বৃষ্টিপাত হয়। এই চরম পার্থক্যের ব্যাখ্যা কী?",
+    "options_bn": [
+      "পশ্চিম দিকে Anabatic বায়ু ওঠার কারণে প্রচুর বৃষ্টি হয়, আর বায়ু পর্বত পেরিয়ে পূর্ব দিকে নামার সময় (Katabatic) শুষ্ক ও উষ্ণ হয়ে যায়।",
+      "Easterly Jet Stream তার সমস্ত আর্দ্রতা পশ্চিম ঢালেই ঘনীভূত করে দেয়।",
+      "পূর্ব দিকটি South-East Trade winds-এর গতিপথে পড়ে, যার মধ্যে কোনো আর্দ্রতা থাকে না।",
+      "পশ্চিম দিকে একটানা Cloudburst হয়, অন্যদিকে পূর্ব দিকটি El Nino দ্বারা প্রভাবিত থাকে।"
+    ],
+    "explanation_bn": "আর্দ্র বায়ু পর্বতের ঢাল বেয়ে ওপরে উঠলে (Anabatic Wind) ঘনীভূত হয়ে পশ্চিম দিকে প্রচুর বৃষ্টি (Orographic Rainfall) ঘটায়। কিন্তু বায়ু যখন পর্বত পার করে পূর্ব দিকে নিচে নামে (Katabatic Wind), তখন তা শুষ্ক ও উষ্ণ হয়ে যায়, যার ফলে বৃষ্টিচ্ছায় অঞ্চল বা Rain Shadow Zone তৈরি হয়।",
+    "question_en": "The western side of the Western Ghats receives 3000-4000 mm of annual rainfall, while the eastern side (Vidarbha) receives only 500-700 mm. What explains this sharp contrast?",
+    "options_en": [
+      "The western side receives Anabatic wind causing orographic rainfall, while the eastern side gets dry and warm Katabatic wind as it descends.",
+      "The Easterly Jet Stream concentrates all its moisture on the western slopes.",
+      "The eastern side falls in the path of the South-East Trade winds which carry no moisture.",
+      "The western side experiences continuous Cloudbursts, while the eastern side is affected by the El Nino."
+    ],
+    "explanation_en": "Moist air rising up the mountain slope (Anabatic wind) causes heavy Orographic rainfall on the windward western side. As the air crosses over and descends the eastern side (Katabatic wind), it becomes warm and dry, creating a Rain Shadow Zone over regions like Vidarbha.",
+    "correctIndex": 0
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
