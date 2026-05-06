@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "বিশাখাদত্তের 'মুদ্রারাক্ষস' গ্রন্থটি মৌর্য যুগের ইতিহাস জানার একটি উৎস হলেও ঐতিহাসিকরা এই বইটির নির্ভরযোগ্যতা নিয়ে সতর্ক কেন?",
+    "options_bn": [
+      "এটি গ্রিক ভাষায় লেখা হয়েছিল এবং এর অনুবাদে ত্রুটি থাকতে পারে।",
+      "এটি 300 খ্রিস্টপূর্বাব্দের ঘটনা নিয়ে লেখা হলেও, গ্রন্থটি প্রায় 500-600 বছর পর 300 খ্রিস্টাব্দে রচিত হয়েছিল।",
+      "বিশাখাদত্ত নিজে আলেকজান্ডারের সেনাপতি ছিলেন বলে তিনি পক্ষপাতদুষ্ট বিবরণ দিয়েছেন।",
+      "এই বইটিতে শুধুমাত্র অশোকের বৌদ্ধ ধর্ম গ্রহণের কথা বলা হয়েছে, চন্দ্রগুপ্তের কোনো উল্লেখ নেই।"
+    ],
+    "explanation_bn": "বিশাখাদত্ত 300 খ্রিস্টপূর্বাব্দের ঘটনা নিয়ে 'মুদ্রারাক্ষস' লিখলেও এটি রচিত হয়েছিল 300 খ্রিস্টাব্দে, অর্থাৎ প্রায় 600 বছরের ব্যবধানে। এই বিশাল সময়ের ফারাকের কারণেই ঐতিহাসিকরা এর নির্ভরযোগ্যতা নিয়ে সতর্ক থাকেন।",
+    "question_en": "Although Vishakadatta's 'Mudrarakshasa' is a source for knowing the history of the Mauryan era, why are historians cautious about its reliability?",
+    "options_en": [
+      "It was written in Greek and its translation might have errors.",
+      "Although it is about the events of 300 BCE, the book was written almost 500-600 years later in 300 CE.",
+      "Vishakadatta himself was a commander of Alexander, hence he gave a biased account.",
+      "This book only talks about Ashoka's conversion to Buddhism, with no mention of Chandragupta."
+    ],
+    "explanation_en": "Vishakadatta wrote 'Mudrarakshasa' about the events of 300 BCE, but it was composed in 300 CE, resulting in a gap of almost 600 years. Because of this huge time gap, historians remain cautious about its reliability.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "সিরিয়ার রাজা প্রথম অ্যান্টিওকাস বিন্দুসারের অনুরোধ করা তিনটি জিনিসের মধ্যে কোনটি পাঠাতে অস্বীকার করেছিলেন এবং কেন?",
+    "options_bn": [
+      "মিষ্টি মদ, কারণ এটি শুধু গ্রিক রাজাদের জন্য সংরক্ষিত ছিল।",
+      "শুকনো ডুমুর, কারণ সেই বছর সিরিয়ায় খরা হয়েছিল।",
+      "একজন দার্শনিক, কারণ গ্রিক ধর্মে মানুষ বিক্রি করা নিষিদ্ধ ছিল।",
+      "যুদ্ধহস্তী, কারণ সেগুলি আলেকজান্ডারের সেনাবাহিনীতে ব্যবহৃত হতো।"
+    ],
+    "explanation_bn": "বিন্দুসার মিষ্টি মদ, শুকনো ডুমুর এবং একজন দার্শনিক চেয়েছিলেন। অ্যান্টিওকাস প্রথম দুটি জিনিস পাঠালেও দার্শনিক পাঠাতে অস্বীকার করেন, কারণ গ্রিক ধর্ম বা আইন অনুযায়ী মানুষ বিক্রি করা যেত না।",
+    "question_en": "Which of the three things requested by Bindusara was refused to be sent by the Syrian king Antiochus I and why?",
+    "options_en": [
+      "Sweet wine, because it was reserved only for Greek kings.",
+      "Dry figs, because there was a drought in Syria that year.",
+      "A philosopher, because selling humans was forbidden in Greek religion.",
+      "War elephants, because they were used in Alexander's army."
+    ],
+    "explanation_en": "Bindusara asked for sweet wine, dry figs, and a philosopher. Antiochus sent the first two but refused to send a philosopher because, according to Greek religion or law, humans could not be sold.",
+    "correctIndex": 2
+  },
+  {
+    "id": 3,
+    "question_bn": "অশোক স্তম্ভের সাধারণ গঠনে নিচ থেকে উপরে নির্দিষ্ট কিছু অংশ থাকে। নিচের কোন অশোক স্তম্ভগুলিতে 'রাজধানী' (Capital) নামক অংশটি অনুপস্থিত?",
+    "options_bn": [
+      "সারনাথ এবং দিল্লি-টোপ্রা স্তম্ভ",
+      "লৌরিয়া অরেরাজ এবং লৌরিয়া নন্দনগড় স্তম্ভ",
+      "রামপুরা এবং লুম্বিনী স্তম্ভ",
+      "মাস্কি এবং গুজ্জর স্তম্ভ"
+    ],
+    "explanation_bn": "অশোক স্তম্ভের সাধারণ গঠনে শ্যাফট, উল্টানো পদ্ম, আবাকাস এবং রাজধানী থাকে। তবে বিহারের লৌরিয়া অরেরাজ এবং লৌরিয়া নন্দনগড় স্তম্ভে কোনো রাজধানী (Capital) নেই।",
+    "question_en": "The general structure of an Ashokan pillar has specific parts from bottom to top. Which of the following Ashokan pillars lack the part called 'Capital'?",
+    "options_en": [
+      "Sarnath and Delhi-Topra pillars",
+      "Lauriya Araraj and Lauriya Nandangarh pillars",
+      "Rampura and Rummindei pillars",
+      "Maski and Gujjar pillars"
+    ],
+    "explanation_en": "The general structure of an Ashokan pillar consists of a shaft, inverted lotus, abacus, and capital. However, the Lauriya Araraj and Lauriya Nandangarh pillars in Bihar do not have a Capital.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "মৌর্য সাম্রাজ্যের কর ব্যবস্থায় 'প্রণয়' (Pranaya) এবং 'হিরণ্য' (Hiranya) বলতে যথাক্রমে কী বোঝানো হতো?",
+    "options_bn": [
+      "গ্রামীণ কর এবং টোল ট্যাক্স",
+      "সেনা রক্ষণাবেক্ষণ কর এবং স্বেচ্ছামূলক উপহার",
+      "জরুরি কর এবং স্বর্ণে পরিশোধের কর",
+      "নগদ কর এবং সারচার্জ"
+    ],
+    "explanation_bn": "মৌর্য প্রশাসনে 'প্রণয়' ছিল একটি জরুরি কর (Emergency tax) এবং 'হিরণ্য' ছিল এমন একটি কর যা স্বর্ণে পরিশোধ করতে হতো।",
+    "question_en": "In the tax system of the Mauryan Empire, what did 'Pranaya' and 'Hiranya' respectively refer to?",
+    "options_en": [
+      "Village tax and toll tax",
+      "Army maintenance tax and voluntary gift",
+      "Emergency tax and tax paid in gold",
+      "Cash tax and surcharge"
+    ],
+    "explanation_en": "In the Mauryan administration, 'Pranaya' was an emergency tax, and 'Hiranya' was a tax that had to be paid in gold.",
+    "correctIndex": 2
+  },
+  {
+    "id": 5,
+    "question_bn": "মৌর্য প্রশাসনে ফৌজদারি (Criminal) মামলা এবং রাষ্ট্র ও জনগণের বিরোধ নিষ্পত্তির জন্য গঠিত আদালতের নাম কী ছিল এবং এর পরিচালককে কী বলা হতো?",
+    "options_bn": [
+      "ধর্মস্থীয় ন্যায়ালয়, ব্যবহারিক",
+      "কণ্টকশোধন ন্যায়ালয়, প্রদেষ্ট",
+      "কণ্টকশোধন ন্যায়ালয়, সমাহর্তা",
+      "ধর্মস্থীয় ন্যায়ালয়, সন্নিধাতা"
+    ],
+    "explanation_bn": "মৌর্য যুগে ফৌজদারি মামলা এবং রাষ্ট্র ও জনগণের বিরোধ নিষ্পত্তির আদালত ছিল 'কণ্টকশোধন ন্যায়ালয়', যার পরিচালক ছিলেন 'প্রদেষ্ট' (Pradeshta)।",
+    "question_en": "What was the name of the court established for settling criminal cases and state-versus-people disputes in the Mauryan administration, and what was its director called?",
+    "options_en": [
+      "Dharmastya Nyayalaya, Vyavaharika",
+      "Kantakashodhan Nyayalaya, Pradeshta",
+      "Kantakashodhan Nyayalaya, Samharata",
+      "Dharmastya Nyayalaya, Sannidhata"
+    ],
+    "explanation_en": "In the Mauryan period, the court for settling criminal cases and state-versus-people disputes was the 'Kantakashodhan Nyayalaya', and its director was the 'Pradeshta'.",
+    "correctIndex": 1
+  },
+  {
+    "id": 6,
+    "question_bn": "বিহারের পাহাড়ে আজীবিক সম্প্রদায়ের ব্যবহারের জন্য 'নাগার্জুনি গুহা' (Nagarjuni Caves) কে নির্মাণ করেছিলেন?",
+    "options_bn": [
+      "চন্দ্রগুপ্ত মৌর্য",
+      "বিন্দুসার",
+      "অশোক",
+      "দশরথ মৌর্য"
+    ],
+    "explanation_bn": "অশোক বারাবার পাহাড়ে লোমাস ঋষি গুহা নির্মাণ করলেও, নাগার্জুনি গুহা নির্মাণ করেছিলেন অশোকের পৌত্র (নাতি) দশরথ মৌর্য, যা আজীবিক সম্প্রদায়ের জন্য তৈরি হয়েছিল।",
+    "question_en": "Who constructed the 'Nagarjuni Caves' in the hills of Bihar for the use of the Ajivika sect?",
+    "options_en": [
+      "Chandragupta Maurya",
+      "Bindusara",
+      "Ashoka",
+      "Dashrath Maurya"
+    ],
+    "explanation_en": "While Ashoka built the Lomas Rishi Cave in the Barabar hills, the Nagarjuni Caves were built by Ashoka's grandson Dashrath Maurya for the Ajivika sect.",
+    "correctIndex": 3
+  },
+  {
+    "id": 7,
+    "question_bn": "কৌটিল্যের 'সপ্তাঙ্গ তত্ত্ব'-এ রাষ্ট্রকে মানবদেহের সাথে তুলনা করা হয়েছে। এই তত্ত্বে 'অমাত্য' এবং 'কোষ'-কে যথাক্রমে মানবদেহের কোন দুটি অংশের সাথে তুলনা করা হয়েছে?",
+    "options_bn": [
+      "মাথা এবং পেশি",
+      "হৃদয় এবং রক্ত",
+      "পা এবং হাড়",
+      "বন্ধু এবং সুরক্ষা"
+    ],
+    "explanation_bn": "সপ্তাঙ্গ তত্ত্বে 'অমাত্য' (মন্ত্রিপরিষদ/কার্যকরী শক্তি) কে মানবদেহের হৃদয় এবং 'কোষ' (রাজস্ব/সম্পদ সঞ্চালন) কে রক্তের সাথে তুলনা করা হয়েছে।",
+    "question_en": "In Kautilya's 'Saptanga Theory', the state is compared to a human body. In this theory, 'Amatya' and 'Kosha' are compared to which two parts of the human body, respectively?",
+    "options_en": [
+      "Head and muscles",
+      "Heart and blood",
+      "Legs and bones",
+      "Friend and protection"
+    ],
+    "explanation_en": "In the Saptanga theory, 'Amatya' (council of ministers/executive power) is compared to the heart, and 'Kosha' (treasury/circulation of resources) is compared to the blood of the human body.",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_bn": "বিন্দুসারের নামকরণ 'বিন্দু' এবং 'সার' শব্দ দুটি থেকে এসেছে। ঐতিহাসিক উৎস অনুযায়ী এই নামের পেছনে আসল কারণ কী ছিল?",
+    "options_bn": [
+      "তিনি জন্ম থেকেই দুটি সমুদ্রের মাঝখানের বিন্দু বা কেন্দ্র শাসন করতেন।",
+      "তাঁর মাথায় জন্মের সময় মায়ের শরীর থেকে আসা এক ফোঁটা বিষ লেগে গিয়েছিল।",
+      "তিনি আজীবিক সম্প্রদায়ের দর্শনের মূল 'বিন্দু' বুঝতে পেরেছিলেন।",
+      "কৌটিল্য তাঁকে বিষপ্রয়োগ করে হত্যা করার চেষ্টা করেছিলেন।"
+    ],
+    "explanation_bn": "মুদ্রারাক্ষস অনুযায়ী, চন্দ্রগুপ্তের বিষমিশ্রিত খাবার খেয়ে তাঁর স্ত্রী মারা গেলে কৌটিল্য শিশুটিকে অস্ত্রোপচার করে বের করেন। সেই শিশুর মাথায় এক ফোঁটা বিষ (বিন্দু) লেগে গিয়েছিল, তাই তার নাম হয় বিন্দুসার।",
+    "question_en": "The naming of Bindusara comes from the words 'Bindu' and 'Sara'. According to historical sources, what was the real reason behind this name?",
+    "options_en": [
+      "He ruled the point or center between the two oceans from birth.",
+      "A drop of poison from his mother's body touched his head at the time of birth.",
+      "He understood the core 'point' of the philosophy of the Ajivika sect.",
+      "Kautilya tried to assassinate him using poison."
+    ],
+    "explanation_en": "According to Mudrarakshasa, when Chandragupta's wife died after eating poisoned food, Kautilya surgically removed the baby. A drop (Bindu) of poison touched the baby's head, hence he was named Bindusara.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "অশোকের প্রধান শিলালেখগুলিতে চারটি লিপির ব্যবহার পাওয়া যায়। এর মধ্যে ভারতের উত্তর-পশ্চিম সীমান্তে (বর্তমান পাকিস্তান অঞ্চলে) প্রধানত কোন লিপিটি ব্যবহৃত হয়েছিল?",
+    "options_bn": [
+      "ব্রাহ্মী (Brahmi)",
+      "আরামাইক (Aramaic)",
+      "খরোষ্ঠী (Kharosthi)",
+      "গ্রিক (Greek)"
+    ],
+    "explanation_bn": "অশোকের শিলালেখে প্রধান লিপি ব্রাহ্মী হলেও, উত্তর-পশ্চিম ভারতে (পাকিস্তান অঞ্চলে) খরোষ্ঠী লিপি ব্যবহার করা হয়েছিল। আফগানিস্তানে গ্রিক ও আরামাইক ব্যবহৃত হতো।",
+    "question_en": "Four scripts are used in the Major Rock Edicts of Ashoka. Among these, which script was primarily used in the North-Western frontier of India (present-day Pakistan region)?",
+    "options_en": [
+      "Brahmi",
+      "Aramaic",
+      "Kharosthi",
+      "Greek"
+    ],
+    "explanation_en": "Although the main script in Ashoka's edicts was Brahmi, the Kharosthi script was used in North-Western India (Pakistan region). Greek and Aramaic were used in Afghanistan.",
+    "correctIndex": 2
+  },
+  {
+    "id": 10,
+    "question_bn": "মৌর্য সাম্রাজ্যের প্রশাসনিক ব্যবস্থা পাঁচটি প্রধান প্রদেশে বিভক্ত ছিল। নিচের কোন জোড়টি (প্রদেশ ও তার রাজধানী) সঠিক নয়?",
+    "options_bn": [
+      "প্রাচ্যপথ — তোষালী",
+      "অবন্তিরথ — উজ্জৈন",
+      "দক্ষিণাপথ — তক্ষশিলা",
+      "প্রাচী — পাটলিপুত্র"
+    ],
+    "explanation_bn": "দক্ষিণাপথ প্রদেশের রাজধানী ছিল সুবর্ণগিরি, তক্ষশিলা নয়। তক্ষশিলা ছিল উত্তরপথ প্রদেশের রাজধানী।",
+    "question_en": "The administrative system of the Mauryan Empire was divided into five main provinces. Which of the following pairs (province and its capital) is NOT correct?",
+    "options_en": [
+      "Prachyapatha — Toshali",
+      "Avantiratha — Ujjain",
+      "Dakshinapatha — Taxila",
+      "Prachi — Pataliputra"
+    ],
+    "explanation_en": "The capital of the Dakshinapatha province was Suvarnagiri, not Taxila. Taxila was the capital of the Uttarapatha province.",
+    "correctIndex": 2
+  },
+  {
+    "id": 11,
+    "question_bn": "মেগাস্থিনিসের 'ইন্ডিকা' এবং কৌটিল্যের 'অর্থশাস্ত্র'-এ মৌর্য সমাজ ব্যবস্থা সম্পর্কে ভিন্ন ভিন্ন তথ্য দেওয়া হয়েছে। মেগাস্থিনিসের বিবরণ অনুযায়ী নিচের কোন দাবিটি সঠিক?",
+    "options_bn": [
+      "সমাজ চারটি বর্ণে বিভক্ত ছিল এবং দাসপ্রথা প্রচলিত ছিল।",
+      "সমাজ সাতটি শ্রেণিতে বিভক্ত ছিল এবং ভারতে কোনো দাসপ্রথা ছিল না।",
+      "মহিলারা শুধুমাত্র সেনাবাহিনীতে কাজ করতেন এবং বিবাহবিচ্ছেদ নিষিদ্ধ ছিল।",
+      "শিকারি ও পশুপালকদের সামাজিক মর্যাদা ব্রাহ্মণদের চেয়ে বেশি ছিল।"
+    ],
+    "explanation_bn": "মেগাস্থিনিসের 'ইন্ডিকা' অনুসারে মৌর্য সমাজ সাতটি শ্রেণিতে (দার্শনিক, চাষি, যোদ্ধা ইত্যাদি) বিভক্ত ছিল এবং আশ্চর্যের বিষয় হলো তিনি দাবি করেছিলেন যে ভারতে কোনো দাসপ্রথা (Slavery) ছিল না।",
+    "question_en": "Megasthenes' 'Indica' and Kautilya's 'Arthashastra' give different information about the Mauryan social system. According to Megasthenes' account, which of the following claims is correct?",
+    "options_en": [
+      "Society was divided into four varnas and slavery was prevalent.",
+      "Society was divided into seven classes and there was no slavery in India.",
+      "Women only worked in the army and divorce was strictly prohibited.",
+      "The social status of hunters and shepherds was higher than that of Brahmins."
+    ],
+    "explanation_en": "According to Megasthenes' 'Indica', Mauryan society was divided into seven classes (philosophers, farmers, warriors, etc.), and surprisingly, he claimed that there was no slavery in India.",
+    "correctIndex": 1
+  },
+  {
+    "id": 12,
+    "question_bn": "মৌর্য প্রশাসনে 'সন্নিধাতা' (Sannidhata) এবং 'সমাহর্তা' (Samharata)-এর দায়িত্বের মধ্যে মূল পার্থক্য কী ছিল?",
+    "options_bn": [
+      "সন্নিধাতা ছিলেন কৃষি বিভাগের প্রধান, আর সমাহর্তা ছিলেন নগর প্রশাসক।",
+      "সন্নিধাতা ছিলেন প্রধান রাজকোষ কর্মকর্তা, আর সমাহর্তা ছিলেন রাজস্ব সংগ্রহের মহাপরিদর্শক।",
+      "সন্নিধাতা বাজার নিয়ন্ত্রণ করতেন, আর সমাহর্তা টোল ট্যাক্স আদায় করতেন।",
+      "সন্নিধাতা ছিলেন অশ্বারোহী বাহিনীর অধিনায়ক, আর সমাহর্তা ছিলেন জাহাজ বিভাগের প্রধান।"
+    ],
+    "explanation_bn": "মৌর্য প্রশাসনে 'সন্নিধাতা' ছিলেন প্রধান রাজকোষ কর্মকর্তা (Chief Treasury Officer), আর 'সমাহর্তা' ছিলেন রাজস্ব বা ট্যাক্স সংগ্রহের মহাপরিদর্শক।",
+    "question_en": "What was the main difference between the responsibilities of 'Sannidhata' and 'Samharata' in the Mauryan administration?",
+    "options_en": [
+      "Sannidhata was the head of agriculture, while Samharata was the city administrator.",
+      "Sannidhata was the chief treasury officer, while Samharata was the inspector general of revenue collection.",
+      "Sannidhata controlled the market, while Samharata collected toll taxes.",
+      "Sannidhata was the commander of cavalry, while Samharata was the head of the naval department."
+    ],
+    "explanation_en": "In the Mauryan administration, 'Sannidhata' was the Chief Treasury Officer, while 'Samharata' was the Inspector General of Revenue Collection.",
+    "correctIndex": 1
+  },
+  {
+    "id": 13,
+    "question_bn": "অশোকের কোন শিলালেখে সমস্ত ধর্ম ও সম্প্রদায়ের প্রতি সহিষ্ণুতা এবং মহিলা কল্যাণে মহামাত্র নিয়োগের কথা বলা হয়েছে, যা কান্দাহারের গ্রিক শিলালেখতেও পাওয়া যায়?",
+    "options_bn": [
+      "শিলালেখ I",
+      "শিলালেখ IV",
+      "শিলালেখ XII",
+      "শিলালেখ XIII"
+    ],
+    "explanation_bn": "অশোকের দ্বাদশ প্রধান শিলালেখে (Rock Edict XII) সব ধর্মের প্রতি সহিষ্ণুতা এবং মহিলাদের কল্যাণের জন্য মহামাত্র নিয়োগের উল্লেখ আছে, যা কান্দাহারের গ্রিক লিপিতেও বিদ্যমান।",
+    "question_en": "In which of Ashoka's Rock Edicts is tolerance towards all religions and sects, and the appointment of Mahamatras for women's welfare mentioned, which is also found in the Greek inscription of Kandahar?",
+    "options_en": [
+      "Rock Edict I",
+      "Rock Edict IV",
+      "Rock Edict XII",
+      "Rock Edict XIII"
+    ],
+    "explanation_en": "Ashoka's Major Rock Edict XII mentions tolerance towards all religions and the appointment of Mahamatras for the welfare of women, which is also present in the Greek inscription of Kandahar.",
+    "correctIndex": 2
+  },
+  {
+    "id": 14,
+    "question_bn": "রাজা হওয়ার আগে অশোককে তাঁর পিতা বিন্দুসার প্রথমবার কোথায় বিদ্রোহ দমনের জন্য পাঠিয়েছিলেন এবং পরবর্তীকালে উজ্জৈনে থাকাকালীন তিনি কার প্রেমে পড়েন?",
+    "options_bn": [
+      "পটলিপুত্র; হেলেনার",
+      "তক্ষশিলা; দেবী কারুভাকীর",
+      "সুবর্ণগিরি; সংঘমিত্রার",
+      "তোষালী; মহেন্দ্রের"
+    ],
+    "explanation_bn": "বিন্দুসারের রাজত্বকালে তক্ষশিলায় বিদ্রোহ হলে অশোককে তা দমনের জন্য পাঠানো হয়। পরে তাঁকে উজ্জৈনে পাঠানো হলে সেখানে দেবী কারুভাকী (বা করুণার ইন্দ্র)-র সাথে তাঁর পরিচয় ও প্রেম হয়।",
+    "question_en": "Before becoming the king, where did his father Bindusara first send Ashoka to suppress a rebellion, and whom did he fall in love with while subsequently staying in Ujjain?",
+    "options_en": [
+      "Pataliputra; Helena",
+      "Taxila; Devi Karuvaki",
+      "Suvarnagiri; Sanghamitra",
+      "Toshali; Mahendra"
+    ],
+    "explanation_en": "During Bindusara's reign, when a rebellion broke out in Taxila, Ashoka was sent to suppress it. Later, when he was sent to Ujjain, he met and fell in love with Devi Karuvaki (or Karuna's Indra) there.",
+    "correctIndex": 1
+  },
+  {
+    "id": 15,
+    "question_bn": "কলিঙ্গ যুদ্ধ 261 খ্রিস্টপূর্বাব্দে শেষ হয়েছিল, যা অশোকের রাজ্যাভিষেকের ঠিক 8 বছর পরে ঘটে। এই তথ্য অনুযায়ী অশোকের রাজ্যাভিষেক কোন বছর হয়েছিল?",
+    "options_bn": [
+      "269 খ্রিস্টপূর্বাব্দ",
+      "253 খ্রিস্টপূর্বাব্দ",
+      "273 খ্রিস্টপূর্বাব্দ",
+      "261 খ্রিস্টপূর্বাব্দ"
+    ],
+    "explanation_bn": "কলিঙ্গ যুদ্ধ 261 খ্রিস্টপূর্বাব্দে শেষ হয়। যেহেতু এটি তাঁর রাজ্যাভিষেকের 8 বছর পরে হয়েছিল, তাই 261 এর সাথে 8 যোগ করলে (যেহেতু খ্রিস্টপূর্বাব্দ পিছনের দিকে গোনা হয়) 269 খ্রিস্টপূর্বাব্দ পাওয়া যায়।",
+    "question_en": "The Kalinga War ended in 261 BCE, which occurred exactly 8 years after Ashoka's coronation. According to this information, in which year did Ashoka's coronation take place?",
+    "options_en": [
+      "269 BCE",
+      "253 BCE",
+      "273 BCE",
+      "261 BCE"
+    ],
+    "explanation_en": "The Kalinga War ended in 261 BCE. Since this happened 8 years after his coronation, adding 8 to 261 (since BCE is counted backwards) gives 269 BCE.",
+    "correctIndex": 0
+  },
+  {
+    "id": 16,
+    "question_bn": "ভারতের জাতীয় প্রতীক (National Emblem) হিসেবে গৃহীত সারনাথ স্তম্ভশীর্ষে চক্র এবং পশুদের সমাহার মূলত কোন দুটি ঐতিহাসিক/ধর্মীয় প্রসঙ্গের প্রতীক?",
+    "options_bn": [
+      "কলিঙ্গ যুদ্ধ এবং চন্দ্রগুপ্তের জৈন ধর্ম গ্রহণ",
+      "বুদ্ধের প্রথম প্রবচন এবং অশোকের ধম্মপরিবর্তন",
+      "বিন্দুসারের দক্ষিণ ভারত জয় এবং গ্রিকদের সাথে শান্তিচুক্তি",
+      "মহেন্দ্র-সংঘমিত্রার শ্রীলঙ্কা যাত্রা এবং উপগুপ্তের দীক্ষা"
+    ],
+    "explanation_bn": "সারনাথের এই স্তম্ভশীর্ষটি গৌতম বুদ্ধের প্রথম প্রবচন (ধর্মচক্রপ্রবর্তন, সারনাথে) এবং সম্রাট অশোকের কলিঙ্গ যুদ্ধের পর 'ধম্মপরিবর্তন'-এর স্মরণে তৈরি করা হয়েছিল।",
+    "question_en": "The combination of the wheel and animals on the Sarnath pillar capital, adopted as the National Emblem of India, is primarily symbolic of which two historical/religious contexts?",
+    "options_en": [
+      "Kalinga War and Chandragupta's conversion to Jainism",
+      "Buddha's First Sermon and Ashoka's Dhammaparivartan",
+      "Bindusara's conquest of South India and the peace treaty with the Greeks",
+      "Mahendra-Sanghamitra's journey to Sri Lanka and Upagupta's initiation"
+    ],
+    "explanation_en": "This pillar capital at Sarnath was created in memory of Gautama Buddha's First Sermon (Dharmachakrapravartana, at Sarnath) and Emperor Ashoka's 'Dhammaparivartan' after the Kalinga War.",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_bn": "চন্দ্রগুপ্ত মৌর্যের আমলে শস্য মজুত রাখার জন্য 'কোষ্ঠাগার' (Kosthagara) নামক একটি বিশেষ বিভাগের উল্লেখ কোন ঐতিহাসিক লিপিতে পাওয়া যায়?",
+    "options_bn": [
+      "নিগলি সাগর শিলালেখ",
+      "কান্দাহার গ্রিক শিলালেখ",
+      "সোহগাউরা তাম্রলিপি",
+      "রুম্মিনদেই স্তম্ভ লেখা"
+    ],
+    "explanation_bn": "চন্দ্রগুপ্ত মৌর্য শস্য মজুতের জন্য 'কোষ্ঠাগার' নামে একটি বিশেষ বিভাগ তৈরি করেছিলেন, যার সুস্পষ্ট উল্লেখ 'সোহগাউরা তাম্রলিপি' (Sohgaura Copper Plate Inscription)-তে পাওয়া যায়।",
+    "question_en": "In which historical inscription is the mention of a special department called 'Kosthagara', meant for grain storage during the reign of Chandragupta Maurya, found?",
+    "options_en": [
+      "Nigali Sagar Edict",
+      "Kandahar Greek Edict",
+      "Sohgaura Copper Plate Inscription",
+      "Rummindei Pillar Edict"
+    ],
+    "explanation_en": "Chandragupta Maurya created a special department called 'Kosthagara' for grain storage, a clear mention of which is found in the 'Sohgaura Copper Plate Inscription'.",
+    "correctIndex": 2
+  },
+  {
+    "id": 18,
+    "question_bn": "মৌর্য রাজবংশের তিন প্রজন্মের তিনজন শক্তিশালী শাসক—চন্দ্রগুপ্ত মৌর্য, বিন্দুসার এবং অশোক—যথাক্রমে কোন কোন ধর্ম বা সম্প্রদায়ের পৃষ্ঠপোষকতা করেছিলেন?",
+    "options_bn": [
+      "জৈন ধর্ম, বৌদ্ধ ধর্ম, আজীবিক সম্প্রদায়",
+      "বৌদ্ধ ধর্ম, আজীবিক সম্প্রদায়, জৈন ধর্ম",
+      "জৈন ধর্ম, আজীবিক সম্প্রদায়, বৌদ্ধ ধর্ম",
+      "আজীবিক সম্প্রদায়, জৈন ধর্ম, বৌদ্ধ ধর্ম"
+    ],
+    "explanation_bn": "মৌর্য রাজবংশে চন্দ্রগুপ্ত জীবনের শেষে জৈন ধর্ম গ্রহণ করেন, তাঁর পুত্র বিন্দুসার আজীবিক সম্প্রদায়ের পৃষ্ঠপোষক ছিলেন এবং নাতি অশোক বৌদ্ধ ধর্ম গ্রহণ করেছিলেন।",
+    "question_en": "Which religions or sects were respectively patronized by the three powerful rulers of three generations of the Mauryan dynasty—Chandragupta Maurya, Bindusara, and Ashoka?",
+    "options_en": [
+      "Jainism, Buddhism, Ajivika sect",
+      "Buddhism, Ajivika sect, Jainism",
+      "Jainism, Ajivika sect, Buddhism",
+      "Ajivika sect, Jainism, Buddhism"
+    ],
+    "explanation_en": "In the Mauryan dynasty, Chandragupta embraced Jainism at the end of his life, his son Bindusara was a patron of the Ajivika sect, and his grandson Ashoka embraced Buddhism.",
+    "correctIndex": 2
+  },
+  {
+    "id": 19,
+    "question_bn": "মৌর্য অর্থনীতিতে বহির্বাণিজ্যের জন্য দুটি প্রধান বন্দর ব্যবহৃত হতো। এই পূর্ব ও পশ্চিম দিকের প্রধান বন্দর দুটির নাম কী ছিল?",
+    "options_bn": [
+      "তাম্রলিপ্তি এবং ভরুচ",
+      "পটলিপুত্র এবং তক্ষশিলা",
+      "সুবর্ণগিরি এবং উজ্জৈন",
+      "তোষালী এবং সারনাথ"
+    ],
+    "explanation_bn": "মৌর্য যুগে বাণিজ্যের জন্য পশ্চিমে প্রধান বন্দর ছিল ভরুচ (Bharuch) ও সুপ্রা এবং পূর্বে প্রধান বন্দর ছিল বর্তমান পশ্চিমবঙ্গের তাম্রলিপ্তি (Tamralipti)।",
+    "question_en": "Two major ports were used for foreign trade in the Mauryan economy. What were the names of these major ports in the east and the west?",
+    "options_en": [
+      "Tamralipti and Bharuch",
+      "Pataliputra and Taxila",
+      "Suvarnagiri and Ujjain",
+      "Toshali and Sarnath"
+    ],
+    "explanation_en": "During the Mauryan period, the major port for trade in the west was Bharuch (and Supra), and the major port in the east was Tamralipti in present-day West Bengal.",
+    "correctIndex": 0
+  },
+  {
+    "id": 20,
+    "question_bn": "15 টি ক্ষুদ্র শিলালেখের মধ্যে মাত্র চারটি স্থানে অশোকের নাম সরাসরি (পিয়দস্সির পরিবর্তে 'অশোক') উল্লেখ করা হয়েছে। নিচের কোন স্থানটি সেই চারটির অন্তর্ভুক্ত নয়?",
+    "options_bn": [
+      "মাস্কি (Maski)",
+      "গুজ্জর (Gujjar)",
+      "রুম্মিনদেই (Rummindei)",
+      "নিত্তুর (Nittur)"
+    ],
+    "explanation_bn": "15 টি ক্ষুদ্র শিলালেখের মধ্যে মাস্কি, গুজ্জর, ব্রহ্মগিরি এবং নিত্তুর—এই চারটি স্থানে অশোকের নাম সরাসরি উল্লেখ আছে। রুম্মিনদেই থেকে অশোকের লুম্বিনী পরিদর্শন এবং কর হ্রাসের তথ্য জানা যায়, তবে এটি এই চারটির অন্তর্ভুক্ত নয়।",
+    "question_en": "Out of the 15 Minor Rock Edicts, Ashoka's name is directly mentioned (as 'Ashoka' instead of 'Piyadassi') in only four places. Which of the following places is NOT included among those four?",
+    "options_en": [
+      "Maski",
+      "Gujjar",
+      "Rummindei",
+      "Nittur"
+    ],
+    "explanation_en": "Out of the 15 Minor Rock Edicts, Ashoka's name is directly mentioned in four places: Maski, Gujjar, Brahmagiri, and Nittur. Rummindei provides information about Ashoka's visit to Lumbini and tax reduction, but it is not among these four.",
+    "correctIndex": 2
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
