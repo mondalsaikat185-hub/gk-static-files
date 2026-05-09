@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "কেরালার ওট্টামথুল্লাল (Ottamthullal) নৃত্যকলা সম্পর্কে নিচের কোন বক্তব্যটি সঠিক?",
+    "options_bn": [
+      "এটি একটি দলীয় পরিবেশনা যেখানে একাধিক শিল্পী একসঙ্গে হিন্দু পুরাণ বর্ণনা করেন।",
+      "এটি শুধুমাত্র পণ্ডিত সমাজের জন্য সংস্কৃত ভাষায় পরিবেশিত একটি ধ্রুপদী শিল্প।",
+      "এটি একটি একক অভিনয়-নৃত্য যেখানে একজন শিল্পী একাই অভিনয়, গান ও কাহিনীর মাধ্যমে সমাজের সমালোচনা করেন।",
+      "এই নৃত্য শুধুমাত্র মহিলারা ওনাম উৎসবের সময় পরিবেশন করে থাকেন।"
+    ],
+    "explanation_bn": "ওট্টামথুল্লাল কুঞ্চন নাম্বিয়ার দ্বারা সৃষ্ট একটি একক অভিনয়-নৃত্যকলা যেখানে একজন শিল্পী একাই সব চরিত্রের ভূমিকায় অভিনয় করেন এবং হাসির মোড়কে সমাজের সমালোচনা করেন। এটি সংস্কৃত শিল্পকলাকে সাধারণ মানুষের কাছে সহজ মলয়ালম ভাষায় পৌঁছে দেয়।",
+    "question_en": "Which of the following statements is correct regarding Ottamthullal dance form of Kerala?",
+    "options_en": [
+      "It is a group performance where multiple artists narrate Hindu mythology together.",
+      "It is a classical art form performed exclusively in Sanskrit for the elite scholars.",
+      "It is a solo acting-dance where a single artist performs acting, singing, and storytelling to satirize society.",
+      "This dance is performed exclusively by women during the Onam festival."
+    ],
+    "explanation_en": "Ottamthullal is a solo acting-dance created by Kunchan Nambiar, where a single artist plays all characters and uses satire to critique society. It brought Sanskrit art forms to common people in simple Malayalam language.",
+    "correctIndex": 2
+  },
+  {
+    "id": 2,
+    "question_bn": "কেরালার 'থেয়্যাম' (Theyyam) বা 'কলিয়াত্তম' নৃত্যের পরিবেশন পদ্ধতি সম্পর্কে সবচেয়ে উল্লেখযোগ্য আধ্যাত্মিক বৈশিষ্ট্য কোনটি?",
+    "options_bn": [
+      "এই নৃত্যে শিল্পীরা রামায়ণের চরিত্রগুলোর শুধুমাত্র মূকাভিনয় করেন।",
+      "পরিবেশক নিজের শরীরে দেবতা বা পূর্বপুরুষের আত্মাকে আহ্বান করেন এবং গ্রামবাসীরা তাঁকে সাক্ষাৎ দেবতা হিসেবে সম্মান করেন।",
+      "এই নৃত্যে মূলত পুরুষরা একটি বৃত্তে দাঁড়িয়ে লাঠি দিয়ে একে অপরকে আঘাত করে।",
+      "এটি একটি ধীর গতির সংস্কৃত থিয়েটার যা ইউনেস্কো কর্তৃক স্বীকৃত।"
+    ],
+    "explanation_bn": "থেয়্যাম কেরালার মালাবার উপকূলের পবিত্র বনরাজিতে পরিবেশিত একটি অতি আধ্যাত্মিক নৃত্য। পরিবেশক নিজের শরীরে দেবতার আত্মাকে আহ্বান করেন এবং লাল পোশাকে তাঁকে সাক্ষাৎ দেবতা হিসেবে গণ্য করা হয়, যিনি গ্রামবাসীদের আশীর্বাদ ও সমস্যার সমাধান দেন।",
+    "question_en": "What is the most notable spiritual characteristic regarding the performance of Kerala's 'Theyyam' or 'Kaliyattam' dance?",
+    "options_en": [
+      "In this dance, artists only pantomime the characters of the Ramayana.",
+      "The performer invokes the spirit of a deity or ancestor into his body, and villagers revere him as a living god.",
+      "In this dance, men mostly stand in a circle and strike each other with sticks.",
+      "It is a slow-paced Sanskrit theater recognized by UNESCO."
+    ],
+    "explanation_en": "Theyyam is a highly spiritual dance performed in the sacred groves of Kerala's Malabar coast. The performer invokes the deity's spirit into his body and, dressed in red, is revered as a living god who blesses villagers and resolves their problems.",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_bn": "কেরালার 'কুডিয়াট্টম' (Koodiyattam) নৃত্যকলা সম্পর্কে নিচের কোনটি সঠিক?",
+    "options_bn": [
+      "এটি পৃথিবীর অন্যতম ধীর গতির পরিবেশনা শিল্প এবং এটি ইউনেস্কো (UNESCO) দ্বারা ইনট্যানজিবল কালচারাল হেরিটেজ হিসেবে স্বীকৃত।",
+      "এটি মূলত ফসল কাটার উৎসব যেখানে মহিলারা মাথায় পাত্র নিয়ে নাচেন।",
+      "এটি একটি মার্শাল আর্ট যা কালারিপায়াট্টুর পূর্বসূরি হিসেবে বিবেচিত হয়।",
+      "এটি কেরালার সবচেয়ে দ্রুত গতির লোকনৃত্য যা শুধুমাত্র বর্ষাকালে পরিবেশিত হয়।"
+    ],
+    "explanation_bn": "কুডিয়াট্টম একটি প্রাচীন সংস্কৃত থিয়েটার যা 2008 সালে ইউনেস্কো কর্তৃক স্বীকৃতি পায়। এর সবচেয়ে অবাক করা বিষয় হলো এর অত্যন্ত ধীর গতি, যেখানে শিল্পীর চোখের পলক ও আঙুলের গভীর অর্থ থাকে এবং একটি দৃশ্য পরিবেশন করতে কয়েকদিন থেকে এক সপ্তাহও লাগতে পারে।",
+    "question_en": "Which of the following is correct about Kerala's 'Koodiyattam' art form?",
+    "options_en": [
+      "It is one of the slowest performing arts in the world and is recognized by UNESCO as an Intangible Cultural Heritage.",
+      "It is primarily a harvest festival dance where women dance with pots on their heads.",
+      "It is a martial art considered the predecessor of Kalaripayattu.",
+      "It is Kerala's fastest folk dance performed exclusively during the monsoon."
+    ],
+    "explanation_en": "Koodiyattam is an ancient Sanskrit theater recognized by UNESCO in 2008. The most surprising aspect is its extremely slow pace, where even a blink or finger movement holds deep meaning, and performing a single scene can take days to a week.",
+    "correctIndex": 0
+  },
+  {
+    "id": 4,
+    "question_bn": "কেরালার 'চাক্যার কূথু' (Chakyar Koothu) পরিবেশনায় শিল্পীর স্বাধীনতায় কোন বিশেষ দিকটি লক্ষ্য করা যায়?",
+    "options_bn": [
+      "শিল্পী শুধুমাত্র সংস্কৃত শ্লোক আবৃত্তি করতে পারেন এবং নিজের মন্তব্য যোগ করতে পারেন না।",
+      "শিল্পী কাহিনীর মধ্যে সমসাময়িক সমাজ ও রাজনীতির তীক্ষ্ণ সমালোচনা করতে পারেন, এমনকী রাজাদেরও।",
+      "শিল্পী অন্যান্য শিল্পীদের সাথে মিলে সম্পূর্ণ একটি নাটক তৈরি করেন যেখানে কোনো একক কাহিনী থাকে না।",
+      "শিল্পী শুধুমাত্র ঈশ্বরের প্রশংসা করেন এবং কোনো পার্থিব বিষয় নিয়ে আলোচনা করেন না।"
+    ],
+    "explanation_bn": "চাক্যার কূথু একটি একক মনোলগ পরিবেশনা শিল্প। এখানে শিল্পী হিন্দু মহাকাব্যের কাহিনী বলার ফাঁকে সমসাময়িক সমাজ, রাজনীতি এবং এমনকী রাজাদেরও তীক্ষ্ণ সমালোচনা করার অনন্য স্বাধীনতা ভোগ করেন।",
+    "question_en": "What special aspect of artistic freedom is observed in the performance of Kerala's 'Chakyar Koothu'?",
+    "options_en": [
+      "The artist can only recite Sanskrit verses and cannot add personal comments.",
+      "The artist can sharply critique contemporary society and politics, including the kings, within the narrative.",
+      "The artist collaborates with other performers to create a full play with no single narrative.",
+      "The artist only praises the gods and does not discuss any worldly matters."
+    ],
+    "explanation_en": "Chakyar Koothu is a solo monologue performing art. The performer enjoys the unique freedom to sharply critique contemporary society, politics, and even kings while narrating Hindu epics.",
+    "correctIndex": 1
+  },
+  {
+    "id": 5,
+    "question_bn": "মধ্যপ্রদেশের 'জওয়ারা' (Jawara) নৃত্যের মূল তাৎপর্য কী?",
+    "options_bn": [
+      "এটি অবিবাহিত মেয়েদের দ্বারা পরিবেশিত একটি বসন্ত উৎসবের নৃত্য।",
+      "এটি দশেরা উৎসবের সময় কামাড় উপজাতির দ্বারা পরিবেশিত হয়।",
+      "এটি একটি কৃষি উৎসবের নৃত্য যেখানে মাটির পাত্রে উৎপন্ন অঙ্কুরিত বীজ মাথায় নিয়ে ভালো ফসলের কৃতজ্ঞতায় নাচ করা হয়।",
+      "এটি একটি মার্শাল আর্ট নৃত্য যেখানে ফসল রক্ষার জন্য ঢাল ও তলোয়ার ব্যবহার করা হয়।"
+    ],
+    "explanation_bn": "জওয়ারা হলো মধ্যপ্রদেশের একটি কৃষি উৎসব নৃত্য। ভালো ফসল পাওয়ার কৃতজ্ঞতায় কৃষকরা দশেরার সময় মাটির পাত্রে জন্মানো 'জওয়ারা' (অঙ্কুরিত বীজ) মাথায় নিয়ে নাচেন, যা পরে নদীতে বিসর্জন দেওয়া হয়।",
+    "question_en": "What is the main significance of Madhya Pradesh's 'Jawara' dance?",
+    "options_en": [
+      "It is a spring festival dance performed by unmarried girls.",
+      "It is performed by the Kamar tribe during the Dussehra festival.",
+      "It is an agricultural festival dance where performers dance in gratitude for a good harvest, carrying pots of sprouted seeds on their heads.",
+      "It is a martial art dance where shields and swords are used to protect crops."
+    ],
+    "explanation_en": "Jawara is an agricultural festival dance of Madhya Pradesh. In gratitude for a good harvest, farmers dance carrying 'Jawara' (sprouted seeds) grown in earthen pots on their heads during Dussehra, which are later immersed in the river.",
+    "correctIndex": 2
+  },
+  {
+    "id": 6,
+    "question_bn": "মধ্যপ্রদেশের মালওয়া অঞ্চলের 'মটকি' (Matki) নৃত্যের সবচেয়ে উল্লেখযোগ্য বৈশিষ্ট্য কোনটি?",
+    "options_bn": [
+      "এটি পুরুষদের দ্বারা বৃত্তাকারে দাঁড়িয়ে লাঠি দিয়ে খেলা একটি নৃত্য।",
+      "মহিলারা মাথায় মাটির কলসি বা মটকি বহন করে এবং একই সাথে দ্রুত গতিতে ভারসাম্য ও দক্ষতার সাথে নৃত্য করেন।",
+      "এটি একটি থিয়েটার নৃত্য যা শুধুমাত্র মঞ্চে পরিবেশিত হয়।",
+      "এটি অবিবাহিত মেয়েরা মাথায় ফুল নিয়ে পরিবেশন করে।"
+    ],
+    "explanation_bn": "মটকি নৃত্য মধ্যপ্রদেশের মালওয়া অঞ্চলের একটি পরিচিত লোকনৃত্য। এই নৃত্যে মহিলারা মাথায় মাটির কলসি (মটকি) নিয়ে অত্যন্ত দ্রুত গতিতে এবং নিখুঁত ভারসাম্যের সাথে নাচ করেন।",
+    "question_en": "What is the most notable characteristic of the 'Matki' dance from the Malwa region of Madhya Pradesh?",
+    "options_en": [
+      "It is a dance played by men standing in a circle with sticks.",
+      "Women perform with earthen pots (Matki) balanced on their heads, dancing at a fast pace with skill and balance.",
+      "It is a theater dance performed exclusively on a stage.",
+      "It is performed by unmarried girls carrying flowers on their heads."
+    ],
+    "explanation_en": "Matki is a popular folk dance of the Malwa region in Madhya Pradesh. In this dance, women balance earthen pots (Matkis) on their heads and dance at a very fast pace with perfect balance and skill.",
+    "correctIndex": 1
+  },
+  {
+    "id": 7,
+    "question_bn": "মধ্যপ্রদেশ ও ছত্তিশগড় উভয় রাজ্যেই ভিল উপজাতি কর্তৃক পরিবেশিত 'ভাগোরিয়া' (Bhagoria) নৃত্যের একটি গুরুত্বপূর্ণ সামাজিক প্রথা কী?",
+    "options_bn": [
+      "এই নৃত্যের মাধ্যমে নতুন ফসল কাটার সূচনা করা হয়।",
+      "এই নৃত্যের সময় অবিবাহিত যুবক-যুবতীরা তাদের নিজেদের জীবনসঙ্গী বেছে নিতে পারেন।",
+      "এটি বিবাহিত নারীদের দ্বারা তাদের স্বামীদের দীর্ঘায়ুর জন্য পরিবেশিত হয়।",
+      "এটি মূলত শিশুদের দ্বারা বসন্তকে স্বাগত জানানোর জন্য করা হয়।"
+    ],
+    "explanation_bn": "ভাগোরিয়া মধ্যপ্রদেশের (মূলত ঝাবুয়া জেলায়) এবং ছত্তিশগড়ের ভিল উপজাতির একটি বিশেষ নৃত্য। ঐতিহ্যগতভাবে এই নৃত্যের সময় যুবক-যুবতীরা তাদের নিজেদের জীবনসঙ্গী বেছে নিতে পারেন।",
+    "question_en": "What is a significant social custom associated with the 'Bhagoria' dance performed by the Bhil tribe in both Madhya Pradesh and Chhattisgarh?",
+    "options_en": [
+      "This dance marks the beginning of the new harvesting season.",
+      "During this dance, unmarried young men and women can choose their life partners.",
+      "It is performed by married women for the longevity of their husbands.",
+      "It is primarily performed by children to welcome spring."
+    ],
+    "explanation_en": "Bhagoria is a special folk dance of the Bhil tribe in Madhya Pradesh (mainly Jhabua district) and Chhattisgarh. Traditionally, during this dance, young men and women get the opportunity to choose their life partners.",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_bn": "মণিপুরের 'থাং-টা' (Thang-Ta) নৃত্য সম্পর্কে কোন তথ্যটি সঠিক?",
+    "options_bn": [
+      "এটি শুধুমাত্র ঢোল বাজিয়ে গাওয়া এক ধরনের কীর্তন।",
+      "এটি একটি মার্শাল আর্ট নৃত্য যেখানে তলোয়ার (থাং) এবং বর্শা বা ঢাল (টা) ব্যবহার করা হয়, যা মৈতেই যোদ্ধাদের যুদ্ধবিদ্যার প্রতিফলন।",
+      "এটি মণিপুরের সবচেয়ে প্রাচীন শাস্ত্রীয় নৃত্য যা শুধু মহিলাদের দ্বারা পরিবেশিত হয়।",
+      "এটি ফসল তোলার সময় কৃষকদের দ্বারা পরিবেশিত একটি উৎসবের নাচ।"
+    ],
+    "explanation_bn": "থাং-টা হলো মণিপুরের একটি ঐতিহ্যবাহী মার্শাল আর্ট নৃত্য। 'থাং' মানে তলোয়ার এবং 'টা' মানে বর্শা বা ঢাল। এটি মৈতেই যোদ্ধাদের প্রাচীন যুদ্ধবিদ্যার কৌশল প্রদর্শন করে এবং এটি 'হুয়েন লাংলোন' নামেও পরিচিত।",
+    "question_en": "Which information is correct about Manipur's 'Thang-Ta' dance?",
+    "options_en": [
+      "It is a type of Kirtan performed only by playing the Dhol.",
+      "It is a martial art dance where a sword (Thang) and a spear or shield (Ta) are used, reflecting the martial skills of Meitei warriors.",
+      "It is the most ancient classical dance of Manipur performed solely by women.",
+      "It is a festival dance performed by farmers during harvest time."
+    ],
+    "explanation_en": "Thang-Ta is a traditional martial art dance of Manipur. 'Thang' means sword and 'Ta' means spear or shield. It showcases the ancient martial skills of Meitei warriors and is also known as 'Huyen Langlon'.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "'লাই হারোবা' (Lai Haraoba) নৃত্যের সাথে মণিপুরের কোন প্রাচীন ধর্মের সরাসরি সম্পর্ক রয়েছে?",
+    "options_bn": [
+      "বৌদ্ধ ধর্ম",
+      "বৈষ্ণব ধর্ম",
+      "সানামাহিজম",
+      "শৈব ধর্ম"
+    ],
+    "explanation_bn": "লাই হারোবা মৈতেই উপজাতির একটি প্রাচীন ধর্মীয় নৃত্য যার অর্থ 'দেবতাদের আনন্দ উৎসব'। এটি মণিপুরের প্রাচীন প্রাক-হিন্দু ধর্ম সানামাহিজম-এর (Sanamahism) একটি অত্যন্ত গুরুত্বপূর্ণ আচার-অনুষ্ঠান।",
+    "question_en": "Which ancient religion of Manipur is directly associated with the 'Lai Haraoba' dance?",
+    "options_en": [
+      "Buddhism",
+      "Vaishnavism",
+      "Sanamahism",
+      "Shaivism"
+    ],
+    "explanation_en": "Lai Haraoba is an ancient religious dance of the Meitei tribe which means 'festival of gods'. It is a very important ritual of Manipur's ancient pre-Hindu religion known as Sanamahism.",
+    "correctIndex": 2
+  },
+  {
+    "id": 10,
+    "question_bn": "মণিপুরের 'পুং চলোম' (Pung Cholom) নৃত্যের আরেকটি পরিচিত নাম কী এবং এর পরিবেশন শৈলী কেমন?",
+    "options_bn": [
+      "এর অন্য নাম 'ঢোল চলোম'; এতে শিল্পীরা ধীর গতিতে ঢোল বাজান।",
+      "এর অন্য নাম 'মৃদঙ্গ কীর্তন'; শিল্পীরা গলায় পুং ঝুলিয়ে বাজানোর সাথে লাফ দেন ও ডিগবাজি খান।",
+      "এর অন্য নাম 'থাং-টা'; শিল্পীরা পুং বাজানোর সাথে তলোয়ার ঘোরান।",
+      "এর অন্য নাম 'জাগোই'; এটি মূলত রাসলীলার একটি শান্ত ও মৃদু রূপ।"
+    ],
+    "explanation_bn": "পুং চলোমকে 'মৃদঙ্গ কীর্তন' বা ধুমাল নামেও জানা যায়। এই নৃত্যে শিল্পীরা গলায় মণিপুরের ঐতিহ্যবাহী বাদ্যযন্ত্র 'পুং' ঝুলিয়ে অত্যন্ত দ্রুতগতিতে বাজান এবং একই সাথে লাফ দেন, ডিগবাজি খান ও অ্যাক্রোব্যাটিক কসরত দেখান।",
+    "question_en": "What is another known name for Manipur's 'Pung Cholom' dance and what is its performance style?",
+    "options_en": [
+      "Its other name is 'Dhol Cholom'; artists play the dhol at a slow pace.",
+      "Its other name is 'Mridanga Kirtan'; artists perform jumps and somersaults while playing the Pung hung around their necks.",
+      "Its other name is 'Thang-Ta'; artists swing swords while playing the Pung.",
+      "Its other name is 'Jagoi'; it is basically a calm and gentle form of Raas Leela."
+    ],
+    "explanation_en": "Pung Cholom is also known as 'Mridanga Kirtan' or Dhumal. In this dance, performers hang the traditional instrument 'Pung' around their necks, play it at a very fast pace, and simultaneously perform jumps, somersaults, and acrobatics.",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "কেরালার 'কোলাকালি' (Kolakali) নৃত্যের প্রকৃতি কেমন?",
+    "options_bn": [
+      "এটি পুরুষদের দ্বারা বৃত্তাকারে লাঠি দিয়ে খেলা একটি নৃত্য, যা গুজরাটের ডান্ডিয়ার অনুরূপ।",
+      "এটি মহিলারা মাথায় কলসি নিয়ে একা মঞ্চে পরিবেশন করেন।",
+      "এটি মন্দিরের গর্ভগৃহে পরিবেশিত একটি একক শাস্ত্রীয় গীত।",
+      "এটি ফসল বোনার সময় করা একটি মৃদু তালযুক্ত পদচালনা।"
+    ],
+    "explanation_bn": "কোলাকালি কেরালার একটি লাঠি নৃত্য। এতে মূলত পুরুষরা একটি বৃত্তে ঘুরতে ঘুরতে একে অপরের লাঠিতে আঘাত করে নাচেন, যা গুজরাটের ডান্ডিয়ার মতো হলেও এর নিজস্ব কেরালা ঘরানার স্টাইল রয়েছে।",
+    "question_en": "What is the nature of Kerala's 'Kolakali' dance?",
+    "options_en": [
+      "It is a circle dance performed by men playing with sticks, similar to Gujarat's Dandiya.",
+      "It is performed solo on stage by women carrying pitchers on their heads.",
+      "It is a solo classical song performed in the inner sanctum of a temple.",
+      "It is a gently paced footwork dance performed during sowing of seeds."
+    ],
+    "explanation_en": "Kolakali is a stick dance of Kerala. Primarily men perform this by moving in a circle and striking each other's sticks. While it resembles Gujarat's Dandiya, it possesses its own distinct Kerala style.",
+    "correctIndex": 0
+  },
+  {
+    "id": 12,
+    "question_bn": "মধ্যপ্রদেশের 'মাচ' (Maach) কী ধরনের লোকশিল্প?",
+    "options_bn": [
+      "এটি একটি মার্শাল আর্ট যা যুদ্ধের ময়দানে প্রদর্শিত হয়।",
+      "এটি মালওয়া অঞ্চলের একটি লোকনাট্য বা থিয়েটার নৃত্য যেখানে মঞ্চে পৌরাণিক ও সামাজিক কাহিনী পরিবেশিত হয়।",
+      "এটি একটি উপজাতীয় শোকনৃত্য যা অন্ত্যেষ্টিক্রিয়ায় করা হয়।",
+      "এটি ফসল তোলার পর উঠানে করা একটি মহিলাদের একক নৃত্য।"
+    ],
+    "explanation_bn": "'মাচ' মানে মঞ্চ। এটি মধ্যপ্রদেশের মালওয়া অঞ্চলের একটি লোকনাট্য শিল্পকলা। এখানে মঞ্চের উপর পৌরাণিক ও সামাজিক কাহিনী নৃত্য, সংগীত ও অভিনয়ের মাধ্যমে পরিবেশন করা হয়।",
+    "question_en": "What kind of folk art is Madhya Pradesh's 'Maach'?",
+    "options_en": [
+      "It is a martial art displayed on the battlefield.",
+      "It is a folk theater or dance drama of the Malwa region where mythological and social stories are performed on stage.",
+      "It is a tribal mourning dance performed during funerals.",
+      "It is a solo women's dance performed in the courtyard after harvesting."
+    ],
+    "explanation_en": "'Maach' translates to stage. It is a folk theater art form of the Malwa region in Madhya Pradesh. Here, mythological and social stories are presented on stage through a blend of dance, music, and acting.",
+    "correctIndex": 1
+  },
+  {
+    "id": 13,
+    "question_bn": "'কালারিপায়াট্টু' (Kalaripayattu) সম্পর্কে কোন তথ্যটি ঐতিহাসিক দৃষ্টিকোণ থেকে সবচেয়ে গুরুত্বপূর্ণ?",
+    "options_bn": [
+      "এটি শুধুমাত্র কাঠের লাঠি দিয়ে খেলা একটি আধুনিক বিনোদনমূলক খেলা।",
+      "এটি কেরালার একটি মার্শাল আর্ট যা কুংফু ও কারাতের মতো আধুনিক মার্শাল আর্টগুলির পূর্বপুরুষ হিসেবে বিবেচিত হয়।",
+      "এটি মণিপুরের মৈতেই উপজাতির দ্বারা সৃষ্ট একটি শাস্ত্রীয় নৃত্য।",
+      "এটিতে কোনো শারীরিক কসরত থাকে না, শুধু মন্ত্রপাঠ করা হয়।"
+    ],
+    "explanation_bn": "কালারিপায়াট্টু কেরালার একটি অতি প্রাচীন মার্শাল আর্ট। একে বিশ্বের প্রাচীনতম মার্শাল আর্টগুলোর একটি ধরা হয় এবং কুংফু ও কারাতের মতো আধুনিক এশীয় মার্শাল আর্টের পূর্বপুরুষ হিসেবে বিবেচনা করা হয়।",
+    "question_en": "Which piece of information regarding 'Kalaripayattu' is most significant from a historical perspective?",
+    "options_en": [
+      "It is a modern recreational game played only with wooden sticks.",
+      "It is a martial art from Kerala considered the ancestor of modern martial arts like Kung Fu and Karate.",
+      "It is a classical dance created by the Meitei tribe of Manipur.",
+      "It involves no physical exertion, only the chanting of mantras."
+    ],
+    "explanation_en": "Kalaripayattu is a very ancient martial art from Kerala. It is considered one of the oldest martial arts in the world and is widely regarded as the predecessor to modern Asian martial arts like Kung Fu and Karate.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "হিমাচল প্রদেশের 'থোডা' (Thoda) মার্শাল নৃত্যের মূল বৈশিষ্ট্য কী?",
+    "options_bn": [
+      "এটি মুষ্টিযুদ্ধ বা বক্সিংয়ের একটি প্রাচীন রূপ।",
+      "এটি একটি তীরন্দাজি-ভিত্তিক মার্শাল নৃত্য যা মহাভারতের পাণ্ডব ও কৌরবদের ঐতিহ্যের সাথে যুক্ত।",
+      "এতে বাঁশের লাঠি ব্যবহার করে সমরসজ্জা দেখানো হয়।",
+      "এতে খোলা তলোয়ার দিয়ে দুজন শিল্পী লড়াই করেন।"
+    ],
+    "explanation_bn": "থোডা হিমাচল প্রদেশের একটি তীরন্দাজি-ভিত্তিক (archery-based) মার্শাল নৃত্য। এর উৎপত্তি ও ঐতিহ্য মহাভারতের পাণ্ডব এবং কৌরবদের পৌরাণিক যুদ্ধের সাথে গভীরভাবে যুক্ত বলে মনে করা হয়।",
+    "question_en": "What is the main characteristic of the 'Thoda' martial dance of Himachal Pradesh?",
+    "options_en": [
+      "It is an ancient form of fist-fighting or boxing.",
+      "It is an archery-based martial dance associated with the heritage of the Pandavas and Kauravas of the Mahabharata.",
+      "It demonstrates battle readiness using bamboo sticks.",
+      "It involves a duel between two performers using bare swords."
+    ],
+    "explanation_en": "Thoda is an archery-based martial dance of Himachal Pradesh. Its origins and heritage are deeply believed to be associated with the mythological battles of the Pandavas and Kauravas in the Mahabharata.",
+    "correctIndex": 1
+  },
+  {
+    "id": 15,
+    "question_bn": "'সিলাম্বাম' (Silambam) ভারতের কোন রাজ্যের একটি প্রাচীন মার্শাল আর্ট এবং এতে মূলত কোন অস্ত্র ব্যবহৃত হয়?",
+    "options_bn": [
+      "মণিপুর; বর্শা",
+      "কেরালা; তলোয়ার",
+      "তামিলনাড়ু; বাঁশের লাঠি",
+      "পাঞ্জাব; ছুরি"
+    ],
+    "explanation_bn": "সিলাম্বাম তামিলনাড়ুর একটি প্রাচীন মার্শাল আর্ট নৃত্য, যেখানে মূলত বাঁশের লাঠি ব্যবহার করা হয়। প্রায় দুই হাজার বছর আগের সঙ্গম সাহিত্যেও এর উল্লেখ পাওয়া যায়।",
+    "question_en": "'Silambam' is an ancient martial art of which Indian state, and which weapon is primarily used in it?",
+    "options_en": [
+      "Manipur; Spear",
+      "Kerala; Sword",
+      "Tamil Nadu; Bamboo stick",
+      "Punjab; Knife"
+    ],
+    "explanation_en": "Silambam is an ancient martial art form of Tamil Nadu, primarily utilizing bamboo sticks. References to this art form can be found in Sangam literature dating back nearly two thousand years.",
+    "correctIndex": 2
+  },
+  {
+    "id": 16,
+    "question_bn": "পাঞ্জাবের কোন মার্শাল আর্ট নৃত্যটি শিখ ধর্মের সাথে গভীরভাবে সংযুক্ত এবং শিখ গুরুদের সময় থেকে শেখানো হতো?",
+    "options_bn": [
+      "লাঠি",
+      "গটকা",
+      "ইনবুয়ান",
+      "মরদানি খেল"
+    ],
+    "explanation_bn": "গটকা পাঞ্জাবের একটি বিখ্যাত মার্শাল আর্ট যা শিখ ধর্মের সাথে গভীরভাবে সংযুক্ত। শিখ গুরুদের সময় থেকেই এটি শেখানো হতো এবং এতে তলোয়ার, ছুরি ও লাঠির ব্যবহার দেখানো হয়।",
+    "question_en": "Which martial art dance of Punjab is deeply connected with Sikhism and was taught since the time of the Sikh Gurus?",
+    "options_en": [
+      "Lathi",
+      "Gatka",
+      "Inbuan",
+      "Mardani Khel"
+    ],
+    "explanation_en": "Gatka is a famous martial art of Punjab deeply associated with Sikhism. It has been taught since the era of the Sikh Gurus and demonstrates the use of swords, knives, and sticks.",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_bn": "‘লাঠি’ (Lathi) মার্শাল নৃত্যটি ভারতের কোন দুটি রাজ্যের সাধারণ বৈশিষ্ট্য?",
+    "options_bn": [
+      "তামিলনাড়ু ও কেরালা",
+      "মধ্যপ্রদেশ ও রাজস্থান",
+      "পাঞ্জাব ও পশ্চিমবঙ্গ",
+      "মণিপুর ও মিজোরাম"
+    ],
+    "explanation_bn": "লাঠি নৃত্য হলো পাঞ্জাব এবং পশ্চিমবঙ্গ উভয় রাজ্যেরই একটি প্রচলিত মার্শাল আর্ট। এই নৃত্যে লাঠি দিয়ে কীভাবে আত্মরক্ষা ও লড়াই করতে হয়, তার কৌশল প্রদর্শিত হয়।",
+    "question_en": "The 'Lathi' martial dance is a common feature of which two states of India?",
+    "options_en": [
+      "Tamil Nadu and Kerala",
+      "Madhya Pradesh and Rajasthan",
+      "Punjab and West Bengal",
+      "Manipur and Mizoram"
+    ],
+    "explanation_en": "The Lathi dance is a traditional martial art prevalent in both Punjab and West Bengal. This dance form exhibits the skills and techniques of self-defense and combat using a stick.",
+    "correctIndex": 2
+  },
+  {
+    "id": 18,
+    "question_bn": "মহারাষ্ট্রের মার্শাল নৃত্য 'মরদানি খেল' (Mardani Khel) শব্দবন্ধে 'মরদানি' শব্দের অর্থ কী নির্দেশ করে?",
+    "options_bn": [
+      "শুধুমাত্র পুরুষদের খেলা",
+      "পুরুষালী বা সাহসী",
+      "রাজাদের প্রমোদকানন",
+      "দুর্গ আক্রমণ"
+    ],
+    "explanation_bn": "মরদানি খেল মহারাষ্ট্রের একটি মার্শাল আর্ট। এখানে 'মরদানি' শব্দের অর্থ হলো 'পুরুষালী' বা 'সাহসী'। এই খেলায় লাঠি, তলোয়ার ও ঢালের সাহায্যে বীরত্বের কৌশল দেখানো হয়।",
+    "question_en": "What does the term 'Mardani' imply in the phrase 'Mardani Khel', a martial dance of Maharashtra?",
+    "options_en": [
+      "A game exclusively for men",
+      "Masculine or brave",
+      "Pleasure garden of kings",
+      "Attack on a fort"
+    ],
+    "explanation_en": "Mardani Khel is a martial art of Maharashtra. The term 'Mardani' translates to 'masculine' or 'brave'. It showcases skills of valor using sticks, swords, and shields.",
+    "correctIndex": 1
+  },
+  {
+    "id": 19,
+    "question_bn": "মিজোরামের কোন লোকনৃত্যটি মূলত একটি কুস্তি-ভিত্তিক মার্শাল নৃত্য?",
+    "options_bn": [
+      "থোডা",
+      "গটকা",
+      "ইনবুয়ান",
+      "মুষ্টি যুদ্ধ"
+    ],
+    "explanation_bn": "ইনবুয়ান হলো মিজোরামের একটি ঐতিহ্যবাহী কুস্তি-ভিত্তিক (wrestling) মার্শাল নৃত্য। এটি মিজো উপজাতির শারীরিক শক্তি ও দক্ষতার পরিচায়ক।",
+    "question_en": "Which folk dance of Mizoram is essentially a wrestling-based martial dance?",
+    "options_en": [
+      "Thoda",
+      "Gatka",
+      "Inbuan",
+      "Musti Yudha"
+    ],
+    "explanation_en": "Inbuan is a traditional wrestling-based martial dance of Mizoram. It is a reflection of the physical strength and agility of the Mizo tribes.",
+    "correctIndex": 2
+  },
+  {
+    "id": 20,
+    "question_bn": "উত্তর প্রদেশের বারাণসীতে প্রচলিত কোন মার্শাল নৃত্যটি খালি হাতে মুষ্টিযুদ্ধ বা বক্সিংয়ের প্রাচীন ঐতিহ্যের প্রতিনিধিত্ব করে?",
+    "options_bn": [
+      "মরদানি খেল",
+      "মুষ্টি যুদ্ধ",
+      "সিলাম্বাম",
+      "মল্লখাম্ব"
+    ],
+    "explanation_bn": "মুষ্টি যুদ্ধ উত্তর প্রদেশের বারাণসীর একটি প্রাচীন মার্শাল আর্ট। এটি কোনো অস্ত্রের সাহায্য ছাড়া, খালি হাতে বক্সিং বা প্রাচীন মুষ্টিযুদ্ধের ঐতিহ্যবাহী রূপ প্রদর্শন করে।",
+    "question_en": "Which martial dance prevalent in Varanasi, Uttar Pradesh, represents the ancient tradition of bare-handed fist-fighting or boxing?",
+    "options_en": [
+      "Mardani Khel",
+      "Musti Yudha",
+      "Silambam",
+      "Mallakhamb"
+    ],
+    "explanation_en": "Musti Yudha is an ancient martial art from Varanasi, Uttar Pradesh. It represents the traditional form of boxing or fist-fighting, performed bare-handed without the use of any weapons.",
+    "correctIndex": 1
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
