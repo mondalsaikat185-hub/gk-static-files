@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "সাতবাহন সমাজের কাঠামো সম্পর্কে নথিতে উল্লেখিত কোন বিবৃতিটি সঠিক?",
+    "options_bn": [
+      "এটি সম্পূর্ণ মাতৃতান্ত্রিক ছিল এবং সম্পত্তির উত্তরাধিকার শুধুমাত্র মেয়েরা পেত।",
+      "রাজাদের নামের সাথে মায়ের নাম যুক্ত হলেও সম্পত্তির উত্তরাধিকার পিতৃতান্ত্রিক ছিল।",
+      "এটি সম্পূর্ণ পিতৃতান্ত্রিক ছিল এবং নারীদের কোনো সামাজিক বা রাজনৈতিক মর্যাদা ছিল না।",
+      "রাজাদের নামের সাথে পিতার নাম যুক্ত হতো কিন্তু শাসনভার মাতৃতান্ত্রিক ছিল।"
+    ],
+    "explanation_bn": "নথিতে বলা হয়েছে যে সাতবাহন সমাজ ছিল মাতৃরৈখিক, যেখানে মায়ের নাম ছেলের নামের আগে বসত, কিন্তু সম্পত্তির উত্তরাধিকার ছেলে পেত, যা ছিল পিতৃতান্ত্রিক।",
+    "question_en": "Which of the following statements is correct regarding the Satavahana social structure as mentioned in the document?",
+    "options_en": [
+      "It was entirely matriarchal, and property inheritance went only to daughters.",
+      "Although mothers' names were added to kings' names, property inheritance was patriarchal.",
+      "It was entirely patriarchal, and women had no social or political status.",
+      "Fathers' names were added to kings' names, but the administration was matriarchal."
+    ],
+    "explanation_en": "The document states that Satavahana society was matrilineal (mothers' names preceded sons' names), but property inheritance went to the son, making that aspect patriarchal.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "পুষ্যমিত্র শুঙ্গ কঠোর ব্রাহ্মণ্য ধর্মের অনুসারী হওয়া সত্ত্বেও তাঁর রাজত্বকালের কোন বৈশিষ্ট্যটি একটি আপাত ঐতিহাসিক বৈপরীত্য তুলে ধরে?",
+    "options_bn": [
+      "তিনি গ্রিক দূত হেলিওডোরাসকে জোরপূর্বক বৈষ্ণব ধর্মে দীক্ষিত করেছিলেন।",
+      "তাঁর রাজত্বকালেই মধ্যপ্রদেশে বৌদ্ধ জাতক কাহিনীর ভাস্কর্য সম্বলিত ভরহুৎ স্তূপ নির্মিত হয়েছিল।",
+      "তিনি বৌদ্ধ সন্ন্যাসীদের বিপুল পরিমাণে ভূমিদান করার প্রথা প্রথম চালু করেছিলেন।",
+      "তিনি তাঁর মুদ্রায় গ্রিক দেবতা অ্যাপোলোর মূর্তি খোদাই করার নির্দেশ দিয়েছিলেন।"
+    ],
+    "explanation_bn": "পুষ্যমিত্র শুঙ্গ ব্রাহ্মণ্য ধর্মের কঠোর অনুসারী হলেও, তাঁর আমলেই বৌদ্ধ ধর্মের জাতক কাহিনীর ভাস্কর্যের জন্য বিখ্যাত ভরহুৎ স্তূপ নির্মিত হয়েছিল।",
+    "question_en": "Despite Pushyamitra Sunga being a strict follower of the Brahmanical religion, which feature of his reign highlights an apparent historical contradiction?",
+    "options_en": [
+      "He forcibly converted the Greek envoy Heliodorus to Vaishnavism.",
+      "The Bharhut Stupa, featuring sculptures of Buddhist Jataka tales, was built during his reign.",
+      "He was the first to introduce the practice of granting vast amounts of land to Buddhist monks.",
+      "He ordered the carving of the Greek god Apollo on his coins."
+    ],
+    "explanation_en": "Although Pushyamitra Sunga was a strict follower of the Brahmanical religion, the Bharhut Stupa, famous for its Buddhist Jataka tale sculptures, was built during his reign.",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_bn": "রাবতাক শিলালিপি সম্পর্কে কোন তথ্যটি সঠিক যা কনিষ্কের শাসনকাল সম্পর্কে ধারণা দেয়?",
+    "options_bn": [
+      "এটি সংস্কৃত ভাষায় লেখা এবং গুজরাটে পাওয়া গেছে।",
+      "এটি প্রাকৃত ভাষায় লেখা এবং মহারাষ্ট্রের গুহায় পাওয়া গেছে।",
+      "এটি ব্যাক্ট্রিয়ান ভাষায় লেখা এবং আফগানিস্তানে পাওয়া গেছে।",
+      "এটি গ্রিক ভাষায় লেখা এবং তক্ষশিলায় পাওয়া গেছে।"
+    ],
+    "explanation_bn": "রাবতাক শিলালিপিটি আফগানিস্তানে পাওয়া গেছে এবং এটি ব্যাক্ট্রিয়ান ভাষায় লেখা, যা কনিষ্কের বংশপরিচয় সম্পর্কে তথ্য দেয়।",
+    "question_en": "Which information is correct regarding the Rabatak Inscription that provides insights into Kanishka's reign?",
+    "options_en": [
+      "It is written in Sanskrit and was found in Gujarat.",
+      "It is written in Prakrit and was found in caves of Maharashtra.",
+      "It is written in the Bactrian language and was found in Afghanistan.",
+      "It is written in Greek and was found in Taxila."
+    ],
+    "explanation_en": "The Rabatak Inscription was found in Afghanistan and is written in the Bactrian language, providing information about Kanishka's lineage.",
+    "correctIndex": 2
+  },
+  {
+    "id": 4,
+    "question_bn": "শক রাজা রুদ্রদামন 1ম-এর জুনাগড় শিলালিপিটি ভারতের ইতিহাসে একটি মাইলফলক কেন?",
+    "options_bn": [
+      "এটি ভারতে পাওয়া প্রথম শিলালিপি যেখানে বিক্রম সংবৎ ক্যালেন্ডারের উল্লেখ রয়েছে।",
+      "এটি সংস্কৃত ভাষায় লেখা প্রথম বিস্তারিত শিলালিপি।",
+      "এটিতে প্রথমবারের মতো বুদ্ধের মানবিক মূর্তির উল্লেখ রয়েছে।",
+      "এটি প্রাকৃত ভাষায় লেখা প্রথম শিলালিপি যা ভূমিদানের প্রমাণ দেয়।"
+    ],
+    "explanation_bn": "গুজরাটের জুনাগড় শিলালিপি হলো সংস্কৃত ভাষায় লেখা প্রথম বিস্তারিত শিলালিপি।",
+    "question_en": "Why is the Junagarh inscription of the Saka king Rudradaman I considered a milestone in Indian history?",
+    "options_en": [
+      "It is the first inscription found in India mentioning the Vikram Samvat calendar.",
+      "It is the first detailed inscription written in Sanskrit.",
+      "It contains the first-ever mention of a human statue of Buddha.",
+      "It is the first Prakrit inscription providing evidence of land donation."
+    ],
+    "explanation_en": "The Junagarh inscription in Gujarat is the first detailed inscription written in Sanskrit.",
+    "correctIndex": 1
+  },
+  {
+    "id": 5,
+    "question_bn": "সাতবাহনরা ভারতে সীসার মুদ্রা চালু করেছিল। এই সীসা তারা কীভাবে সংগ্রহ করত বলে মনে করা হয়?",
+    "options_bn": [
+      "মধ্য এশিয়া থেকে যাযাবরদের মাধ্যমে।",
+      "রোমান সাম্রাজ্যের সাথে বাণিজ্যের মাধ্যমে।",
+      "সিল্ক রোডের মাধ্যমে চিনের সাথে বাণিজ্যের মাধ্যমে।",
+      "দক্ষিণ ভারতের গভীর খনি থেকে উত্তোলন করে।"
+    ],
+    "explanation_bn": "ভারতে সীসা স্বাভাবিকভাবে পাওয়া যেত না, তাই সাতবাহনরা রোমান সাম্রাজ্যের সাথে বাণিজ্যের মাধ্যমে সীসা সংগ্রহ করত বলে মনে করা হয়।",
+    "question_en": "The Satavahanas introduced lead coins in India. How are they believed to have acquired this lead?",
+    "options_en": [
+      "Through nomads from Central Asia.",
+      "Through trade with the Roman Empire.",
+      "Through trade with China via the Silk Road.",
+      "By extracting it from deep mines in South India."
+    ],
+    "explanation_en": "Lead was not naturally available in India, so it is believed the Satavahanas acquired it through trade with the Roman Empire.",
+    "correctIndex": 1
+  },
+  {
+    "id": 6,
+    "question_bn": "ভারতীয় মুদ্রাব্যবস্থায় ইন্দো-গ্রিকদের যুগান্তকারী অবদান কোনটি ছিল?",
+    "options_bn": [
+      "তারাই প্রথম মুদ্রায় রাজার বাস্তবসম্মত প্রতিকৃতি খোদাই করার রীতি (Coins attributed to King) শুরু করেছিল।",
+      "তারাই প্রথম সীসা এবং পোটিনের তৈরি মুদ্রা চালু করেছিল।",
+      "তারাই প্রথম মুদ্রায় হিন্দু ও বৌদ্ধ দেবতার যৌথ প্রতিকৃতি ব্যবহার করেছিল।",
+      "তারাই প্রথম ভূমিদানের প্রমাণস্বরূপ তাম্রশাসন চালু করেছিল।"
+    ],
+    "explanation_bn": "ইন্দো-গ্রিকরাই ভারতে প্রথম মুদ্রায় রাজার প্রতিকৃতি খোদাই করার রীতি শুরু করেছিল, যাকে 'Coins attributed to King' বলা হয়।",
+    "question_en": "What was the revolutionary contribution of the Indo-Greeks to the Indian coinage system?",
+    "options_en": [
+      "They were the first to introduce the practice of engraving realistic kings' portraits on coins (Coins attributed to King).",
+      "They were the first to introduce coins made of lead and potin.",
+      "They were the first to use joint portraits of Hindu and Buddhist deities on coins.",
+      "They were the first to introduce copper plates for land donation."
+    ],
+    "explanation_en": "The Indo-Greeks were the first to introduce the practice of engraving the king's portrait on coins, known as 'Coins attributed to King'.",
+    "correctIndex": 0
+  },
+  {
+    "id": 7,
+    "question_bn": "মৌর্য সাম্রাজ্যের পতন সম্পর্কে নথিতে উল্লেখিত সময়কাল থেকে কোন আশ্চর্যজনক তথ্যটি জানা যায়?",
+    "options_bn": [
+      "অশোকের মৃত্যুর মাত্র 47 বছরের মধ্যে 136 বছর ধরে গড়ে ওঠা বিশাল সাম্রাজ্যের পতন ঘটে।",
+      "অশোকের মৃত্যুর 136 বছর পর সাম্রাজ্যটি পূর্ব ও পশ্চিম দুই ভাগে বিভক্ত হয়।",
+      "শুঙ্গ বংশ 47 বছর শাসন করার পর মৌর্য সাম্রাজ্যের পতন ঘটে।",
+      "150 বছর ধরে চলা বিদেশি আক্রমণের ফলে মাত্র 47 দিনে সাম্রাজ্যের পতন হয়।"
+    ],
+    "explanation_bn": "মৌর্য সাম্রাজ্য তৈরি করতে 136 বছর লেগেছিল, কিন্তু অশোক মারা যাওয়ার মাত্র 47 বছরের মধ্যে এটি সম্পূর্ণ শেষ হয়ে যায়।",
+    "question_en": "What astonishing fact is revealed from the timeline of the Mauryan Empire's decline mentioned in the document?",
+    "options_en": [
+      "Within just 47 years of Ashoka's death, the vast empire built over 136 years collapsed.",
+      "136 years after Ashoka's death, the empire split into eastern and western halves.",
+      "The Mauryan Empire collapsed after the Sunga dynasty ruled for 47 years.",
+      "Due to foreign invasions lasting 150 years, the empire collapsed in just 47 days."
+    ],
+    "explanation_en": "It took 136 years to build the Mauryan Empire, but it completely collapsed within just 47 years of Ashoka's death.",
+    "correctIndex": 0
+  },
+  {
+    "id": 8,
+    "question_bn": "কোন সাতবাহন রাজা নিজেকে 'একব্রাহ্মণ' উপাধিতে ভূষিত করেছিলেন এবং চতুর্বর্ণ ব্যবস্থা পুনঃপ্রতিষ্ঠার দাবি করেছিলেন?",
+    "options_bn": [
+      "সিমুক সাতবাহন",
+      "বাসিষ্ঠীপুত্র পুলুমাভি",
+      "গৌতমীপুত্র সাতকর্ণী",
+      "প্রথম সাতকর্ণী"
+    ],
+    "explanation_bn": "গৌতমীপুত্র সাতকর্ণীর উপাধি ছিল 'একব্রাহ্মণ', এবং তিনি নিজেকে ব্রাহ্মণ হিসেবে পরিচয় দিয়ে চতুর্বর্ণ ব্যবস্থা পুনঃপ্রতিষ্ঠার দাবি করতেন।",
+    "question_en": "Which Satavahana king adorned himself with the title 'Ekabrahmana' and claimed to have restored the Chaturvarna system?",
+    "options_en": [
+      "Simuka Satavahana",
+      "Vashishtiputra Pulumavi",
+      "Gautamiputra Satakarni",
+      "Satakarni I"
+    ],
+    "explanation_en": "Gautamiputra Satakarni used the title 'Ekabrahmana', identifying himself as a Brahmin and claiming to re-establish the Chaturvarna system.",
+    "correctIndex": 2
+  },
+  {
+    "id": 9,
+    "question_bn": "গান্ধার ও মথুরা শিল্পকলার মধ্যে পার্থক্য নির্দেশকারী কোন জোড়াটি সঠিক?",
+    "options_bn": [
+      "গান্ধার শিল্পকলা: লাল বেলেপাথর ও দেশীয় প্রভাব; মথুরা শিল্পকলা: ধূসর বেলেপাথর ও গ্রিক প্রভাব",
+      "গান্ধার শিল্পকলা: হিন্দু ও জৈন বিষয়বস্তু; মথুরা শিল্পকলা: কেবল বৌদ্ধ বিষয়বস্তু",
+      "গান্ধার শিল্পকলা: গ্রিক-রোমান প্রভাবযুক্ত ধূসর বেলেপাথরের ব্যবহার; মথুরা শিল্পকলা: সম্পূর্ণ দেশীয় শৈলীযুক্ত লাল বেলেপাথরের ব্যবহার",
+      "গান্ধার শিল্পকলা: বুদ্ধের প্রতীকের ব্যবহার; মথুরা শিল্পকলা: বুদ্ধের প্রথম মানবিক মূর্তি"
+    ],
+    "explanation_bn": "গান্ধার শিল্পকলায় হেলেনিস্টিক (গ্রিক-রোমান) শৈলী ও ধূসর বেলেপাথরের ব্যবহার দেখা যায়, অন্যদিকে মথুরা শিল্পকলায় সম্পূর্ণ দেশীয় ভারতীয় শৈলী ও লাল বেলেপাথরের ব্যবহার দেখা যায়।",
+    "question_en": "Which pair correctly indicates the difference between Gandhara and Mathura art?",
+    "options_en": [
+      "Gandhara art: Red sandstone & indigenous influence; Mathura art: Grey sandstone & Greek influence",
+      "Gandhara art: Hindu and Jain themes; Mathura art: Only Buddhist themes",
+      "Gandhara art: Grey sandstone with Greco-Roman influence; Mathura art: Red sandstone with completely indigenous Indian style",
+      "Gandhara art: Use of symbols for Buddha; Mathura art: First human statues of Buddha"
+    ],
+    "explanation_en": "Gandhara art used grey sandstone with Hellenistic (Greco-Roman) influence, while Mathura art used red sandstone with a completely indigenous Indian style.",
+    "correctIndex": 2
+  },
+  {
+    "id": 10,
+    "question_bn": "চেদি রাজা খারবেলের হাতিগুম্ফা শিলালিপিটিকে আধুনিক কর্পোরেট ধারণার সাথে কীভাবে তুলনা করা হয়েছে?",
+    "options_bn": [
+      "এটি একটি পাথরে খোদাই করা বার্ষিক প্রতিবেদন, যেখানে তাঁর 13 বছরের রাজত্বের বিবরণ রয়েছে।",
+      "এটি একটি রাজস্ব আদায়ের নির্দেশিকা যা আধুনিক ট্যাক্স কোডের সমতুল্য।",
+      "এটি একটি আন্তর্জাতিক বাণিজ্য চুক্তি যা সিল্ক রোডের ব্যবসার নিয়মাবলী বর্ণনা করে।",
+      "এটি একটি আইনি দলিল যা ভূমিদানের শর্তাবলী উল্লেখ করে।"
+    ],
+    "explanation_bn": "হাতিগুম্ফা শিলালিপিকে পাথরে খোদাই করা বার্ষিক প্রতিবেদনের সাথে তুলনা করা হয়েছে, যেখানে রাজা খারবেলের 13 বছরের রাজত্বের বিবরণ আছে।",
+    "question_en": "How is the Hathigumpha inscription of the Chedi king Kharavela compared to a modern corporate concept?",
+    "options_en": [
+      "It is a stone-carved annual report detailing his 13 years of reign.",
+      "It is a revenue collection guideline equivalent to a modern tax code.",
+      "It is an international trade agreement describing Silk Road rules.",
+      "It is a legal document explicitly stating land donation terms."
+    ],
+    "explanation_en": "The Hathigumpha inscription is compared to a stone-carved annual report detailing the 13 years of King Kharavela's reign.",
+    "correctIndex": 0
+  },
+  {
+    "id": 11,
+    "question_bn": "কালিদাসের 'মালবিকাগ্নিমিত্র' নাটকটি কোন রাজবংশের ঐতিহাসিক প্রেক্ষাপট বহন করে?",
+    "options_bn": [
+      "গুপ্ত বংশ",
+      "শুঙ্গ বংশ",
+      "সাতবাহন বংশ",
+      "কুষাণ বংশ"
+    ],
+    "explanation_bn": "কালিদাস গুপ্ত যুগের কবি হলেও তিনি শুঙ্গ যুগের রাজা অগ্নিমিত্র (পুষ্যমিত্র শুঙ্গের পুত্র) ও মালবিকার কাহিনী নিয়ে নাটকটি লিখেছিলেন।",
+    "question_en": "Kalidasa's play 'Malavikagnimitram' carries the historical context of which dynasty?",
+    "options_en": [
+      "Gupta dynasty",
+      "Sunga dynasty",
+      "Satavahana dynasty",
+      "Kushan dynasty"
+    ],
+    "explanation_en": "Although Kalidasa was a poet of the Gupta era, he wrote the play based on the Sunga era king Agnimitra and Malavika.",
+    "correctIndex": 1
+  },
+  {
+    "id": 12,
+    "question_bn": "প্রাচীন ভারতের ইতিহাসে কোন রাজবংশকে 'শুঙ্গভৃত্যাস' বলা হতো এবং কেন?",
+    "options_bn": [
+      "সাতবাহন বংশকে, কারণ তারা শুঙ্গ রাজাদের অধীনে দাক্ষিণাত্য শাসন করত।",
+      "কণ্ব বংশকে, কারণ এর প্রতিষ্ঠাতা বাসুদেব কণ্ব শুঙ্গ রাজা দেবভূতির সেনাপতি ছিলেন।",
+      "চেদি বংশকে, কারণ তারা শুঙ্গদের পরাজিত করে কলিঙ্গ দখল করেছিল।",
+      "কুষাণ বংশকে, কারণ তারা শুঙ্গদের কাছ থেকে সিল্ক রোডের নিয়ন্ত্রণ নিয়েছিল।"
+    ],
+    "explanation_bn": "কণ্ব বংশকে 'শুঙ্গভৃত্যাস' বা শুঙ্গদের সেবক বলা হতো কারণ এর প্রতিষ্ঠাতা বাসুদেব কণ্ব শুঙ্গ রাজার সেনাপতি ছিলেন।",
+    "question_en": "In ancient Indian history, which dynasty was called 'Shungabhrityas' and why?",
+    "options_en": [
+      "The Satavahana dynasty, because they ruled the Deccan under Sunga kings.",
+      "The Kanva dynasty, because its founder Vasudeva Kanva was a general of the Sunga king Devabhuti.",
+      "The Chedi dynasty, because they defeated the Sungas and captured Kalinga.",
+      "The Kushan dynasty, because they took control of the Silk Road from the Sungas."
+    ],
+    "explanation_en": "The Kanva dynasty was called 'Shungabhrityas' (servants of the Sungas) because its founder Vasudeva Kanva was a general of the Sunga king.",
+    "correctIndex": 1
+  },
+  {
+    "id": 13,
+    "question_bn": "কুষাণ রাজারা নিজেদের 'দেবপুত্র' উপাধিতে ভূষিত করতেন। এই উপাধিটি তাদের কোন ধারণা পূরণে সহায়ক ছিল?",
+    "options_bn": [
+      "এর মাধ্যমে তারা নিজেদের ভারতীয় ক্ষত্রিয় হিসেবে প্রতিষ্ঠা করতে চেয়েছিলেন।",
+      "এর মাধ্যমে তারা 'রাজার দেবত্ব' বা ঈশ্বরের পুত্র হিসেবে নিজেদের শাসনকে বৈধতা দিতেন।",
+      "এর মাধ্যমে তারা বৌদ্ধ ধর্মের প্রতি তাদের গভীর অনুরাগের কথা প্রচার করতেন।",
+      "এর মাধ্যমে তারা রোমান সম্রাটদের সমকক্ষ হিসেবে নিজেদের দাবি করতেন।"
+    ],
+    "explanation_bn": "কুষাণরা নিজেদের 'দেবপুত্র' বলত, যার মাধ্যমে তারা 'রাজার দেবত্ব' (Divinity of King) ধারণা প্রতিষ্ঠা করে শাসনকে বৈধতা দিত।",
+    "question_en": "Kushan kings adorned themselves with the title 'Devaputra'. Which concept did this title help them fulfill?",
+    "options_en": [
+      "To establish themselves as Indian Kshatriyas.",
+      "To legitimize their rule by promoting the 'Divinity of King' or as sons of God.",
+      "To propagate their deep devotion to Buddhism.",
+      "To claim themselves to be equals of Roman emperors."
+    ],
+    "explanation_en": "Kushans called themselves 'Devaputra', establishing the 'Divinity of King' concept to give legitimacy to their rule.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "ভারতে 'ক্ষত্রপ' (Satrap) শাসনব্যবস্থা কারা প্রথম প্রবর্তন করেছিল?",
+    "options_bn": [
+      "ইন্দো-গ্রিকরা",
+      "শকরা",
+      "কুষাণরা",
+      "সাতবাহনরা"
+    ],
+    "explanation_bn": "শকরা ভারতে ক্ষত্রপ শাসনব্যবস্থা চালু করেছিল, যেখানে রাজ্যকে প্রদেশে ভাগ করে মহাক্ষত্রপ এবং ক্ষত্রপদের মাধ্যমে শাসন করা হতো।",
+    "question_en": "Who first introduced the 'Satrap' administrative system in India?",
+    "options_en": [
+      "Indo-Greeks",
+      "Sakas",
+      "Kushans",
+      "Satavahanas"
+    ],
+    "explanation_en": "The Sakas introduced the Satrap administrative system in India, dividing the state into provinces ruled by Mahakshatrapas and Kshatrapas.",
+    "correctIndex": 1
+  },
+  {
+    "id": 15,
+    "question_bn": "কুষাণ সাম্রাজ্যের অভূতপূর্ব অর্থনৈতিক সমৃদ্ধির প্রধান কারণ কী ছিল?",
+    "options_bn": [
+      "দক্ষিণ ভারতের সাথে মশলা বাণিজ্য।",
+      "রোমান সাম্রাজ্যের সাথে সীসার মুদ্রার বিনিময়।",
+      "সিল্ক রোডের ওপর তাদের নিয়ন্ত্রণ এবং তা থেকে প্রাপ্ত কর।",
+      "মথুরা এবং পেশাওয়ারের খনি থেকে প্রাপ্ত সোনার মজুত।"
+    ],
+    "explanation_bn": "সিল্ক রোড নিয়ন্ত্রণ ছিল কুষাণদের সবচেয়ে বড় অর্থনৈতিক শক্তি, যেখান থেকে প্রাপ্ত কর তাদের সম্পদশালী করেছিল।",
+    "question_en": "What was the main reason for the unprecedented economic prosperity of the Kushan Empire?",
+    "options_en": [
+      "Spice trade with South India.",
+      "Exchange of lead coins with the Roman Empire.",
+      "Control over the Silk Road and the taxes derived from it.",
+      "Gold reserves obtained from mines in Mathura and Peshawar."
+    ],
+    "explanation_en": "Controlling the Silk Road was the Kushans' greatest economic strength, and taxing this trade route made them wealthy.",
+    "correctIndex": 2
+  },
+  {
+    "id": 16,
+    "question_bn": "বিদিশায় অবস্থিত হেলিওডোরাস স্তম্ভটি প্রাচীন ভারতের ইতিহাসের কোন দিকটি নির্দেশ করে?",
+    "options_bn": [
+      "গ্রিকরা প্রাচীন ভারতে এসে ভারতীয় সংস্কৃতি ও বৈষ্ণব ধর্মের প্রতি আকৃষ্ট হয়েছিল।",
+      "শুঙ্গ রাজারা জোরপূর্বক বিদেশিদের ব্রাহ্মণ্য ধর্মে দীক্ষিত করতেন।",
+      "ইন্দো-গ্রিকদের ভারতে প্রথম আক্রমণ ও বিজয়ের স্মারক।",
+      "বৌদ্ধ ধর্মের প্রসারে গ্রিকদের অবদানের নিদর্শন।"
+    ],
+    "explanation_bn": "গ্রিক দূত হেলিওডোরাস বৈষ্ণব ধর্মে দীক্ষিত হয়ে এই স্তম্ভ নির্মাণ করেন, যা প্রমাণ করে বিদেশিরা ভারতীয় ধর্মের প্রতি আকৃষ্ট হয়েছিল।",
+    "question_en": "Which aspect of ancient Indian history does the Heliodorus pillar in Vidisha indicate?",
+    "options_en": [
+      "Greeks in ancient India were attracted to Indian culture and Vaishnavism.",
+      "Sunga kings forcefully converted foreigners to the Brahmanical religion.",
+      "A memorial to the Indo-Greeks' first invasion and victory in India.",
+      "An example of the Greeks' contribution to the spread of Buddhism."
+    ],
+    "explanation_en": "The Greek envoy Heliodorus embraced Vaishnavism and built this pillar, proving foreigners were attracted to Indian religion.",
+    "correctIndex": 0
+  },
+  {
+    "id": 17,
+    "question_bn": "সাতবাহন বংশের ভাষা ও ধর্মীয় নীতির মধ্যে কোন আকর্ষণীয় বৈপরীত্য দেখা যায়?",
+    "options_bn": [
+      "তারা বৌদ্ধ ধর্মের অনুসারী হয়েও সংস্কৃত ভাষায় শিলালিপি রচনা করেছিলেন।",
+      "তারা ব্রাহ্মণ্য মতাদর্শের পৃষ্ঠপোষক হওয়া সত্ত্বেও সংস্কৃতের বদলে স্থানীয় প্রাকৃত ভাষা ব্যবহার করতেন।",
+      "তারা জৈন ধর্মের অনুসারী হয়েও গ্রিক ভাষায় শিলালিপি খোদাই করেছিলেন।",
+      "তারা বিদেশি সংস্কৃতির দ্বারা প্রভাবিত হয়েও ফারসি ভাষার বদলে সংস্কৃত ব্যবহার করতেন।"
+    ],
+    "explanation_bn": "সাতবাহনরা ব্রাহ্মণ্য মতাদর্শ পোষণ করলেও তারা সংস্কৃত নয় বরং স্থানীয় প্রাকৃত ভাষা ব্যবহার করতেন।",
+    "question_en": "What interesting contradiction is seen between the language and religious policies of the Satavahana dynasty?",
+    "options_en": [
+      "Despite following Buddhism, they composed inscriptions in Sanskrit.",
+      "Despite patronizing Brahmanical ideology, they used the local Prakrit language instead of Sanskrit.",
+      "Despite following Jainism, they engraved inscriptions in Greek.",
+      "Despite foreign influence, they used Sanskrit instead of Persian."
+    ],
+    "explanation_en": "Although the Satavahanas patronized Brahmanical ideology, they notably used the local Prakrit language instead of Sanskrit.",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "গান্ধার শিল্পকলার আগে বৌদ্ধ শিল্পে বুদ্ধকে কীভাবে উপস্থাপন করা হতো?",
+    "options_bn": [
+      "লাল বেলেপাথরের মূর্তির মাধ্যমে।",
+      "গ্রিক দেবতার আদলে।",
+      "বিভিন্ন প্রতীকের মাধ্যমে, যেমন পদচিহ্ন বা চাকা।",
+      "মানবিক রূপে, কিন্তু আলোকবলয় ছাড়া।"
+    ],
+    "explanation_bn": "গান্ধার শিল্পকলার আগে বুদ্ধকে সরাসরি মূর্তিতে নয়, বরং পদচিহ্ন, চাকা, বৃক্ষ ইত্যাদি প্রতীকের মাধ্যমে বোঝানো হতো।",
+    "question_en": "How was Buddha depicted in Buddhist art prior to Gandhara art?",
+    "options_en": [
+      "Through red sandstone statues.",
+      "Modeled after Greek gods.",
+      "Through various symbols, such as footprints or a wheel.",
+      "In human form, but without a halo."
+    ],
+    "explanation_en": "Before Gandhara art, Buddha was not depicted in direct human form but rather through symbols like footprints, wheels, or trees.",
+    "correctIndex": 2
+  },
+  {
+    "id": 19,
+    "question_bn": "ভারত সরকারের রাষ্ট্রীয় ক্যালেন্ডার হিসেবে ব্যবহৃত 'শক সংবৎ' কে এবং কবে শুরু করেছিলেন?",
+    "options_bn": [
+      "বিক্রমাদিত্য, 57 খ্রিস্টপূর্বে।",
+      "রুদ্রদামন 1ম, 130 খ্রিস্টাব্দে।",
+      "কনিষ্ক, 78 খ্রিস্টাব্দে।",
+      "গৌতমীপুত্র সাতকর্ণী, 106 খ্রিস্টাব্দে।"
+    ],
+    "explanation_bn": "কুষাণ রাজা কনিষ্ক 78 খ্রিস্টাব্দে সিংহাসনে আরোহণ করেন এবং এখান থেকেই শক সংবৎ শুরু হয়।",
+    "question_en": "Who started the 'Saka Era', used as the national calendar by the Government of India, and when?",
+    "options_en": [
+      "Vikramaditya, in 57 BC.",
+      "Rudradaman I, in 130 AD.",
+      "Kanishka, in 78 AD.",
+      "Gautamiputra Satakarni, in 106 AD."
+    ],
+    "explanation_en": "The Kushan king Kanishka ascended the throne in 78 AD, marking the beginning of the Saka Era.",
+    "correctIndex": 2
+  },
+  {
+    "id": 20,
+    "question_bn": "ভারতীয় সংস্কৃতির অবিচ্ছেদ্য অংশ হিসেবে পরিচিত লম্বা কোট, ট্রাউজার এবং পাগড়ি (Turban) পরার রীতি ভারতে কারা প্রবর্তন করেছিল?",
+    "options_bn": [
+      "সাতবাহনরা",
+      "শকরা",
+      "ইন্দো-গ্রিকরা",
+      "কুষাণরা"
+    ],
+    "explanation_bn": "কুষাণরা ভারতে লম্বা কোট, ট্রাউজার এবং পাগড়ি পরার রীতি প্রবর্তন করেছিল, যা আজও ভারতীয় সংস্কৃতির অংশ।",
+    "question_en": "Who introduced the practice of wearing long coats, trousers, and turbans in India, which are now recognized as an integral part of Indian culture?",
+    "options_en": [
+      "Satavahanas",
+      "Sakas",
+      "Indo-Greeks",
+      "Kushans"
+    ],
+    "explanation_en": "The Kushans introduced long coats, trousers, and turbans in India, which remain a part of Indian culture to this day.",
+    "correctIndex": 3
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
