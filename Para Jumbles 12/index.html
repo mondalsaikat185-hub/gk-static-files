@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>English Parajumble Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  --bg-main: #e8f5e9;
+  --bg-paper: #fffde7;
+  --bg-filler: #fff3e0;
+  --text-color: #000000;
+  --accent-color: #2e7d32;
+  --opt-default-bg: #fce4ec;
+  --opt-border: #f8bbd0;
+  --opt-selected-bg: #d32f2f;
+  --opt-selected-text: #ffffff;
+  --timer-color: #c62828;
+  --sentence-border: #1565c0;
+  --sentence-label-bg: #1565c0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main);
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 900px;
+  background-color: var(--bg-filler);
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 90%;
+  max-width: 440px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+.progress-info {
+  font-size: 0.85rem;
+  color: #555;
+  background: rgba(255,255,255,0.8);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+/* Question Card */
+.question-container {
+  background-color: var(--bg-paper);
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 16px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 12px;
+  color: var(--text-color);
+  line-height: 1.5;
+}
+
+/* ── Sentence Display ─────────────────── */
+.sentences-box {
+  background: #e3f2fd;
+  border-left: 4px solid var(--sentence-border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.sentences-box.mini {
+  font-size: 0.92rem;
+  margin-bottom: 10px;
+}
+
+.sentence-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.sentence-row:last-child { margin-bottom: 0; }
+
+.sentence-label {
+  background: var(--sentence-label-bg);
+  color: white;
+  font-weight: bold;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.sentence-text {
+  line-height: 1.55;
+  flex: 1;
+}
+
+.order-prompt {
+  font-size: 0.88rem;
+  color: #555;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+/* ── Options (ordering choices) ─────────── */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .options-grid { grid-template-columns: 1fr; }
+}
+
+.option {
+  padding: 11px 14px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg);
+  border: 1px solid var(--opt-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.option:hover { filter: brightness(0.95); }
+
+.option.selected {
+  background-color: var(--opt-selected-bg);
+  color: var(--opt-selected-text);
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 13px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+.submit-bar {
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid #ddd;
+  position: sticky;
+  bottom: 0;
+}
+
+.exam-info-box {
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+  color: #555;
+  background: #f5f5f5;
+  padding: 10px 14px;
+  border-radius: 6px;
+  text-align: left;
+}
+
+/* ── Review Section ────────────────────── */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 16px;
+  text-align: left;
+}
+.status-correct   { color: green;   font-weight: bold; }
+.status-wrong     { color: #d32f2f; font-weight: bold; }
+.status-unanswered{ color: #f57c00; font-weight: bold; }
+
+/* Correct sequence arrangement */
+.correct-arrangement {
+  background: #e8f5e9;
+  border-left: 3px solid var(--accent-color);
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin: 8px 0;
+}
+
+.arranged-sentence {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 7px;
+  font-size: 0.91rem;
+  line-height: 1.4;
+}
+.arranged-sentence:last-child { margin-bottom: 0; }
+
+.step-num {
+  background: var(--accent-color);
+  color: white;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.step-label {
+  color: var(--accent-color);
+  font-weight: bold;
+  flex-shrink: 0;
+  min-width: 28px;
+}
+
+.explanation {
+  background: #f1f8e9;
+  padding: 10px 14px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE    = "English Parajumble Quiz";
+const APP_SUBTITLE = "Arrange the sentences in the correct order";
+const DEFAULT_CONFIG = {"totalTime": 600, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "This shift towards renewable energy is not just an environmental imperative but an economic one.",
+      "B": "For decades, fossil fuels have been the primary driver of global industrialization.",
+      "C": "However, the resulting greenhouse gas emissions have precipitated unprecedented climate crises.",
+      "D": "To combat this, nations are heavily investing in solar and wind infrastructures."
+    },
+    "options_en": [
+      "B, C, D, A",
+      "B, D, A, C",
+      "C, B, D, A",
+      "A, B, C, D"
+    ],
+    "explanation_en": "Sentence B introduces the topic of fossil fuels driving industrialization. Sentence C introduces the contrast and consequence (climate crises). Sentence D provides the solution nations are adopting (investing in solar/wind), and Sentence A concludes by commenting on \"This shift\" mentioned in D.",
+    "correctIndex": 0
+  },
+  {
+    "id": 2,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "Despite this initial setback, she secretly continued her research in a makeshift laboratory.",
+      "B": "In the late nineteen hundredth century, academic institutions were largely closed off to female scientists.",
+      "C": "Her groundbreaking discoveries there eventually forced the scientific community to recognize her brilliance.",
+      "D": "Marie applied for a prestigious fellowship but was summarily rejected on the basis of her gender."
+    },
+    "options_en": [
+      "D, A, C, B",
+      "B, A, D, C",
+      "B, D, A, C",
+      "D, B, C, A"
+    ],
+    "explanation_en": "Sentence B sets the historical context. Sentence D gives a specific example of this context affecting the protagonist, Marie. Sentence A describes her reaction (\"Despite this initial setback\") to the rejection, and Sentence C concludes with the ultimate outcome of her secret research.",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "Such a move, while risky, ultimately proved to be the turning point for the struggling enterprise.",
+      "B": "The board of directors realized that continuing with the legacy products would lead to inevitable bankruptcy.",
+      "C": "Therefore, they made the bold decision to pivot entirely to artificial intelligence software.",
+      "D": "In recent years, the company had seen a massive decline in its market share due to outdated technology."
+    },
+    "options_en": [
+      "B, C, D, A",
+      "D, B, C, A",
+      "D, C, B, A",
+      "C, A, D, B"
+    ],
+    "explanation_en": "Sentence D introduces the core problem (decline in market share). Sentence B explains the board's realization regarding this problem. Sentence C presents the action taken (\"Therefore, they made the bold decision\"), and Sentence A concludes by reflecting on the outcome of \"Such a move.\"",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "It dictates that human actions are largely driven by a subconscious desire for social validation.",
+      "B": "Despite these criticisms, understanding this framework helps professionals navigate complex group dynamics.",
+      "C": "The concept of social mirroring has been debated by sociologists for several decades.",
+      "D": "Yet, critics argue that this theory oversimplifies the true complexity of individual motivation."
+    },
+    "options_en": [
+      "C, A, D, B",
+      "C, A, B, D",
+      "A, D, B, C",
+      "D, B, A, C"
+    ],
+    "explanation_en": "Sentence C introduces the main subject (\"concept of social mirroring\"). Sentence A explains what \"It\" (the concept) dictates. Sentence D introduces the counter-argument or criticism of this theory. Sentence B resolves the paragraph by stating its usefulness \"Despite these criticisms.\"",
+    "correctIndex": 0
+  },
+  {
+    "id": 5,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "These intricate motifs served not just as decoration, but as a silent protest against the ruling monarch.",
+      "B": "The manuscript, discovered in a dusty monastery attic, dates back to the early fifteen century.",
+      "C": "Scholars were immediately captivated by the unusual marginalia bordering its illuminated pages.",
+      "D": "Only recently have historians managed to decode the hidden symbols embedded within those borders."
+    },
+    "options_en": [
+      "B, C, A, D",
+      "C, B, D, A",
+      "B, C, D, A",
+      "D, B, A, C"
+    ],
+    "explanation_en": "Sentence B introduces the newly discovered manuscript. Sentence C narrows the focus to the manuscript's unusual marginalia (borders). Sentence D discusses the decoding of symbols within \"those borders,\" and Sentence A reveals the true purpose of \"These intricate motifs\" (the decoded symbols).",
+    "correctIndex": 2
+  },
+  {
+    "id": 6,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "This mutualistic relationship ensures the survival of both species in a nutrient-poor environment.",
+      "B": "The fungus extracts minerals from the soil and delivers them directly to the tree's root system.",
+      "C": "Deep within the ancient forest, a vast subterranean network connects the towering pine trees.",
+      "D": "In return, the tree provides the fungus with essential sugars produced during photosynthesis."
+    },
+    "options_en": [
+      "C, B, D, A",
+      "B, D, A, C",
+      "C, D, B, A",
+      "A, B, C, D"
+    ],
+    "explanation_en": "Sentence C introduces the setting and the subterranean network. Sentence B specifies the role of the fungus in this network. Sentence D explains what the tree does \"In return.\" Sentence A summarizes the interaction as \"This mutualistic relationship.\"",
+    "correctIndex": 0
+  },
+  {
+    "id": 7,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "The plumber arrived an hour later, equipped with a heavy toolbox and a flashlight.",
+      "B": "Sarah woke up in the middle of the night to the sound of rushing water.",
+      "C": "After inspecting the basement, he quickly identified a burst pipe behind the washing machine.",
+      "D": "She rushed downstairs, saw the flooded floor, and immediately called an emergency repair service."
+    },
+    "options_en": [
+      "B, A, D, C",
+      "B, D, A, C",
+      "D, A, C, B",
+      "A, B, C, D"
+    ],
+    "explanation_en": "Sentence B introduces the initiating event (Sarah waking up to water sounds). Sentence D follows her immediate reaction (calling the repair service). Sentence A introduces the arrival of the plumber, and Sentence C details the plumber's action (inspecting and finding the burst pipe).",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "The train finally screeched to a halt at a desolate, snow-covered station.",
+      "B": "Marcus had been traveling for three days across the rugged Siberian landscape.",
+      "C": "He grabbed his heavy coat and stepped out into the freezing wind, relieved to have finally arrived.",
+      "D": "During the journey, he spent most of his time reading and looking out the frost-covered windows."
+    },
+    "options_en": [
+      "B, D, C, A",
+      "B, D, A, C",
+      "A, C, B, D",
+      "D, B, A, C"
+    ],
+    "explanation_en": "Sentence B introduces Marcus and his ongoing journey. Sentence D elaborates on what he did \"During the journey.\" Sentence A marks the end of the travel as the train halts. Sentence C describes his action of stepping out of the train after it stopped.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "Inside the envelope was a single key and a map marked with a red X.",
+      "B": "Without hesitating, he grabbed his coat to find out where the map led.",
+      "C": "Arthur found a mysterious, unmarked letter slipped under his front door.",
+      "D": "Curious and slightly apprehensive, he carefully tore open the seal."
+    },
+    "options_en": [
+      "C, D, A, B",
+      "C, A, D, B",
+      "D, C, B, A",
+      "A, B, C, D"
+    ],
+    "explanation_en": "Sentence C establishes the starting point (Arthur finding the letter). Sentence D describes his action of opening it. Sentence A reveals the contents found inside. Sentence B shows his immediate reaction to the contents (the map).",
+    "correctIndex": 0
+  },
+  {
+    "id": 10,
+    "question_en": "Arrange the sentences in the correct order:",
+    "sentences": {
+      "A": "The dog barked loudly and chased the ball across the park.",
+      "B": "Tommy picked up a red rubber ball and threw it as far as he could.",
+      "C": "Finally, it caught the ball and brought it back to Tommy with a wagging tail.",
+      "D": "It ran past the swings and leaped over a small wooden bench."
+    },
+    "options_en": [
+      "B, A, C, D",
+      "B, D, A, C",
+      "A, C, B, D",
+      "B, A, D, C"
+    ],
+    "explanation_en": "Sentence B starts the action (Tommy throwing the ball). Sentence A describes the dog's immediate reaction (chasing the ball). Sentence D provides details of the chase (running past swings). Sentence C concludes the sequence with the dog catching and returning the ball.",
+    "correctIndex": 3
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_para';
+const TIMER_KEY   = 'quiz_end_time_para';
+const ANSWERS_KEY = 'quiz_answers_para';
+
+// =========================================
+// 2. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp  = new Date().toLocaleString();
+  const payload    = { time: timestamp, name, score: score.toFixed(2), total, percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (e) {
+    console.error("Score submission failed:", e);
+    return false;
+  }
+};
+
+// =========================================
+// 3. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+// ── Quiz Screen ────────────────────────────────────────────────────────────
+const Quiz = ({ questions, config, onComplete }) => {
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  const [userAnswers, setUserAnswers] = useState(() => {
+    try { const s = localStorage.getItem(ANSWERS_KEY); return s ? JSON.parse(s) : {}; }
+    catch (e) { return {}; }
+  });
+
+  const answersRef = useRef(userAnswers);
+  useEffect(() => { answersRef.current = userAnswers; }, [userAnswers]);
+  useEffect(() => { localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers)); }, [userAnswers]);
+
+  // Timer (absolute timestamp based)
+  useEffect(() => {
+    let targetTime;
+    const stored = localStorage.getItem(TIMER_KEY);
+    if (stored) {
+      targetTime = parseInt(stored, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const tick = () => {
+      const left = Math.max(0, Math.floor((targetTime - Date.now()) / 1000));
+      setTimeLeft(left);
+      if (left <= 0) { onComplete(answersRef.current); return true; }
+      return false;
+    };
+
+    if (tick()) return;
+    const timer = setInterval(() => { if (tick()) clearInterval(timer); }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const toggleOption = (qIdx, optIdx) => {
+    setUserAnswers(prev => {
+      const next = { ...prev };
+      if (next[qIdx] === optIdx) delete next[qIdx];
+      else next[qIdx] = optIdx;
+      return next;
+    });
+  };
+
+  const fmt = (s) => {
+    const m = Math.floor(s / 60), sec = s % 60;
+    return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+  };
+
+  const answeredCount = Object.keys(userAnswers).length;
+
+  return (
+    <div className="main-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+
+      {/* Sticky Header */}
+      <div className="sticky-header">
+        <div className="timer-box">⏱ {fmt(timeLeft)}</div>
+        <div className="progress-info">
+          {answeredCount} / {questions.length} answered
+        </div>
+      </div>
+
+      {/* Questions */}
+      <div style={{ padding: '20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const selected  = userAnswers[idx];
+          const sentences = q.sentences || {};
+
+          return (
+            <div key={q.id} className="question-container">
+              {/* Question heading */}
+              <div className="question-text">Q{idx + 1}. {q.question_en}</div>
+
+              {/* Sentences A, B, C, D */}
+              <div className="sentences-box">
+                {['A', 'B', 'C', 'D'].filter(l => sentences[l]).map(letter => (
+                  <div key={letter} className="sentence-row">
+                    <span className="sentence-label">{letter}</span>
+                    <span className="sentence-text">{sentences[letter]}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Ordering MCQ options */}
+              <div className="order-prompt">Choose the correct order:</div>
+              <div className="options-grid">
+                {q.options_en.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option${selected === optIdx ? ' selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', flexShrink: 0 }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Submit Bar */}
+      <div className="submit-bar">
+        <button onClick={() => onComplete(userAnswers)}>Submit Exam</button>
+      </div>
+    </div>
+  );
+};
+
+// ── Result Screen ──────────────────────────────────────────────────────────
+const Result = ({ questions, userAnswers, config, studentName, onRetake }) => {
+  const [status, setStatus] = useState("Sending data...");
+  const [score,  setScore]  = useState(0);
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let s = 0;
+    questions.forEach((q, i) => {
+      const u = userAnswers[i];
+      if (u !== undefined) s += (u === q.correctIndex ? config.marksCorrect : config.marksWrong);
+    });
+    setScore(s);
+    submitScoreToSheet(studentName, s, totalPossible)
+      .then(ok => setStatus(ok ? "✅ Score saved to sheet!" : "⚠️ Saved locally (connection failed)"));
+  }, []);
+
+  const percentage = totalPossible > 0 ? ((score / totalPossible) * 100).toFixed(1) : 0;
+
+  return (
+    <div className="main-wrapper">
+      {/* Score Card */}
+      <div className="card">
+        <h2 style={{ color: 'var(--accent-color)' }}>Result Summary</h2>
+        <div style={{ fontSize: '2.2rem', color: 'var(--accent-color)', fontWeight: 'bold', margin: '10px 0' }}>
+          {score.toFixed(1)}
+          <span style={{ fontSize: '1rem', color: '#666' }}> / {totalPossible}</span>
+        </div>
+        <div style={{ fontSize: '1.1rem', color: '#333', marginBottom: '8px' }}>
+          Score: <strong>{percentage}%</strong>
+        </div>
+        <p style={{ margin: '5px 0' }}>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: status.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>{status}</p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      {/* Detailed Review */}
+      <div style={{ padding: '20px' }}>
+        <h3 style={{ color: 'var(--accent-color)' }}>Detailed Review</h3>
+        {questions.map((q, idx) => {
+          const u         = userAnswers[idx];
+          const attempted = u !== undefined;
+          const correct   = attempted && u === q.correctIndex;
+          const cls = attempted ? (correct ? 'status-correct' : 'status-wrong') : 'status-unanswered';
+          const txt = attempted
+            ? (correct ? `Correct (+${config.marksCorrect})` : `Wrong (${config.marksWrong})`)
+            : 'Skipped';
+
+          const sentences       = q.sentences || {};
+          const correctOrderStr = q.options_en[q.correctIndex] || '';
+          const correctLetters  = correctOrderStr.split(',').map(s => s.trim()).filter(Boolean);
+
+          return (
+            <div key={q.id} className="review-item">
+              <p style={{ fontWeight: '600', marginBottom: '6px' }}>Q{idx + 1}: {q.question_en}</p>
+
+              {/* All sentences */}
+              <div className="sentences-box mini">
+                {['A', 'B', 'C', 'D'].filter(l => sentences[l]).map(letter => (
+                  <div key={letter} className="sentence-row">
+                    <span className="sentence-label">{letter}</span>
+                    <span className="sentence-text">{sentences[letter]}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className={cls} style={{ marginBottom: '4px' }}>Status: {txt}</p>
+              <p style={{ marginBottom: '4px' }}>
+                Correct Order: <strong style={{ color: 'green' }}>{correctOrderStr}</strong>
+              </p>
+              {attempted && (
+                <p style={{ marginBottom: '8px', color: correct ? 'green' : '#d32f2f' }}>
+                  Your Order: {q.options_en[u]}
+                </p>
+              )}
+
+              {/* Correct sequence with full sentences */}
+              {correctLetters.length > 0 && (
+                <div className="correct-arrangement">
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px', color: 'var(--accent-color)', fontSize: '0.92rem' }}>
+                    ✅ Correct Sequence:
+                  </div>
+                  {correctLetters.map((letter, i) => (
+                    <div key={i} className="arranged-sentence">
+                      <span className="step-num">{i + 1}</span>
+                      <span className="step-label">({letter})</span>
+                      <span>{sentences[letter] || ''}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {q.explanation_en && (
+                <div className="explanation">
+                  <strong>Explanation:</strong> {q.explanation_en}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ── App Root ───────────────────────────────────────────────────────────────
+const App = () => {
+  const session = useMemo(() => {
+    try { const s = localStorage.getItem(SESSION_KEY); return s ? JSON.parse(s) : null; }
+    catch (e) { return null; }
+  }, []);
+
+  const [screen,      setScreen]      = useState(session?.isActive ? 'QUIZ' : 'LANDING');
+  const [name,        setName]        = useState(session?.name || '');
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name }));
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = (window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0)
+      ? window.__PREPARSED_JSON__
+      : [];
+    const lim = DEFAULT_CONFIG.maxQuestions;
+    return lim > 0 ? all.slice(0, lim) : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) { alert("Please enter your name."); return; }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (ans) => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers(ans);
+    setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div
+      className="main-wrapper"
+      style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}
+    >
+      {screen === 'LANDING' && (
+        <div className="card">
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+
+          <div className="exam-info-box">
+            <strong>Exam Details</strong><br />
+            Questions: {questions.length} &nbsp;|&nbsp;
+            Time: {Math.floor(DEFAULT_CONFIG.totalTime / 60)} min &nbsp;|&nbsp;
+            +{DEFAULT_CONFIG.marksCorrect} / {DEFAULT_CONFIG.marksWrong}
+          </div>
+
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>Student Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleStart()}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '11px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem' }}
+            />
+          </div>
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz questions={questions} config={DEFAULT_CONFIG} onComplete={handleComplete} />
+      )}
+      {screen === 'RESULT' && (
+        <Result
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+  </script>
+</body>
+</html>
