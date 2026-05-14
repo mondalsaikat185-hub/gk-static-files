@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "লালারস অ্যামাইলেজ পাকস্থলীতে প্রবেশ করার পর এর কার্যকারিতার ক্ষেত্রে কোনটি ঘটে এবং কেন?",
+    "options_bn": [
+      "পেপসিনের উপস্থিতির কারণে এটি আরও সক্রিয় হয়।",
+      "পাকস্থলীর অত্যন্ত অ্যাসিডিক পরিবেশের কারণে এটি নিষ্ক্রিয় হয়ে যায়।",
+      "এটি হাইড্রোক্লোরিক অ্যাসিডের সাথে মিশে প্রোটিন পরিপাক শুরু করে।",
+      "এটি মিউকাস মেমব্রেনের সংস্পর্শে এসে ফ্যাট ইমালসিফিকেশন করে।"
+    ],
+    "explanation_bn": "লালারস অ্যামাইলেজ ক্ষারীয় বা নিরপেক্ষ মাধ্যমে কাজ করে। পাকস্থলীর গ্যাস্ট্রিক রসে HCl থাকায় পরিবেশটি অত্যন্ত অ্যাসিডিক (pH 1.6) হয়, যার ফলে এই এনজাইমটি নিষ্ক্রিয় হয়ে পড়ে।",
+    "question_en": "What happens to the functionality of salivary amylase after it enters the stomach, and why?",
+    "options_en": [
+      "It becomes more active due to the presence of pepsin.",
+      "It becomes inactive due to the highly acidic environment of the stomach.",
+      "It mixes with hydrochloric acid and begins digesting proteins.",
+      "It comes in contact with the mucus membrane and emulsifies fat."
+    ],
+    "explanation_en": "Salivary amylase works in an alkaline or neutral medium. The stomach has a highly acidic environment (pH 1.6) due to HCl in the gastric juice, which inactivates this enzyme.",
+    "correctIndex": 1
+  },
+  {
+    "id": 2,
+    "question_bn": "পিত্তরস (Bile Juice) সম্পর্কে নিচের কোন বক্তব্যটি বৈজ্ঞানিকভাবে সঠিক?",
+    "options_bn": [
+      "এটি যকৃতে সঞ্চিত থাকে এবং প্রোটিন পরিপাকে সাহায্য করে।",
+      "এতে শক্তিশালী এনজাইম থাকে যা শর্করাকে গ্লুকোজে পরিণত করে।",
+      "এটি পরিপাকের জন্য কোনো রাসায়নিক এনজাইম বহন করে না, বরং ইমালসিফিকেশন প্রক্রিয়ায় চর্বিকে ছোট ছোট কণায় পরিণত করে।",
+      "এটি অগ্ন্যাশয় রসে অ্যাসিডিক মাধ্যম তৈরি করে পরিপাক তরান্বিত করে।"
+    ],
+    "explanation_bn": "পিত্তরসে কোনো এনজাইম থাকে না। এটি ইমালসিফিকেশন প্রক্রিয়ায় শারীরিকভাবে বড় চর্বির গ্লোবিউল ভেঙে ছোট কণায় পরিণত করে এবং ক্ষুদ্রান্ত্রের মাধ্যম ক্ষারীয় করে।",
+    "question_en": "Which of the following statements about Bile Juice is scientifically correct?",
+    "options_en": [
+      "It is stored in the liver and helps in protein digestion.",
+      "It contains powerful enzymes that convert carbohydrates into glucose.",
+      "It does not carry any chemical enzymes for digestion, but breaks down fats into smaller droplets through emulsification.",
+      "It creates an acidic medium for pancreatic juice to accelerate digestion."
+    ],
+    "explanation_en": "Bile juice contains no enzymes. It works physically by emulsifying large fat globules into smaller particles and creates an alkaline medium in the small intestine.",
+    "correctIndex": 2
+  },
+  {
+    "id": 3,
+    "question_bn": "ক্ষুদ্রান্ত্রের তিনটি অংশের মধ্যে পরিপাক ও পুষ্টিশোষণের বন্টন কীভাবে ঘটে?",
+    "options_bn": [
+      "ডুয়োডেনামে পুষ্টিশোষণ হয় এবং জেজুনাম ও ইলিয়ামে মূল পরিপাক ঘটে।",
+      "ডুয়োডেনামে মূল পরিপাক ঘটে এবং জেজুনাম ও ইলিয়ামে বেশিরভাগ পুষ্টিশোষণ হয়।",
+      "জেজুনামে চর্বি পরিপাক হয় এবং ইলিয়ামে প্রোটিন পরিপাক হয়।",
+      "তিনটি অংশেই সমানভাবে পরিপাক ও পুষ্টিশোষণ সম্পন্ন হয়।"
+    ],
+    "explanation_bn": "ক্ষুদ্রান্ত্রের প্রথম ভাগ ডুয়োডেনামেই মূলত পরিপাক ঘটে, আর পুষ্টিশোষণ বেশিরভাগ ভেতরের দিকের অংশ জেজুনাম ও ইলিয়ামে সম্পন্ন হয়।",
+    "question_en": "How are digestion and nutrient absorption distributed among the three parts of the small intestine?",
+    "options_en": [
+      "Nutrient absorption occurs in the duodenum, while main digestion happens in the jejunum and ileum.",
+      "Main digestion occurs in the duodenum, and most nutrient absorption happens in the jejunum and ileum.",
+      "Fat digestion occurs in the jejunum and protein digestion in the ileum.",
+      "Digestion and nutrient absorption occur equally across all three parts."
+    ],
+    "explanation_en": "The main digestion essentially occurs in the first part, the duodenum, while most of the nutrient absorption takes place in the inner parts, the jejunum and ileum.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "শ্বাস গ্রহণ ও শ্বাস ত্যাগের সময় বায়ুর উপাদানগুলির পরিবর্তনের ক্ষেত্রে কোনটি ঘটে?",
+    "options_bn": [
+      "শ্বাস ত্যাগের সময় নাইট্রোজেনের পরিমাণ কমে যায় কারণ শরীর তা ব্যবহার করে।",
+      "শ্বাস ত্যাগের সময় অক্সিজেনের পরিমাণ 21% থেকে 0% এ নেমে আসে।",
+      "শ্বাস ত্যাগের সময় নাইট্রোজেনের পরিমাণ অপরিবর্তিত থাকে কিন্তু কার্বন ডাই-অক্সাইডের পরিমাণ প্রায় 120 গুণ বৃদ্ধি পায়।",
+      "শ্বাস ত্যাগের সময় কার্বন ডাই-অক্সাইডের পরিমাণ 16% থেকে 4.4% এ নেমে আসে।"
+    ],
+    "explanation_bn": "আমাদের শরীর নাইট্রোজেন ব্যবহার করে না তাই এটি 78% অপরিবর্তিত থাকে। অন্যদিকে, কোষ শ্বসনে CO2 তৈরি হওয়ায় শ্বাস ছাড়ার সময় এটি 0.036% থেকে বেড়ে 4.4% হয়, যা প্রায় 120 গুণ বেশি।",
+    "question_en": "What happens to the composition of air components during inhalation and exhalation?",
+    "options_en": [
+      "The amount of nitrogen decreases during exhalation because the body uses it.",
+      "The amount of oxygen drops from 21% to 0% during exhalation.",
+      "The amount of nitrogen remains unchanged during exhalation, but the amount of carbon dioxide increases by about 120 times.",
+      "The amount of carbon dioxide drops from 16% to 4.4% during exhalation."
+    ],
+    "explanation_en": "Our body does not use nitrogen, so it remains unchanged at 78%. However, since cellular respiration produces CO2, its level increases from 0.036% to 4.4% during exhalation, which is about 120 times more.",
+    "correctIndex": 2
+  },
+  {
+    "id": 5,
+    "question_bn": "অগ্ন্যাশয় রসের এনজাইমগুলো কোন মাধ্যমের উপস্থিতিতে শর্করা, চর্বি ও প্রোটিন পরিপাক করতে সক্ষম হয়?",
+    "options_bn": [
+      "পিত্তরস দ্বারা সৃষ্ট ক্ষারীয় মাধ্যমে",
+      "গ্যাস্ট্রিক রস দ্বারা সৃষ্ট অ্যাসিডিক মাধ্যমে",
+      "লালারস দ্বারা সৃষ্ট নিরপেক্ষ মাধ্যমে",
+      "মিউকাস দ্বারা সৃষ্ট অ্যাসিডিক মাধ্যমে"
+    ],
+    "explanation_bn": "অগ্ন্যাশয় রসের তিনটি শক্তিশালী এনজাইম (অ্যামাইলেজ, লাইপেজ, ট্রিপসিন) ক্ষারীয় মাধ্যমে কাজ করে, যা ক্ষুদ্রান্ত্রে পিত্তরস সরবরাহ করে থাকে।",
+    "question_en": "In the presence of which medium are the enzymes of the pancreatic juice able to digest carbohydrates, fats, and proteins?",
+    "options_en": [
+      "Alkaline medium created by bile juice",
+      "Acidic medium created by gastric juice",
+      "Neutral medium created by saliva",
+      "Acidic medium created by mucus"
+    ],
+    "explanation_en": "The three powerful enzymes of pancreatic juice (amylase, lipase, trypsin) work in an alkaline medium, which is provided by the bile juice in the small intestine.",
+    "correctIndex": 0
+  },
+  {
+    "id": 6,
+    "question_bn": "জলাবদ্ধতার কারণে মাটিতে গাছ মরে যাওয়ার মূল বৈজ্ঞানিক কারণ কী?",
+    "options_bn": [
+      "অতিরিক্ত পানি মূলের এপিডার্মিসকে ফাটিয়ে দেয়।",
+      "মাটিকণার মাঝের ফাঁকা জায়গায় পানি জমে যাওয়ায় মূলের কোষগুলো অক্সিজেন ডিফিউশন করতে পারে ভগ্নাংশে নেমে আসত।",
+      "পাতা স্টোমাটার মাধ্যমে অতিরিক্ত পানি বের করতে না পেরে পচে যায়।",
+      "মাটির পুষ্টি উপাদান পানিতে ধুয়ে যাওয়ায় গাছ খাদ্য পায় না।"
+    ],
+    "explanation_bn": "মাটিকণার মাঝে ফাঁকা জায়গায় বায়ু থাকে যেখান থেকে মূলের রোমকোষ অক্সিজেন ডিফিউশন করে। জলাবদ্ধতা হলে ওই ফাঁকা জায়গা পানিতে পূর্ণ হয়ে যায়, ফলে মূল শ্বাস নিতে না পেরে গাছ মরে যায়।",
+    "question_en": "What is the main scientific reason for plants dying in waterlogged soil?",
+    "options_en": [
+      "Excess water bursts the epidermis of the roots.",
+      "Water fills the spaces between soil particles, preventing root cells from diffusing oxygen.",
+      "Leaves rot because they cannot release excess water through the stomata.",
+      "Soil nutrients wash away in the water, depriving the plant of food."
+    ],
+    "explanation_en": "There is air in the spaces between soil particles from which root hairs diffuse oxygen. During waterlogging, these spaces get filled with water, making roots unable to breathe, which kills the plant.",
+    "correctIndex": 1
+  },
+  {
+    "id": 7,
+    "question_bn": "যকৃতের কোষগুলির কাজের বিভাজন সম্পর্কে নিচের কোন তথ্যটি সঠিক?",
+    "options_bn": [
+      "হেপাটোসাইট পুরনো লোহিত রক্তকণিকা ভাঙে এবং কাপফার কোষ প্রোটিন সংশ্লেষ করে।",
+      "কাপফার কোষ যকৃতের 80% গঠন করে এবং হেপাটোসাইট ফ্যাগোসাইটোসিস প্রক্রিয়ায় কাজ করে।",
+      "হেপাটোসাইট প্রোটিন সংশ্লেষ ও পিত্তরস তৈরি করে এবং কাপফার কোষ ফ্যাগোসাইটোসিস প্রক্রিয়ায় পুরনো লোহিত রক্তকণিকা গ্রাস করে।",
+      "উভয় কোষই শুধুমাত্র গ্লুকোজকে গ্লাইকোজেনে রূপান্তরের কাজ করে।"
+    ],
+    "explanation_bn": "হেপাটোসাইট যকৃতের প্রধান কোষ যা প্রোটিন সংশ্লেষ ও পিত্তরস তৈরি করে। অন্যদিকে, কাপফার কোষ হলো ফ্যাগোসাইটিক কোষ যা পুরনো বা ক্ষতিগ্রস্ত লোহিত রক্তকণিকা (RBC) গ্রাস করে ভাঙে।",
+    "question_en": "Which of the following information is correct regarding the division of labor among liver cells?",
+    "options_en": [
+      "Hepatocytes break down old red blood cells and Kupffer cells synthesize proteins.",
+      "Kupffer cells make up 80% of the liver and hepatocytes act through phagocytosis.",
+      "Hepatocytes synthesize proteins and produce bile juice, while Kupffer cells engulf old red blood cells through phagocytosis.",
+      "Both cells function exclusively to convert glucose into glycogen."
+    ],
+    "explanation_en": "Hepatocytes are the main liver cells that synthesize proteins and produce bile juice. On the other hand, Kupffer cells are phagocytic cells that engulf and break down old or damaged red blood cells (RBCs).",
+    "correctIndex": 2
+  },
+  {
+    "id": 8,
+    "question_bn": "রাফেজ বা আঁশজাতীয় খাবার কোষ্ঠকাঠিন্য প্রতিরোধে কীভাবে সাহায্য করে?",
+    "options_bn": [
+      "এটি গ্যাস্ট্রিক রসের ক্ষরণ বাড়িয়ে খাদ্য দ্রুত হজম করে।",
+      "এটি আহার নালীতে তরঙ্গের মতো পেশি সংকোচন বা পেরিস্টালসিসকে উৎসাহিত করে এবং মলের পরিমাণ বাড়াতে সাহায্য করে।",
+      "এটি বৃহদান্ত্রে পানি শোষণ সম্পূর্ণভাবে বন্ধ করে দেয়।",
+      "এটি খাদ্যের সাথে মিশে রাসায়নিক এনজাইম হিসেবে কাজ করে।"
+    ],
+    "explanation_bn": "আহার নালীতে পেরিস্টালসিস নামক তরঙ্গের মতো পেশি সংকোচনের মাধ্যমে খাদ্য এগিয়ে যায়। রাফেজ বা আঁশ এই পেরিস্টালসিসকে উৎসাহিত করে এবং মল বৃদ্ধিতে (stool bulk) সাহায্য করে, যার অভাবে কোষ্ঠকাঠিন্য হয়।",
+    "question_en": "How does roughage or fiber-rich food help in preventing constipation?",
+    "options_en": [
+      "It increases gastric juice secretion to digest food quickly.",
+      "It encourages peristalsis, the wave-like muscle contraction in the alimentary canal, and helps increase stool bulk.",
+      "It completely stops water absorption in the large intestine.",
+      "It mixes with food and acts as a chemical enzyme."
+    ],
+    "explanation_en": "Food moves forward through wave-like muscle contractions called peristalsis in the alimentary canal. Roughage or fiber encourages this peristalsis and helps increase stool bulk, the absence of which causes constipation.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "শ্বসন (Respiration) এবং শ্বাসক্রিয়ার (Breathing) মধ্যে মৌলিক পার্থক্য কী?",
+    "options_bn": [
+      "শ্বসন ফুসফুসে ঘটে যেখানে ATP তৈরি হয়, আর শ্বাসক্রিয়া কোষে ঘটে গ্যাস বিনিময়ের জন্য।",
+      "শ্বসন একটি জৈবরাসায়নিক প্রক্রিয়া যেখানে কোষে শক্তি (ATP) উৎপন্ন হয়, আর শ্বাসক্রিয়া কেবল একটি শারীরিক প্রক্রিয়া যা গ্যাস বিনিময় করে।",
+      "শ্বাসক্রিয়ায় এনজাইমের প্রয়োজন হয়, কিন্তু শ্বসনে কোনো এনজাইমের দরকার হয় না।",
+      "শ্বসনে কার্বন ডাই-অক্সাইড নির্গত হয়বিধা না, কিন্তু শ্বাসক্রিয়ায় নির্গত হয়।"
+    ],
+    "explanation_bn": "শ্বসন হলো একটি জৈবরাসায়নিক প্রক্রিয়া যেখানে কোষে এনজাইমের সাহায্যে জৈব যৌগের জারণ ঘটে এবং ATP শক্তি উৎপন্ন হয়। অপরদিকে, শ্বাসক্রিয়া শুধু ফুসফুসে অক্সিজেন গ্রহণ ও কার্বন ডাই-অক্সাইড নির্গমনের শারীরিক প্রক্রিয়া।",
+    "question_en": "What is the fundamental difference between respiration and breathing?",
+    "options_en": [
+      "Respiration occurs in the lungs where ATP is produced, while breathing occurs in cells for gas exchange.",
+      "Respiration is a biochemical process where energy (ATP) is produced in cells, while breathing is merely a physical process of gas exchange.",
+      "Breathing requires enzymes, whereas respiration does not need any enzymes.",
+      "Respiration does not release carbon dioxide, but breathing does."
+    ],
+    "explanation_en": "Respiration is a biochemical process where organic compounds are oxidized in cells with the help of enzymes to produce ATP energy. Conversely, breathing is just a physical process of gas exchange (O2 in, CO2 out) in the lungs.",
+    "correctIndex": 1
+  },
+  {
+    "id": 10,
+    "question_bn": "বায়বীয় ও অবায়বীয় শ্বসনের শেষ উৎপাদ এবং শক্তির পরিমাণে বিশাল পার্থক্যের কারণ কী?",
+    "options_bn": [
+      "বায়বীয় শ্বসনে পাইরুভেট সাইটোপ্লাজমে থাকে, কিন্তু অবায়বীয় শ্বসনে তা মাইটোকন্ড্রিয়ায় প্রবেশ করে।",
+      "বায়বীয় শ্বসন মাইটোকন্ড্রিয়ায় সম্পূর্ণ জারণ ঘটায় বলে প্রচুর পরিমাণে ATP দেয় (প্রায় 36 ATP), অন্যদিকে অবায়বীয় শ্বসন সাইটোপ্লাজমে অসম্পূর্ণ জারণ ঘটায় বলে মাত্র 2 ATP দেয়।",
+      "অবায়বীয় শ্বসনে মাইটোকন্ড্রিয়া বেশি সক্রিয় থাকে বলে ল্যাকটিক অ্যাসিড তৈরি হয়।",
+      "বায়বীয় শ্বসনে অক্সিজেনের উপস্থিতির কারণে পাইরুভেট সরাসরি 2 ATP তে পরিণত হয়।"
+    ],
+    "explanation_bn": "বায়বীয় শ্বসনে পাইরুভেট মাইটোকন্ড্রিয়ায় প্রবেশ করে সম্পূর্ণ জারণের মাধ্যমে প্রচুর পরিমাণ ATP (পরীক্ষার মানদণ্ডে 36 ATP) তৈরি করে। অবায়বীয় শ্বসনে অক্সিজেনের অভাবে সাইটোপ্লাজমেই অসম্পূর্ণ জারণ ঘটে, যার ফলে মাত্র 2 ATP তৈরি হয়।",
+    "question_en": "What is the reason for the huge difference in the end products and energy amounts between aerobic and anaerobic respiration?",
+    "options_en": [
+      "In aerobic respiration, pyruvate stays in the cytoplasm, but in anaerobic respiration, it enters the mitochondria.",
+      "Aerobic respiration causes complete oxidation in mitochondria, yielding a much larger amount of ATP (about 36 ATP), while anaerobic respiration causes incomplete oxidation in the cytoplasm, yielding only 2 ATP.",
+      "In anaerobic respiration, mitochondria are more active, leading to lactic acid production.",
+      "In aerobic respiration, the presence of oxygen turns pyruvate directly into 2 ATP."
+    ],
+    "explanation_en": "In aerobic respiration, pyruvate enters the mitochondria and undergoes complete oxidation to produce a much larger amount of ATP (36 ATP for exam contexts). In anaerobic respiration, due to the lack of oxygen, incomplete oxidation occurs in the cytoplasm, yielding only 2 ATP.",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "ক্ষুদ্রান্ত্রের ভেতরের দেয়াল যদি ভিলাই (Villi) বিহীন এবং সম্পূর্ণ সমতল হতো, তবে পরিপাক তন্ত্রে কী প্রভাব পড়ত?",
+    "options_bn": [
+      "পরিপাকের গতি বহুগুণ বৃদ্ধি পেত।",
+      "গ্যাস্ট্রিক রসের নিঃসরণ বেড়ে গিয়ে পেটে আলসার হতো।",
+      "পৃষ্ঠের ক্ষেত্রফল কমে যাওয়ার কারণে পুষ্টিশোষণ বর্তমানের তুলনায় মাত্র ভগ্নাংশে নেমে আসত।",
+      "পিত্তরস সরাসরি ক্ষুদ্রান্ত্র থেকে রক্তে প্রবেশ করত।"
+    ],
+    "explanation_bn": "ভিলাইগুলো ক্ষুদ্রান্ত্রের ভেতরের পৃষ্ঠের ক্ষেত্রফল (Surface Area) বহুগুণে বাড়িয়ে দেয়। যদি এটি সমতল হতো, তবে পুষ্টিশোষণের জন্য পর্যাপ্ত পৃষ্ঠক্ষেত্র না থাকায় তা অনেক কমে যেত।",
+    "question_en": "If the inner wall of the small intestine were completely flat without villi, what impact would it have on the digestive system?",
+    "options_en": [
+      "The speed of digestion would increase manifold.",
+      "Gastric juice secretion would increase, causing stomach ulcers.",
+      "Due to a decrease in surface area, nutrient absorption would drop to a mere fraction of what it is now.",
+      "Bile juice would enter the blood directly from the small intestine."
+    ],
+    "explanation_en": "The villi multiply the surface area of the inner wall of the small intestine for nutrient absorption. If it were flat, absorption would decrease significantly as it wouldn't have sufficient surface area.",
+    "correctIndex": 2
+  },
+  {
+    "id": 12,
+    "question_bn": "অবায়বীয় শ্বসনের ফলে মানবদেহের পেশিকোষ এবং ইস্টের (Yeast) মধ্যে উৎপন্ন উপাদানের মূল পার্থক্য কী?",
+    "options_bn": [
+      "পেশিকোষে ইথানল উৎপন্ন হয়, অন্যদিকে ইস্টে ল্যাকটিক অ্যাসিড উৎপন্ন হয়।",
+      "পেশিকোষে ল্যাকটিক অ্যাসিড উৎপন্ন হয়, অন্যদিকে ইস্টে গাঁজন প্রক্রিয়ায় ইথানল ও কার্বন ডাই-অক্সাইড উৎপন্ন হয়।",
+      "পেশিকোষে প্রচুর ATP উৎপন্ন হয়, অন্যদিকে ইস্টে 2 ATP উৎপন্ন হয়।",
+      "পেশিকোষে শ্বসন মাইটোকন্ড্রিয়ায় ঘটে, কিন্তু ইস্টে সাইটোপ্লাজমে ঘটে।"
+    ],
+    "explanation_bn": "অবায়বীয় শ্বসনে অক্সিজেনের অভাবে মানুষের পেশিকোষে ল্যাকটিক অ্যাসিড তৈরি হয়, যা ক্র্যাম্প সৃষ্টি করে। অন্যদিকে ইস্টের ক্ষেত্রে গাঁজন প্রক্রিয়ায় ইথানল ও CO2 তৈরি হয়।",
+    "question_en": "What is the main difference in the compounds produced by anaerobic respiration between human muscle cells and yeast?",
+    "options_en": [
+      "Muscle cells produce ethanol, whereas yeast produces lactic acid.",
+      "Muscle cells produce lactic acid, whereas yeast produces ethanol and carbon dioxide through fermentation.",
+      "Muscle cells produce high ATP, whereas yeast produces 2 ATP.",
+      "Respiration in muscle cells occurs in mitochondria, but in yeast, it occurs in the cytoplasm."
+    ],
+    "explanation_en": "In anaerobic respiration, due to the lack of oxygen, human muscle cells produce lactic acid (causing cramps). On the other hand, yeast produces ethanol and CO2 through the fermentation process.",
+    "correctIndex": 1
+  },
+  {
+    "id": 13,
+    "question_bn": "খাবার গিলে খাওয়ার সময় তা ফুসফুসে প্রবেশ করে না কেন?",
+    "options_bn": [
+      "অ্যালভিওলাই খাবারকে শ্বাসনালী থেকে বের করে দেয়।",
+      "ল্যারিংক্স সংকুচিত হয়ে শ্বাসনালী বন্ধ করে দেয়।",
+      "এপিগ্লোটিস নামক ঢাকনাটি গিলে খাওয়ার সময় শ্বাসপথ ঢেকে দেয়।",
+      "ফ্যারিংক্স কেবল বায়ুকে প্রবেশ করতে দেয় এবং খাবারকে বাধা দেয়।"
+    ],
+    "explanation_bn": "এপিগ্লোটিস হলো একটি বিশেষ ঢাকনার মতো কাঠামো, যা গিলে খাওয়ার সময় শ্বাসনালীর পথ ঢেকে দেয়, ফলে খাবার ভুল করে ফুসফুসে প্রবেশ করতে পারে না।",
+    "question_en": "Why does food not enter the lungs when swallowed?",
+    "options_en": [
+      "Alveoli expel food from the windpipe.",
+      "The larynx constricts to close off the windpipe.",
+      "A flap called the epiglottis covers the airway during swallowing.",
+      "The pharynx only allows air to enter and blocks food."
+    ],
+    "explanation_en": "The epiglottis is a special flap-like structure that covers the airway when swallowing, thereby preventing food from accidentally entering the lungs.",
+    "correctIndex": 2
+  },
+  {
+    "id": 14,
+    "question_bn": "রক্তে গ্লুকোজের মাত্রা নিয়ন্ত্রণের পাশাপাশি যকৃতের আর কোন গুরুত্বপূর্ণ বিপাকীয় কাজ রয়েছে?",
+    "options_bn": [
+      "এটি সরাসরি প্রোটিন পরিপাক করে পেপসিন এনজাইম নিঃসরণ করে।",
+      "এটি রক্তে উপস্থিত অ্যামিনো অ্যাসিড থেকে শরীরের প্রয়োজনীয় প্রোটিন সংশ্লেষ করে।",
+      "এটি হাইড্রোক্লোরিক অ্যাসিড তৈরি করে ব্যাকটেরিয়া ধ্বংস করে।",
+      "এটি ক্ষুদ্রান্ত্রে মলটেজ এনজাইম সরবরাহ করে গ্লুকোজ তৈরি করে।"
+    ],
+    "explanation_bn": "যকৃৎ রক্তে গ্লুকোজের মাত্রা নিয়ন্ত্রণের পাশাপাশি পরিপাকের পর প্রাপ্ত অ্যামিনো অ্যাসিড ব্যবহার করে শরীরের প্রয়োজনীয় প্রোটিন সংশ্লেষ করে।",
+    "question_en": "Besides regulating blood glucose levels, what other important metabolic function does the liver have?",
+    "options_en": [
+      "It directly digests proteins by secreting the pepsin enzyme.",
+      "It synthesizes necessary body proteins from amino acids present in the blood.",
+      "It produces hydrochloric acid to destroy bacteria.",
+      "It provides maltase enzyme to the small intestine to produce glucose."
+    ],
+    "explanation_en": "In addition to regulating blood glucose levels, the liver synthesizes necessary proteins for the body using the amino acids obtained after digestion.",
+    "correctIndex": 1
+  },
+  {
+    "id": 15,
+    "question_bn": "মানবদেহের আহার নালীর (Alimentary Canal) অংশ নয়, কিন্তু পরিপাকে অপরিহার্য ভূমিকা পালন করে এমন অঙ্গগুলি কোনটি?",
+    "options_bn": [
+      "পাকস্থলী ও ক্ষুদ্রান্ত্র",
+      "যকৃৎ ও অগ্ন্যাশয়",
+      "সিকাম ও অ্যাপেন্ডিক্স",
+      "ফ্যারিংক্স ও ট্র্যাকিয়া"
+    ],
+    "explanation_bn": "যকৃৎ এবং অগ্ন্যাশয় আহার নালীর (যার মধ্য দিয়ে খাবার প্রবাহিত হয়) সরাসরি অংশ নয়, কিন্তু এরা পাচক গ্রন্থি হিসেবে গুরুত্বপূর্ণ রস (পিত্তরস ও অগ্ন্যাশয় রস) আহার নালীতে সরবরাহ করে।",
+    "question_en": "Which organs are not a part of the human alimentary canal, yet play an essential role in digestion?",
+    "options_en": [
+      "Stomach and small intestine",
+      "Liver and pancreas",
+      "Cecum and appendix",
+      "Pharynx and trachea"
+    ],
+    "explanation_en": "The liver and pancreas are not direct parts of the alimentary canal (through which food passes), but they are digestive glands that supply vital juices (bile and pancreatic juice) into the canal.",
+    "correctIndex": 1
+  },
+  {
+    "id": 16,
+    "question_bn": "উভচর প্রাণী ব্যাঙ ও কুনোব্যাঙের শ্বসনের ক্ষেত্রে কোন বক্তব্যটি সঠিক?",
+    "options_bn": [
+      "উভয়ই শুধুমাত্র ফুলকা ব্যবহার করে",
+      "উভয়ই স্থলে ফুসফুস এবং পানিতে চামড়া ব্যবহার করে",
+      "ব্যাঙ চামড়া ব্যবহার করে কিন্তু কুনোব্যাঙ শুধুই ফুসফুস ব্যবহার করে",
+      "কুনোব্যাঙ শুধুই ফুলকা ব্যবহার করে"
+    ],
+    "explanation_bn": "ব্যাঙ ও কুনোব্যাঙ উভয়ই উভচর প্রাণী। এরা স্থলে ফুসফুসের মাধ্যমে এবং পানিতে সিক্ত চামড়ার মাধ্যমে শ্বসন করে। ফুলকা কেবল লার্ভা বা ব্যাঙাচি অবস্থায় থাকে।",
+    "question_en": "Which statement is correct regarding the respiration of amphibians like frogs and toads?",
+    "options_en": [
+      "Both use only gills.",
+      "Both use lungs on land and skin in water.",
+      "A frog uses skin but a toad uses only lungs.",
+      "A toad uses only gills."
+    ],
+    "explanation_en": "Both frogs and toads are amphibians. They respire through lungs on land and moist skin in water. Gills are present only in the larval or tadpole stage.",
+    "correctIndex": 1
+  },
+  {
+    "id": 17,
+    "question_bn": "কোষে ATP উৎপাদনের প্রক্রিয়ায় NADH-এর নির্দিষ্ট কাজ কী?",
+    "options_bn": [
+      "এটি গ্লুকোজ ভেঙে পাইরুভেট তৈরি করে।",
+      "এটি ইলেকট্রন ট্রান্সপোর্ট চেইনে ইলেকট্রন বহন করে ATP উৎপাদনে সাহায্য করে।",
+      "এটি পেশিকোষে ল্যাকটিক অ্যাসিড জমতে বাধা দেয়।",
+      "এটি মাইটোকন্ড্রিয়ার বাইরে গ্লাইকোলাইসিস প্রক্রিয়াকে উদ্দীপ্ত করে।"
+    ],
+    "explanation_bn": "NADH (নিকোটিনামাইড অ্যাডেনাইন ডাইনিউক্লিওটাইড) হলো একটি কোএনজাইম যা ইলেকট্রন পরিবহন শৃঙ্খলে (Electron Transport Chain) ইলেকট্রন বহন করে এবং সেলুলার শ্বসনে ATP উৎপাদনে সাহায্য করে।",
+    "question_en": "What is the specific role of NADH in the process of ATP production in cells?",
+    "options_en": [
+      "It breaks down glucose to produce pyruvate.",
+      "It carries electrons in the electron transport chain to help produce ATP.",
+      "It prevents the accumulation of lactic acid in muscle cells.",
+      "It stimulates the glycolysis process outside the mitochondria."
+    ],
+    "explanation_en": "NADH (Nicotinamide Adenine Dinucleotide) is a coenzyme that carries electrons in the electron transport chain, aiding in the production of ATP during cellular respiration.",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "পাকস্থলীতে গ্যাস্ট্রিক আলসার (Gastric Ulcer) হওয়ার প্রধান কারণ নিচের কোনটি?",
+    "options_bn": [
+      "পেপসিন এনজাইমের নিঃসরণ পুরোপুরি বন্ধ হয়ে যাওয়া।",
+      "মিউকাস মেমব্রেনের স্তর কমে গিয়ে পাকস্থলীর কোষ গ্যাস্ট্রিক রসের সংস্পর্শে আসা।",
+      "অগ্ন্যাশয় থেকে লাইপেজ এনজাইম পাকস্থলীতে প্রবেশ করা।",
+      "খাদ্যে অতিরিক্ত শর্করা থাকার কারণে লালারস অ্যামাইলেজ পেটে জমা হওয়া।"
+    ],
+    "explanation_bn": "পাকস্থলীর মিউকাস স্তর পেটের নাজুক কোষগুলোকে তীব্র অ্যাসিডিক গ্যাস্ট্রিক রসের হাত থেকে রক্ষা করে। কোনো কারণে এই মিউকাস স্তর কমে গেলে অ্যাসিডের প্রভাবে পেটের দেয়ালে ঘা বা গ্যাস্ট্রিক আলসার হয়।",
+    "question_en": "Which of the following is the primary cause of a gastric ulcer in the stomach?",
+    "options_en": [
+      "The complete cessation of pepsin enzyme secretion.",
+      "The depletion of the mucus membrane layer allowing stomach cells to come into contact with gastric juice.",
+      "The entry of lipase enzyme from the pancreas into the stomach.",
+      "Accumulation of salivary amylase in the stomach due to excess carbohydrates in food."
+    ],
+    "explanation_en": "The mucus layer of the stomach protects the delicate cells from the highly acidic gastric juice. If this mucus layer decreases for any reason, the acid causes sores or gastric ulcers on the stomach wall.",
+    "correctIndex": 1
+  },
+  {
+    "id": 19,
+    "question_bn": "শ্বাস নেওয়ার (Inhalation) সময় মানবদেহে বক্ষগহ্বর প্রসারিত হওয়ার জন্য কোন শারীরবৃত্তীয় পরিবর্তন ঘটে?",
+    "options_bn": [
+      "বুকের পিঞ্জর নিচে নামে এবং ডায়াফ্রাম উপরে ওঠে।",
+      "বুকের পিঞ্জর উপরে ওঠে এবং ডায়াফ্রাম নিচে নামে।",
+      "বুকের পিঞ্জর স্থির থাকে কিন্তু ডায়াফ্রাম সংকুচিত হয়।",
+      "অ্যালভিওলাই সংকুচিত হয়ে বুকের পিঞ্জরকে উপরে ঠেলে দেয়।"
+    ],
+    "explanation_bn": "শ্বাস নেওয়ার সময় বুকের পিঞ্জর (Rib Cage) উপরে ওঠে এবং ডায়াফ্রাম (Diaphragm) নিচে নামে। এর ফলে বুকের গহ্বর বড় হয় এবং ফুসফুস প্রসারিত হতে পারে।",
+    "question_en": "What physiological change occurs to expand the thoracic cavity during inhalation in the human body?",
+    "options_en": [
+      "The rib cage moves down and the diaphragm moves up.",
+      "The rib cage moves up and the diaphragm moves down.",
+      "The rib cage remains stationary but the diaphragm contracts.",
+      "The alveoli contract and push the rib cage up."
+    ],
+    "explanation_en": "During inhalation, the rib cage moves up and the diaphragm moves down. As a result, the chest cavity enlarges and allows the lungs to expand.",
+    "correctIndex": 1
+  },
+  {
+    "id": 20,
+    "question_bn": "অ্যালভিওলাই (Alveoli) থেকে রক্তে অক্সিজেনের প্রবেশ কোন নীতির ভিত্তিতে ঘটে?",
+    "options_bn": [
+      "অ্যালভিওলাইতে রক্তের চেয়ে কার্বন ডাই-অক্সাইডের ঘনত্ব বেশি থাকায়।",
+      "ডিফিউশন (Diffusion) প্রক্রিয়ায়, কারণ অ্যালভিওলাইতে অক্সিজেনের ঘনত্ব রক্তের চেয়ে বেশি থাকে।",
+      "ফুসফুসের পেশির শক্তিশালী সংকোচনের মাধ্যমে অক্সিজেন রক্তে প্রবেশ করে।",
+      "অ্যালভিওলাইতে থাকা এনজাইম অক্সিজেনকে রক্তে শোষিত হতে বাধ্য করে।"
+    ],
+    "explanation_bn": "অ্যালভিওলাই থেকে রক্তে অক্সিজেন যায় ডিফিউশন বা ব্যাপন প্রক্রিয়ায়। কারণ অ্যালভিওলাইতে অক্সিজেনের ঘনত্ব বেশি থাকে কিন্তু আগত রক্তে অক্সিজেনের ঘনত্ব কম থাকে।",
+    "question_en": "On what principle does oxygen enter the blood from the alveoli?",
+    "options_en": [
+      "Because the concentration of carbon dioxide is higher in the alveoli than in the blood.",
+      "Through the diffusion process, because the concentration of oxygen is higher in the alveoli than in the blood.",
+      "Oxygen enters the blood through powerful contractions of the lung muscles.",
+      "Enzymes in the alveoli force oxygen to be absorbed into the blood."
+    ],
+    "explanation_en": "Oxygen moves from the alveoli into the blood through the process of diffusion. This happens because the concentration of oxygen is higher in the alveoli but lower in the incoming blood.",
+    "correctIndex": 1
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
