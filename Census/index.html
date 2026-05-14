@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilingual GK Quiz</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+:root {
+  /* 2.B. Background Strategy */
+  --bg-main: #e8f5e9;       /* Light Green (Main Page Background) */
+  --bg-paper: #fffde7;      /* Light Yellow (Question Paper Area) */
+  --bg-filler: #fff3e0;     /* Light Peach (Empty/Filler Spaces) */
+  
+  --text-color: #000000;    /* Black Typography */
+  --accent-color: #2e7d32;  /* Dark Green for headers/buttons */
+
+  /* 2.B. Option Styling */
+  --opt-default-bg: #fce4ec;   /* Pink background */
+  --opt-border: #f8bbd0;       /* Pink border */
+  --opt-selected-bg: #d32f2f;  /* Red background (Selected State) */
+  --opt-selected-text: #ffffff; /* White text on Red */
+  
+  --timer-color: #c62828;   /* Red for timer */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-main); /* Light Green Background */
+  color: var(--text-color);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.main-wrapper {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--bg-filler); /* Light Peach Filler/Frame */
+  min-height: 100vh;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: none;
+  padding: 20px;
+  width: 100%;
+}
+.screen.active { display: block; }
+
+/* General Cards (Landing & Result) */
+.card {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
+  margin-top: 40px;
+}
+
+h1 { color: var(--accent-color); margin-bottom: 5px; }
+.subtitle { color: #555; margin-bottom: 25px; }
+
+/* Sticky Header with Timer & Language Toggle */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-main);
+  padding: 10px 20px;
+  border-bottom: 2px solid var(--accent-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin: 0 -20px 20px -20px;
+}
+
+.timer-box {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--timer-color);
+  background: rgba(255,255,255,0.8);
+  padding: 5px 15px;
+  border-radius: 20px;
+}
+
+/* Question Paper Area */
+.question-container {
+  background-color: var(--bg-paper); /* Light Yellow Paper */
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #fae7b5;
+  margin-bottom: 20px;
+}
+
+.question-text {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  color: var(--text-color); /* Black text */
+  white-space: pre-wrap; /* Preserves A. B. C. D. line breaks */
+}
+
+/* Options Styling */
+.options-grid {
+  display: grid;
+  grid-template-columns: 1fr; 
+  gap: 10px;
+}
+
+.option {
+  padding: 12px 15px;
+  border-radius: 6px;
+  background-color: var(--opt-default-bg); /* Pink */
+  border: 1px solid var(--opt-border); /* Pink border */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.option:hover {
+  filter: brightness(0.95);
+}
+
+/* Selected State: Red Background */
+.option.selected {
+  background-color: var(--opt-selected-bg); /* Red */
+  color: var(--opt-selected-text); /* White text */
+  border-color: #b71c1c;
+}
+
+/* Buttons */
+button {
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+button:hover { background-color: #1b5e20; }
+
+/* Review Section */
+.review-item {
+  background: white;
+  border-bottom: 1px solid #eee;
+  padding: 15px;
+  text-align: left;
+}
+.status-correct { color: green; font-weight: bold; }
+.status-wrong { color: #d32f2f; font-weight: bold; }
+.status-unanswered { color: #f57c00; font-weight: bold; }
+.explanation {
+  background: #f1f8e9;
+  padding: 10px;
+  margin-top: 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #333;
+}
+
+@media (min-width: 600px) {
+  .options-grid { grid-template-columns: 1fr 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+// =========================================
+// 1. CONFIGURATION
+// =========================================
+const APP_TITLE = "Bilingual GK Quiz";
+const APP_SUBTITLE = "Select language and test your knowledge";
+const DEFAULT_CONFIG = {"totalTime": 480, "marksCorrect": 2.0, "marksWrong": -0.5, "maxQuestions": 0};
+const DEFAULT_LANGUAGE = 'en';
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4OuRL-wnpvEtZPUcO61v6IIWpHcffUdVbMSteEZoVBU9SJn8niXq-yo7bAY785TBp/exec";
+const DEFAULT_RAW_TEXT = "";
+
+window.__PREPARSED_JSON__ = [
+  {
+    "id": 1,
+    "question_bn": "নোটে উল্লিখিত 84th এবং 87th Constitutional Amendment অনুযায়ী, Delimitation Commission সম্পর্কে নিচের কোন বিবৃতিটি সঠিক?\n(A) Delimitation 2026 সাল পর্যন্ত স্থগিত রাখা হয়েছে এবং এটি 2011 সালের Census-এর ভিত্তিতে হবে।\n(B) Delimitation 2024 সাল পর্যন্ত স্থগিত রাখা হয়েছে এবং এটি 2001 সালের Census-এর ভিত্তিতে হবে।\n(C) Delimitation 2026 সাল পর্যন্ত স্থগিত রাখা হয়েছে এবং এটি 2001 সালের Census-এর ভিত্তিতে হবে।\n(D) Delimitation 2021 সাল পর্যন্ত স্থগিত রাখা হয়েছে এবং এটি 1991 সালের Census-এর ভিত্তিতে হবে।",
+    "options_bn": [
+      "Delimitation 2026 সাল পর্যন্ত স্থগিত রাখা হয়েছে এবং এটি 2011 সালের Census-এর ভিত্তিতে হবে।",
+      "Delimitation 2024 সাল পর্যন্ত স্থগিত রাখা হয়েছে এবং এটি 2001 সালের Census-এর ভিত্তিতে হবে।",
+      "Delimitation 2026 সাল পর্যন্ত স্থগিত রাখা হয়েছে এবং এটি 2001 সালের Census-এর ভিত্তিতে হবে।",
+      "Delimitation 2021 সাল পর্যন্ত স্থগিত রাখা হয়েছে এবং এটি 1991 সালের Census-এর ভিত্তিতে হবে।"
+    ],
+    "explanation_bn": "84th Constitutional Amendment অনুসারে Delimitation 2026 সাল পর্যন্ত স্থগিত রাখা হয়েছে এবং 87th CA অনুযায়ী এটি 2001 সালের আদমশুমারির ভিত্তিতে করা হবে।",
+    "question_en": "According to the 84th and 87th Constitutional Amendments mentioned in the notes, which of the following statements regarding the Delimitation Commission is correct?\n(A) Delimitation is frozen till 2026 and will be based on the 2011 Census.\n(B) Delimitation is frozen till 2024 and will be based on the 2001 Census.\n(C) Delimitation is frozen till 2026 and will be based on the 2001 Census.\n(D) Delimitation is frozen till 2021 and will be based on the 1991 Census.",
+    "options_en": [
+      "Delimitation is frozen till 2026 and will be based on the 2011 Census.",
+      "Delimitation is frozen till 2024 and will be based on the 2001 Census.",
+      "Delimitation is frozen till 2026 and will be based on the 2001 Census.",
+      "Delimitation is frozen till 2021 and will be based on the 1991 Census."
+    ],
+    "explanation_en": "The 84th CA froze the delimitation till 2026, and the 87th CA mandated that it will be based on the 2001 Census data.",
+    "correctIndex": 2
+  },
+  {
+    "id": 2,
+    "question_bn": "Census 2011 দুটি পর্যায়ে পরিচালিত হয়েছিল। পর্যায় দুটি কী কী ছিল এবং সেই সময়ে Registrar General ও Census Commissioner কে ছিলেন?",
+    "options_bn": [
+      "Population Enumeration এবং House Listing; M.K. Narayan",
+      "House Listing এবং Population Enumeration; C.M. Chandramouli",
+      "Demographic Survey এবং Population Enumeration; W.C. Plowden",
+      "House Listing এবং Delimitation; C.M. Chandramouli"
+    ],
+    "explanation_bn": "Census 2011 প্রথমে House Listing (এপ্রিল-সেপ্টেম্বর 2010) এবং পরে Population Enumeration (সেপ্টেম্বর-ফেব্রুয়ারি 2011) পর্যায়ে সম্পন্ন হয়। এর দায়িত্বে ছিলেন C.M. Chandramouli।",
+    "question_en": "The Census 2011 was conducted in two distinct phases. What were these phases, and who was the Registrar General and Census Commissioner during this time?",
+    "options_en": [
+      "Population Enumeration and House Listing; M.K. Narayan",
+      "House Listing and Population Enumeration; C.M. Chandramouli",
+      "Demographic Survey and Population Enumeration; W.C. Plowden",
+      "House Listing and Delimitation; C.M. Chandramouli"
+    ],
+    "explanation_en": "Census 2011 was completed in two phases: House Listing (Apr-Sep 2010) and Population Enumeration (Feb 9-28, 2011), under the leadership of C.M. Chandramouli.",
+    "correctIndex": 1
+  },
+  {
+    "id": 3,
+    "question_bn": "ভারতের জনসংখ্যার ইতিহাসে 1921 সালকে কেন \"Year of Great Divide\" বলা হয়?",
+    "options_bn": [
+      "কারণ এই বছর জনসংখ্যা বৃদ্ধির হার সর্বোচ্চ 24.8% এ পৌঁছেছিল।",
+      "কারণ এটি একমাত্র দশক ছিল যেখানে দুর্ভিক্ষ এবং স্প্যানিশ ফ্লুর কারণে জনসংখ্যা বৃদ্ধির হার -0.03% এ নেমেছিল।",
+      "কারণ এটি ভারতের জনসংখ্যা বিস্ফোরণের যুগের সূচনা করেছিল।",
+      "কারণ এই বছর গ্রামীণ এবং শহুরে জনসংখ্যার অনুপাত সমান হয়েছিল।"
+    ],
+    "explanation_bn": "1911-21 দশকে মহামারী ও দুর্ভিক্ষের কারণে ভারতের জনসংখ্যা প্রথমবারের মতো হ্রাস পেয়েছিল (-0.03%), এর পর থেকে জনসংখ্যা কেবল বৃদ্ধি পেয়েছে। তাই 1921 সালকে \"Great Divide\" বলা হয়।",
+    "question_en": "Why is 1921 known as the \"Year of Great Divide\" in the demographic history of India?",
+    "options_en": [
+      "Because it was the year when the population growth rate reached its maximum at 24.8%.",
+      "Because it was the only decade where the population growth rate dropped to -0.03% due to famines and the Spanish Flu.",
+      "Because it marked the beginning of India's population explosion era.",
+      "Because it was the year when the rural and urban population ratio became equal."
+    ],
+    "explanation_en": "During the 1911-21 decade, India's population decreased by -0.03% for the first time due to famines and epidemics. After 1921, the population has only continuously increased.",
+    "correctIndex": 1
+  },
+  {
+    "id": 4,
+    "question_bn": "Census 2011-এর তথ্য অনুযায়ী, 2001 সালের তুলনায় শিশু লিঙ্গ অনুপাত (0-6 বছর)-এর প্রবণতা কেমন ছিল এবং কোন রাজ্যে এই অনুপাত সর্বনিম্ন?\n(A) 927 থেকে কমে 919 হয়েছে; হরিয়ানায় সর্বনিম্ন।\n(B) 919 থেকে বেড়ে 927 হয়েছে; কেরালায় সর্বনিম্ন।\n(C) 943 থেকে কমে 919 হয়েছে; পাঞ্জাবে সর্বনিম্ন।\n(D) 927 এ স্থির ছিল; অরুণাচল প্রদেশে সর্বনিম্ন।",
+    "options_bn": [
+      "927 থেকে কমে 919 হয়েছে; হরিয়ানায় সর্বনিম্ন।",
+      "919 থেকে বেড়ে 927 হয়েছে; কেরালায় সর্বনিম্ন।",
+      "943 থেকে কমে 919 হয়েছে; পাঞ্জাবে সর্বনিম্ন।",
+      "927 এ স্থির ছিল; অরুণাচল প্রদেশে সর্বনিম্ন।"
+    ],
+    "explanation_bn": "শিশু লিঙ্গ অনুপাত 2001 সালের 927 থেকে কমে 2011 সালে 919 এ দাঁড়িয়েছে, এবং হরিয়ানায় এই অনুপাত সর্বনিম্ন (834)।",
+    "question_en": "Based on the Census 2011 data, how did the Child Sex Ratio (0-6 years) trend compare to 2001, and which state recorded the lowest ratio?",
+    "options_en": [
+      "It decreased from 927 to 919; lowest in Haryana.",
+      "It improved from 919 to 927; lowest in Kerala.",
+      "It decreased from 943 to 919; lowest in Punjab.",
+      "It remained stagnant at 927; lowest in Arunachal Pradesh."
+    ],
+    "explanation_en": "The Child Sex Ratio alarmingly dropped from 927 in 2001 to 919 in 2011, and Haryana recorded the lowest child sex ratio (834).",
+    "correctIndex": 0
+  },
+  {
+    "id": 5,
+    "question_bn": "2011 সালের সাক্ষরতার হারের ক্ষেত্রে, ভারতের কোন রাজ্যে পুরুষ ও মহিলার সাক্ষরতার হারের মধ্যে পার্থক্য সবচেয়ে বেশি ছিল এবং জাতীয় পর্যায়ে এই পার্থক্যের পরিমাণ কত?",
+    "options_bn": [
+      "রাজস্থান; জাতীয় পার্থক্য ছিল 16.68%",
+      "বিহার; জাতীয় পার্থক্য ছিল 9.2%",
+      "ঝাড়খণ্ড; জাতীয় পার্থক্য ছিল 27.85%",
+      "উত্তর প্রদেশ; জাতীয় পার্থক্য ছিল 16.68%"
+    ],
+    "explanation_bn": "রাজস্থানে পুরুষ ও মহিলার সাক্ষরতার হারের পার্থক্য সবচেয়ে বেশি (27.85% পয়েন্ট), আর সমগ্র ভারতে এই পার্থক্য ছিল 16.68% (পুরুষ 82.14% এবং মহিলা 65.46%)।",
+    "question_en": "Regarding the 2011 literacy rates, which Indian state registered the highest gap between male and female literacy, and what was the gap at the national level?",
+    "options_en": [
+      "Rajasthan; National gap was 16.68%.",
+      "Bihar; National gap was 9.2%.",
+      "Jharkhand; National gap was 27.85%.",
+      "Uttar Pradesh; National gap was 16.68%."
+    ],
+    "explanation_en": "Rajasthan recorded the highest gender disparity in literacy (27.85% points), while the national average difference between male (82.14%) and female (65.46%) literacy was 16.68%.",
+    "correctIndex": 0
+  },
+  {
+    "id": 6,
+    "question_bn": "2011 সালের আদমশুমারি অনুযায়ী, কোন ধর্মীয় সম্প্রদায়ের দশকীয় জনসংখ্যা বৃদ্ধির হার সবচেয়ে কম ছিল, কিন্তু একই সাথে সেই সম্প্রদায়ের সাক্ষরতার হার সর্বোচ্চ ছিল?",
+    "options_bn": [
+      "বৌদ্ধ",
+      "খ্রিষ্টান",
+      "শিখ",
+      "জৈন"
+    ],
+    "explanation_bn": "জৈনদের দশকীয় বৃদ্ধির হার সব ধর্মের মধ্যে সর্বনিম্ন (5.37%), কিন্তু শিক্ষা সচেতনতার কারণে তাদের সাক্ষরতার হার দেশের সমস্ত ধর্মীয় গোষ্ঠীর মধ্যে সর্বোচ্চ।",
+    "question_en": "According to the 2011 Census, which religious community recorded the lowest decadal population growth rate but concurrently possessed the highest literacy rate among all groups?",
+    "options_en": [
+      "Buddhists",
+      "Christians",
+      "Sikhs",
+      "Jains"
+    ],
+    "explanation_en": "The Jain community had the lowest decadal population growth at 5.37%, yet they hold the highest literacy rate among all religious groups due to their educational awareness.",
+    "correctIndex": 3
+  },
+  {
+    "id": 7,
+    "question_bn": "ঐতিহাসিক ও ভৌগোলিক কারণে ভারতের কোন রাজ্য বা কেন্দ্রশাসিত অঞ্চলগুলিতে তফসিলি উপজাতি (ST) জনসংখ্যা নেই বললেই চলে বা অত্যন্ত নগণ্য?",
+    "options_bn": [
+      "উত্তর প্রদেশ, বিহার, দিল্লি, লক্ষদ্বীপ",
+      "পাঞ্জাব, হরিয়ানা, দিল্লি, চণ্ডীগড়",
+      "পাঞ্জাব, হরিয়ানা, গোয়া, পুদুচেরি",
+      "হরিয়ানা, গুজরাট, দিল্লি, চণ্ডীগড়"
+    ],
+    "explanation_bn": "পাঞ্জাব, হরিয়ানা, দিল্লি এবং চণ্ডীগড়ে ঐতিহাসিক ও ভৌগোলিক কারণে তফসিলি উপজাতি (ST) জনসংখ্যা নেই বললেই চলে বা এটি প্রায় নগণ্য।",
+    "question_en": "Due to historical and geographical reasons, in which of the following groups of States/Union Territories is the Scheduled Tribe (ST) population practically negligible or almost non-existent?",
+    "options_en": [
+      "Uttar Pradesh, Bihar, Delhi, Lakshadweep",
+      "Punjab, Haryana, Delhi, Chandigarh",
+      "Punjab, Haryana, Goa, Puducherry",
+      "Haryana, Gujarat, Delhi, Chandigarh"
+    ],
+    "explanation_en": "States and UTs like Punjab, Haryana, Delhi, and Chandigarh have negligible or almost no recorded ST populations due to historical and geographical factors.",
+    "correctIndex": 1
+  },
+  {
+    "id": 8,
+    "question_bn": "1872 সালের প্রথম আদমশুমারিকে \"অসম্পূর্ণ\" বলা হয়। ভারতের প্রথম সম্পূর্ণ এবং সমন্বিত আদমশুমারি (1st Synchronised Census) কবে এবং কার শাসনকালে পরিচালিত হয়েছিল?",
+    "options_bn": [
+      "1881 সালে, লর্ড মেয়োর শাসনকালে",
+      "1881 সালে, লর্ড রিপনের শাসনকালে",
+      "1891 সালে, লর্ড ডাফরিনের শাসনকালে",
+      "1872 সালে, হেনরি ওয়াল্টারের অধীনে"
+    ],
+    "explanation_bn": "ভারতের প্রথম সম্পূর্ণ এবং সমন্বিত আদমশুমারি 1881 সালে লর্ড রিপনের শাসনকালে কমিশনার W.C. Plowden-এর অধীনে পরিচালিত হয়।",
+    "question_en": "The first census of 1872 is termed \"incomplete\". When and under whose reign was the first complete and synchronised census of India conducted?",
+    "options_en": [
+      "In 1881, under Lord Mayo",
+      "In 1881, under Lord Ripon",
+      "In 1891, under Lord Dufferin",
+      "In 1872, under Henry Walter"
+    ],
+    "explanation_en": "The first complete and synchronised census of India was conducted in 1881 during the reign of Lord Ripon, under the supervision of Commissioner W.C. Plowden.",
+    "correctIndex": 1
+  },
+  {
+    "id": 9,
+    "question_bn": "ভারতীয় আদমশুমারিতে ব্যবহৃত সরকারি সংজ্ঞা অনুযায়ী, নিচের কোন ব্যক্তিকে \"সাক্ষর\" (Literate) হিসেবে বিবেচনা করা হবে?",
+    "options_bn": [
+      "একজন 6 বছর বয়সী শিশু যে ইংরেজিতে সাবলীলভাবে পড়তে ও লিখতে পারে।",
+      "একজন 7 বছর বয়সী শিশু যে শুধুমাত্র হিন্দিতে পড়তে পারে কিন্তু লিখতে পারে না।",
+      "একজন 8 বছর বয়সী শিশু যে যেকোনো একটি ভাষায় অর্থ বুঝে পড়তে ও লিখতে পারে।",
+      "একজন 10 বছর বয়সী ব্যক্তি যে পড়তে ও লিখতে পারে কিন্তু লেখার অর্থ বোঝে না।"
+    ],
+    "explanation_bn": "সাক্ষরতার সরকারি শর্ত হলো—ব্যক্তির বয়স 7 বছর বা তার বেশি হতে হবে এবং তাকে যেকোনো একটি ভাষায় অর্থ বুঝে পড়তে ও লিখতে সক্ষম হতে হবে। 6 বছর বা তার কম বয়সীদের ধরা হয় না।",
+    "question_en": "According to the official government definition used in the Indian Census, which of the following individuals would be considered \"literate\"?",
+    "options_en": [
+      "A 6-year-old child who can read and write English fluently.",
+      "A 7-year-old child who can only read but not write in Hindi.",
+      "An 8-year-old who can read, write, and understand any one language.",
+      "A 10-year-old who can read and write but does not understand the meaning of the text."
+    ],
+    "explanation_en": "The official criteria for literacy strictly require a person to be 7 years or older, and capable of both reading and writing with understanding in any language. Children aged 6 or below are excluded.",
+    "correctIndex": 2
+  },
+  {
+    "id": 10,
+    "question_bn": "Census 2011 প্রান্তিক জনগোষ্ঠীর সাক্ষরতার হারের মাধ্যমে সামাজিক বৈষম্য তুলে ধরেছে। ভারতে তফসিলি জাতি (SC) এবং তফসিলি উপজাতির (ST) সাক্ষরতার হার যথাক্রমে কত ছিল?",
+    "options_bn": [
+      "SC: 59%, ST: 66.1%",
+      "SC: 66.1%, ST: 59%",
+      "SC: 74.04%, ST: 59%",
+      "SC: 64.83%, ST: 66.1%"
+    ],
+    "explanation_bn": "2011 সালের তথ্যানুযায়ী, তফসিলি জাতির (SC) সাক্ষরতার হার ছিল 66.1% এবং তফসিলি উপজাতির (ST) সাক্ষরতার হার তুলনামূলকভাবে কম, 59% ছিল।",
+    "question_en": "The Census 2011 highlights existing social disparities through the literacy rates of marginalized communities. What were the literacy rates of the Scheduled Castes (SC) and Scheduled Tribes (ST) respectively?",
+    "options_en": [
+      "SC: 59%, ST: 66.1%",
+      "SC: 66.1%, ST: 59%",
+      "SC: 74.04%, ST: 59%",
+      "SC: 64.83%, ST: 66.1%"
+    ],
+    "explanation_en": "According to the document, the literacy rate among Scheduled Castes (SC) was 66.1%, while it was lower at 59% for Scheduled Tribes (ST).",
+    "correctIndex": 1
+  },
+  {
+    "id": 11,
+    "question_bn": "2001-2011 দশকে ভারতে প্রায় 18.1 কোটি মানুষ বৃদ্ধি পেয়েছে। এই সময়ে পুরুষ এবং মহিলাদের বৃদ্ধির হারের মধ্যে পার্থক্য কেমন ছিল?",
+    "options_bn": [
+      "পুরুষদের বৃদ্ধির হার মহিলাদের তুলনায় বেশি ছিল।",
+      "পুরুষ এবং মহিলাদের বৃদ্ধির হার প্রায় সমান ছিল।",
+      "মহিলাদের বৃদ্ধির হার (18.12%) পুরুষদের বৃদ্ধির হারের (17.19%) চেয়ে বেশি ছিল।",
+      "পুরুষদের বৃদ্ধির হার নেতিবাচক ছিল কিন্তু মহিলাদের ইতিবাচক ছিল।"
+    ],
+    "explanation_bn": "2001-2011 দশকে পুরুষদের জনসংখ্যা বৃদ্ধির হার ছিল 17.19%, যেখানে মহিলাদের বৃদ্ধির হার ছিল তুলনামূলকভাবে বেশি (18.12%), যা একটি ইতিবাচক দিক।",
+    "question_en": "During the 2001-2011 decade, India's population increased by approximately 18.1 crore. How did the growth rates of males and females compare during this period?",
+    "options_en": [
+      "The growth rate of males was higher than that of females.",
+      "The growth rates of males and females were almost equal.",
+      "The growth rate of females (18.12%) was higher than the growth rate of males (17.19%).",
+      "The growth rate of males was negative but females showed positive growth."
+    ],
+    "explanation_en": "In the 2001-2011 decade, the male population growth rate was 17.19%, whereas the female growth rate was comparatively higher at 18.12%, which is a positive indicator.",
+    "correctIndex": 2
+  },
+  {
+    "id": 12,
+    "question_bn": "ক্ষেত্রফলের দিক থেকে গোয়া ভারতের সবচেয়ে ছোট রাজ্য, কিন্তু Census 2011 অনুযায়ী এর একটি অনন্য জনসংখ্যাগত বৈশিষ্ট্য রয়েছে। সেটি কী?",
+    "options_bn": [
+      "এটি ভারতের সবচেয়ে বেশি নগরায়িত রাজ্য (62.17% শহর জনসংখ্যা)।",
+      "এটি ভারতের সব রাজ্যের মধ্যে সর্বোচ্চ জনঘনত্ব বিশিষ্ট রাজ্য।",
+      "এই রাজ্যের দশকীয় জনসংখ্যা বৃদ্ধির হার সবচেয়ে কম।",
+      "এর শিশু লিঙ্গ অনুপাত অরুণাচল প্রদেশের চেয়ে বেশি।"
+    ],
+    "explanation_bn": "গোয়া আয়তনে সবচেয়ে ছোট রাজ্য হলেও, শতাংশের বিচারে এটি দেশের সবচেয়ে বেশি নগরায়িত রাজ্য, যেখানে 62.17% মানুষ শহরে বসবাস করেন।",
+    "question_en": "Goa is the smallest state in India by area, but it holds a unique demographic distinction according to Census 2011. What is it?",
+    "options_en": [
+      "It is the most urbanized state in India with the highest percentage of urban population (62.17%).",
+      "It has the highest population density among all Indian states.",
+      "It recorded the lowest decadal population growth rate in India.",
+      "It has a higher child sex ratio than Arunachal Pradesh."
+    ],
+    "explanation_en": "Despite being geographically the smallest state, Goa leads the country in urbanization percentage, with 62.17% of its population living in urban areas.",
+    "correctIndex": 0
+  },
+  {
+    "id": 13,
+    "question_bn": "অর্থনৈতিক লিঙ্গ বৈষম্য নির্দেশ করে, Census 2011 ভারতের কর্মশক্তি অংশগ্রহণের হার (Workforce Participation Rate) সম্পর্কে কী তথ্য প্রদান করেছে?",
+    "options_bn": [
+      "পুরুষের অংশগ্রহণ 54.6% এবং মহিলার অংশগ্রহণ 24.3%।",
+      "পুরুষের অংশগ্রহণ 53.26% এবং মহিলার অংশগ্রহণ মাত্র 25.5%।",
+      "পুরুষের অংশগ্রহণ 82.14% এবং মহিলার অংশগ্রহণ 65.46%।",
+      "পুরুষের অংশগ্রহণ 68.8% এবং মহিলার অংশগ্রহণ 31.2%।"
+    ],
+    "explanation_bn": "2011 সালের তথ্যানুযায়ী, পুরুষ কর্মশক্তি অংশগ্রহণের হার ছিল 53.26%, যেখানে মহিলাদের অংশগ্রহণ ছিল অনেক কম, মাত্র 25.5%, যা একটি বিশাল অর্থনৈতিক বৈষম্য তুলে ধরে।",
+    "question_en": "Highlighting economic gender disparity, what does the Census 2011 data reveal about the workforce participation rate in India?",
+    "options_en": [
+      "Male participation is 54.6% and female participation is 24.3%.",
+      "Male participation is 53.26% and female participation is only 25.5%.",
+      "Male participation is 82.14% and female participation is 65.46%.",
+      "Male participation is 68.8% and female participation is 31.2%."
+    ],
+    "explanation_en": "The data highlights a severe economic disparity, with the male workforce participation rate at 53.26%, compared to a very low female participation rate of just 25.5%.",
+    "correctIndex": 1
+  },
+  {
+    "id": 14,
+    "question_bn": "ভারতের জনঘনত্বে তীব্র বৈসাদৃশ্য দেখা যায়। যেখানে দিল্লি (UT)-র জনঘনত্ব 11,320 জন/বর্গকিমি, সেখানে কোন রাজ্যের জনঘনত্ব সবচেয়ে কম এবং এর মান কত?",
+    "options_bn": [
+      "সিকিম, 52 জন/বর্গকিমি",
+      "মিজোরাম, 46 জন/বর্গকিমি",
+      "অরুণাচল প্রদেশ, 17 জন/বর্গকিমি",
+      "আন্দামান ও নিকোবর, 17 জন/বর্গকিমি"
+    ],
+    "explanation_bn": "ভারতের মধ্যে অরুণাচল প্রদেশের জনঘনত্ব সবচেয়ে কম, যেখানে প্রতি বর্গকিলোমিটারে মাত্র 17 জন মানুষ বাস করেন।",
+    "question_en": "The population density in India varies drastically. While Delhi (UT) has a staggering density of 11,320 persons/sq.km, which state possesses the lowest population density, and what is its value?",
+    "options_en": [
+      "Sikkim, 52 persons/sq.km",
+      "Mizoram, 46 persons/sq.km",
+      "Arunachal Pradesh, 17 persons/sq.km",
+      "Andaman & Nicobar, 17 persons/sq.km"
+    ],
+    "explanation_en": "Arunachal Pradesh has the lowest population density among all Indian states, with a remarkably sparse figure of just 17 persons per square kilometer.",
+    "correctIndex": 2
+  },
+  {
+    "id": 15,
+    "question_bn": "2001-2011 দশকে ভারতকে 'Disinflation'-এর মতো একটি জনসংখ্যাগত পর্যায়ে বিবেচনা করা হয়েছিল। এই সময়ের বার্ষিক গড় বৃদ্ধির হার এবং দশকীয় বৃদ্ধির হার কত ছিল?",
+    "options_bn": [
+      "বার্ষিক: 17.64%, দশকীয়: 21.5%",
+      "বার্ষিক: 1.64%, দশকীয়: 17.64%",
+      "বার্ষিক: 3.08%, দশকীয়: 24.8%",
+      "বার্ষিক: -0.03%, দশকীয়: 17.64%"
+    ],
+    "explanation_bn": "2001-2011 সময়কালে ভারতের জনসংখ্যা বৃদ্ধির গতি হ্রাস পেয়েছিল, যেখানে বার্ষিক গড় বৃদ্ধির হার ছিল 1.64% এবং মোট দশকীয় বৃদ্ধির হার ছিল 17.64%।",
+    "question_en": "In the period of 2001-2011, India was considered to be in a demographic phase similar to 'Disinflation'. What were the annual average growth rate and the decadal growth rate during this period?",
+    "options_en": [
+      "Annual: 17.64%, Decadal: 21.5%",
+      "Annual: 1.64%, Decadal: 17.64%",
+      "Annual: 3.08%, Decadal: 24.8%",
+      "Annual: -0.03%, Decadal: 17.64%"
+    ],
+    "explanation_en": "During the 2001-2011 decade, the growth speed slowed down, yielding an annual average growth rate of 1.64% and a decadal growth rate of 17.64%.",
+    "correctIndex": 1
+  },
+  {
+    "id": 16,
+    "question_bn": "1951 সালের আদমশুমারির সাথে 2011 সালের তুলনা করলে, এই সময়কালে ভারতের অসাধারণ জনসংখ্যাগত পরিবর্তনের সঠিক চিত্রটি নিচের কোন বিবৃতিতে ফুটে ওঠে?",
+    "options_bn": [
+      "জনসংখ্যা 235% বৃদ্ধি পেয়েছে, এবং মহিলা সাক্ষরতার হার 5.56% থেকে বেড়ে 65.46% হয়েছে।",
+      "জনঘনত্ব 382 থেকে কমে 117 জন/বর্গকিমি হয়েছে।",
+      "লিঙ্গ অনুপাত 933 থেকে উল্লেখযোগ্যভাবে উন্নত হয়ে 946 হয়েছে।",
+      "সামগ্রিক সাক্ষরতার হার 5.56% থেকে বেড়ে 74.04% হয়েছে।"
+    ],
+    "explanation_bn": "1951 সালের তুলনায় 2011 সালে ভারতের জনসংখ্যা প্রায় 235% বৃদ্ধি পায়, এবং মহিলা সাক্ষরতা একটি বিশাল পরিবর্তনের মধ্য দিয়ে 5.56% থেকে বেড়ে 65.46%-এ পৌঁছায়।",
+    "question_en": "Comparing the Census of 1951 with 2011, which of the following statements perfectly captures the dramatic demographic transformation of India over this period?",
+    "options_en": [
+      "The population increased by 235%, and female literacy rose remarkably from 5.56% to 65.46%.",
+      "The population density decreased from 382 to 117 persons/sq.km.",
+      "The sex ratio saw a massive improvement from 933 to 946.",
+      "The overall literacy rate increased from 5.56% to 74.04%."
+    ],
+    "explanation_en": "Compared to 1951, India witnessed a 235% jump in overall population by 2011, while female literacy saw a revolutionary rise from a mere 5.56% to 65.46%."
+  },
+  {
+    "id": 17,
+    "question_bn": "উত্তর প্রদেশে তফসিলি জাতির (SC) মোট জনসংখ্যা সর্বোচ্চ হলেও, শতাংশের বিচারে কোন রাজ্যে SC জনসংখ্যার অনুপাত সর্বোচ্চ?",
+    "options_bn": [
+      "হরিয়ানা",
+      "পাঞ্জাব",
+      "মধ্যপ্রদেশ",
+      "বিহার"
+    ],
+    "explanation_bn": "উত্তর প্রদেশে SC মানুষের মোট সংখ্যা সবচেয়ে বেশি হলেও, রাজ্যের মোট জনসংখ্যার শতাংশ হিসেবে পাঞ্জাবে SC জনগোষ্ঠীর হার সবচেয়ে বেশি।",
+    "question_en": "While Uttar Pradesh has the highest total number of Scheduled Caste (SC) population, which state has the highest proportion of SC population in terms of percentage?",
+    "options_en": [
+      "Haryana",
+      "Punjab",
+      "Madhya Pradesh",
+      "Bihar"
+    ],
+    "explanation_en": "Although Uttar Pradesh leads in absolute numbers, Punjab has the highest proportion of Scheduled Caste population when measured as a percentage of the state's total population.",
+    "correctIndex": 1
+  },
+  {
+    "id": 18,
+    "question_bn": "2011 সালের আদমশুমারি অনুযায়ী, ভারতের 1.21 বিলিয়ন জনসংখ্যা বিশ্বের মোট জনসংখ্যার কত শতাংশ প্রতিনিধিত্ব করে?",
+    "options_bn": [
+      "16.6%",
+      "19.4%",
+      "17.5%",
+      "21.5%"
+    ],
+    "explanation_bn": "2011 সালে ভারতের 121 কোটি জনসংখ্যা ছিল সমগ্র বিশ্বের মোট জনসংখ্যার 17.5 শতাংশ (যেখানে চীনের জনসংখ্যা ছিল 19.4%)।",
+    "question_en": "According to the 2011 Census, India's population of 1.21 billion represents what percentage of the total global population?",
+    "options_en": [
+      "16.6%",
+      "19.4%",
+      "17.5%",
+      "21.5%"
+    ],
+    "explanation_en": "In 2011, India's population of 1210 million accounted for 17.5% of the total world population, compared to China's 19.4%.",
+    "correctIndex": 2
+  },
+  {
+    "id": 19,
+    "question_bn": "2011 সালে 0-6 বছর বয়সী শিশু জনসংখ্যা ছিল 158.8 মিলিয়ন, যা 2001 সালের তুলনায় 3.08% হ্রাস পেয়েছে। নোট অনুযায়ী, এই নির্দিষ্ট হ্রাস থেকে কোন জনসংখ্যাগত সিদ্ধান্তে উপনীত হওয়া যায়?",
+    "options_bn": [
+      "এটি শিশুমৃত্যুর হারের ব্যাপক বৃদ্ধি নির্দেশ করে।",
+      "এটি একটি ইতিবাচক লক্ষণ যা নির্দেশ করে যে দেশের প্রজনন হার ধীরে ধীরে কমছে।",
+      "এটি দেখায় যে ডেমোগ্রাফিক ডিভিডেন্ডের সুযোগ সম্পূর্ণ বন্ধ হয়ে গেছে।",
+      "এটি 1921 সালের Great Divide-এর মতো সর্বোচ্চ নেতিবাচক বৃদ্ধির প্রতিনিধিত্ব করে।"
+    ],
+    "explanation_bn": "শিশু জনসংখ্যার এই 3.08% হ্রাস একটি ইতিবাচক ইঙ্গিত, কারণ এর মানে হলো দেশের পরিবার পরিকল্পনা কাজ করছে এবং প্রজনন হার ধীরে ধীরে হ্রাস পাচ্ছে।",
+    "question_en": "The child population (0-6 years) in 2011 was 158.8 million, showing a decline of 3.08% compared to 2001. What demographic conclusion is drawn from this specific decline according to the notes?",
+    "options_en": [
+      "It indicates a massive increase in the infant mortality rate.",
+      "It is a positive sign indicating that the country's fertility rate is gradually decreasing.",
+      "It shows that the demographic dividend window has completely closed.",
+      "It represents the highest negative growth similar to the 1921 Great Divide."
+    ],
+    "explanation_en": "The 3.08% drop in child population is considered a positive demographic sign, indicating that family planning is taking effect and the national fertility rate is gradually declining.",
+    "correctIndex": 1
+  },
+  {
+    "id": 20,
+    "question_bn": "ভারতের জাতীয় জনসংখ্যা নীতি (National Population Policy বা NPP) 2000 সালে প্রণীত হয়েছিল। জনসংখ্যা স্থিতিশীল করার ক্ষেত্রে এর চূড়ান্ত লক্ষ্য কী?",
+    "options_bn": [
+      "2026 সালের মধ্যে একটি স্থিতিশীল জনসংখ্যা অর্জন করা।",
+      "2045 সালের মধ্যে একটি স্থিতিশীল জনসংখ্যা অর্জন করা।",
+      "2024 সালের মধ্যে একটি স্থিতিশীল জনসংখ্যা অর্জন করা।",
+      "2050 সালের মধ্যে একটি স্থিতিশীল জনসংখ্যা অর্জন করা।"
+    ],
+    "explanation_bn": "2000 সালে প্রণীত NPP-এর প্রধান লক্ষ্য হলো দেশের প্রজনন চাহিদা পূরণ করা এবং 2045 সালের মধ্যে একটি স্থিতিশীল জনসংখ্যায় (stable population) পৌঁছানো।",
+    "question_en": "The National Population Policy (NPP) of India was formulated in the year 2000. What is its ultimate target regarding population stabilization?",
+    "options_en": [
+      "To achieve a stable population by the year 2026.",
+      "To achieve a stable population by the year 2045.",
+      "To achieve a stable population by the year 2024.",
+      "To achieve a stable population by the year 2050."
+    ],
+    "explanation_en": "The core objective of the NPP, formulated in 2000, is to address reproductive health needs and ultimately achieve a stable population by the year 2045.",
+    "correctIndex": 1
+  }
+];
+
+// PERSISTENCE KEYS
+const SESSION_KEY = 'quiz_session_v1_dl';
+const TIMER_KEY = 'quiz_end_time_dl';
+const ANSWERS_KEY = 'quiz_answers_dl';
+
+// =========================================
+// 2. PARSER SERVICE (No longer explicitly needed if pre-parsed, but kept for fallback)
+// =========================================
+const parseQuizText = (text) => {
+  if (!text) return [];
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const blocks = normalizedText.split(/\n(?=Q?\d+\.)/);
+  
+  const parsedQuestions = [];
+
+  blocks.forEach((block, index) => {
+    if (!block.trim()) return;
+
+    // Detect format
+    const isNewFormat = block.includes("Options (choose one):");
+
+    let qEn = "Question missing";
+    let optsEn = [];
+    let correctIndex = 0;
+    let expEn = "";
+
+    if (isNewFormat) {
+        // NEW PARAJUMBLE FORMAT
+        const qMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\nOptions \(choose one\):)/i);
+        qEn = qMatch ? qMatch[1].trim() : "Question text missing";
+  
+        const optSectionMatch = block.match(/Options \(choose one\):\s*([\s\S]*?)(?=\nCorrect option:)/i);
+        if (optSectionMatch) {
+          optsEn = optSectionMatch[1]
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0)
+            .map(line => line.replace(/^([A-Za-z0-9]+)[\.\)]\s*/, ''));
+        }
+  
+        const ansMatch = block.match(/Correct option:\s*(.*?)(?=\nExplanation:|$)/i);
+        const correctValue = ansMatch ? ansMatch[1].trim() : "";
+        
+        correctIndex = optsEn.findIndex(opt => opt.replace(/\s/g, '') === correctValue.replace(/\s/g, ''));
+        if (correctIndex === -1) correctIndex = 0;
+  
+        const expMatch = block.match(/Explanation:\s*([\s\S]*?)(?=$)/i);
+        expEn = expMatch ? expMatch[1].trim() : "";
+      
+        parsedQuestions.push({
+          id: index + 1,
+          question_bn: "",
+          options_bn: optsEn,
+          explanation_bn: "",
+          question_en: qEn,
+          options_en: optsEn,
+          explanation_en: expEn,
+          correctIndex: correctIndex >= 0 ? correctIndex : 0
+        });
+  
+    } else {
+      // OLD FORMAT FALLBACK
+      const bnSectionMatch = block.match(/প্রশ্ন:\s*([\s\S]*?)(?=\nQuestion:|$)/);
+      const bnSection = bnSectionMatch ? bnSectionMatch[0] : '';
+      
+      const enSectionMatch = block.match(/Question:\s*([\s\S]*?)(?=\nAnswer:|$)/);
+      const enSection = enSectionMatch ? enSectionMatch[0] : '';
+
+      const qBn = bnSection.match(/প্রশ্ন:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      let qEn = enSection.match(/Question:\s*([\s\S]*?)(?=\n\(A\))/)?.[1]?.trim() || "";
+      
+      if (!qEn && !qBn) {
+          const genericQMatch = block.match(/(?:Q?\d+\.\s*)?([\s\S]*?)(?=\n\(A\))/);
+          qEn = genericQMatch ? genericQMatch[1].trim() : "Question missing";
+      }
+
+      const cleanSection = (txt) => {
+         return txt.replace(/\n(?:Answer|উত্তর|Correct option|Explanation|ব্যাখ্যা):[\s\S]*$/i, '');
+      };
+
+      const extractOptions = (section) => {
+          const matches = [...section.matchAll(/\([A-D]\)\s*(.*?)(?=\n\(|\nউত্তর:|\nQuestion:|\nAnswer:|\nCorrect|\nব্যাখ্যা:|$)/g)];
+          return matches.map(m => m[1].trim());
+      };
+
+      const optsBn = extractOptions(cleanSection(bnSection));
+      let optsEn = extractOptions(cleanSection(enSection));
+
+      if (optsEn.length === 0 && !bnSection) {
+          optsEn = extractOptions(cleanSection(block));
+      }
+
+      const ansMatch = block.match(/(?:Answer|উত্তর|Correct option):\s*(?:\()([A-D])(?:\))/i);
+      const ansChar = ansMatch ? ansMatch[1] : 'A';
+      correctIndex = ansChar.toUpperCase().charCodeAt(0) - 'A'.charCodeAt(0);
+
+      const expBnMatch = block.match(/(?:ব্যাখ্যা):\s*([\s\S]*?)(?=\nQuestion:|$)/i);
+      const expEnMatch = block.match(/(?:Explanation):\s*([\s\S]*?)(?=$)/i);
+      
+      const expBn = expBnMatch ? expBnMatch[1].trim() : "";
+      const expEn = expEnMatch ? expEnMatch[1].trim() : "";
+
+      parsedQuestions.push({
+        id: index + 1,
+        question_bn: qBn,
+        options_bn: optsBn,
+        explanation_bn: expBn,
+        question_en: qEn,
+        options_en: optsEn,
+        explanation_en: expEn,
+        correctIndex: correctIndex >= 0 ? correctIndex : 0
+      });
+    }
+  });
+
+  return parsedQuestions;
+};
+
+// =========================================
+// 3. API SERVICE
+// =========================================
+const submitScoreToSheet = async (name, score, total) => {
+  if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("PASTE_YOUR")) {
+    console.warn("Google Script URL not configured.");
+    return false;
+  }
+  const percentage = ((score / total) * 100).toFixed(2);
+  const timestamp = new Date().toLocaleString();
+  const payload = { time: timestamp, name: name, score: score.toFixed(2), total: total, percentage: percentage };
+  try {
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to submit score", error);
+    return false;
+  }
+};
+
+// =========================================
+// 4. COMPONENTS
+// =========================================
+const { useState, useEffect, useMemo, useRef } = React;
+
+const Quiz = ({ questions, config, initialLang, onComplete }) => {
+  const [lang, setLang] = useState(initialLang);
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  // Initialize Answers from LocalStorage
+  const [userAnswers, setUserAnswers] = useState(() => {
+      try {
+        const saved = localStorage.getItem(ANSWERS_KEY);
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) { return {}; }
+  });
+  
+  const answersRef = useRef(userAnswers);
+  useEffect(() => {
+      answersRef.current = userAnswers;
+  }, [userAnswers]);
+
+  useEffect(() => {
+    let targetTime;
+    const storedEndTime = localStorage.getItem(TIMER_KEY);
+
+    if (storedEndTime) {
+      targetTime = parseInt(storedEndTime, 10);
+    } else {
+      targetTime = Date.now() + config.totalTime * 1000;
+      localStorage.setItem(TIMER_KEY, targetTime.toString());
+    }
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const secondsLeft = Math.max(0, Math.floor((targetTime - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft <= 0) return true; 
+      return false; 
+    };
+
+    const autoSubmit = () => {
+       onComplete(answersRef.current);
+    };
+
+    if (updateTimer()) {
+        autoSubmit();
+        return;
+    }
+
+    const timer = setInterval(() => {
+      if (updateTimer()) {
+        clearInterval(timer);
+        autoSubmit();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify(userAnswers));
+  }, [userAnswers]);
+
+  const toggleOption = (qIndex, optIndex) => {
+    setUserAnswers((prev) => {
+      const current = prev[qIndex];
+      const newState = { ...prev };
+      if (current === optIndex) {
+        delete newState[qIndex];
+      } else {
+        newState[qIndex] = optIndex;
+      }
+      return newState;
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div className="main-wrapper screen active" style={{ display: 'flex' }}>
+      <div className="sticky-header">
+        <div className="timer-box">
+          ⏱ {formatTime(timeLeft)}
+        </div>
+        <select
+          value={lang}
+          onChange={(e) => setLang(e.target.value)}
+          style={{ padding: '5px', fontSize: '1rem' }}
+        >
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <div style={{ padding: '0 20px', flex: 1 }}>
+        {questions.map((q, idx) => {
+          const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+          const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+          const selected = userAnswers[idx];
+
+          return (
+            <div key={q.id} className="question-container">
+              <div className="question-text">Q{idx + 1}. {qText}</div>
+              <div className="options-grid">
+                {options && options.map((opt, optIdx) => (
+                  <div
+                    key={optIdx}
+                    onClick={() => toggleOption(idx, optIdx)}
+                    className={`option ${selected === optIdx ? 'selected' : ''}`}
+                  >
+                    <span style={{ fontWeight: 'bold', marginRight: '8px' }}>
+                      {String.fromCharCode(65 + optIdx)}.
+                    </span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ padding: '20px', background: 'white', borderTop: '1px solid #ddd' }}>
+        <button onClick={() => onComplete(userAnswers)}>
+          Submit Exam
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Result = ({ questions, userAnswers, config, studentName, initialLang, onRetake }) => {
+  const [submissionStatus, setSubmissionStatus] = useState("Sending data...");
+  const [score, setScore] = useState(0);
+  const [lang, setLang] = useState(initialLang);
+
+  const totalPossible = questions.length * config.marksCorrect;
+
+  useEffect(() => {
+    let calculatedScore = 0;
+    questions.forEach((q, idx) => {
+      const userChoice = userAnswers[idx];
+      if (userChoice !== undefined) {
+        if (userChoice === q.correctIndex) {
+          calculatedScore += config.marksCorrect;
+        } else {
+          calculatedScore += config.marksWrong;
+        }
+      }
+    });
+    setScore(calculatedScore);
+
+    submitScoreToSheet(studentName, calculatedScore, totalPossible).then((success) => {
+      setSubmissionStatus(success ? "✅ Score saved successfully!" : "⚠️ Saved locally (Connection failed)");
+    });
+  }, []);
+
+  return (
+    <div className="main-wrapper screen active">
+      <div className="card">
+        <h2>Result Summary</h2>
+        <div style={{ fontSize: '2rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
+          {score.toFixed(1)} <span style={{ fontSize: '1rem', color: '#666' }}>/ {totalPossible}</span>
+        </div>
+        <p>Student: <strong>{studentName}</strong></p>
+        <p style={{ color: submissionStatus.includes('✅') ? 'green' : 'orange', fontWeight: 'bold' }}>
+          {submissionStatus}
+        </p>
+        <button onClick={onRetake} style={{ marginTop: '20px' }}>Take Quiz Again</button>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        <h3>Detailed Review</h3>
+        <div style={{marginBottom: '10px'}}>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{ padding: '5px' }}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+        </div>
+        {questions.map((q, idx) => {
+           const qText = (lang === 'bn' && q.question_bn) ? q.question_bn : q.question_en;
+           const options = (lang === 'bn' && q.options_bn && q.options_bn.length) ? q.options_bn : q.options_en;
+           const exp = (lang === 'bn' && q.explanation_bn) ? q.explanation_bn : q.explanation_en;
+
+           const userChoice = userAnswers[idx];
+           const isAttempted = userChoice !== undefined;
+           const isCorrect = isAttempted && userChoice === q.correctIndex;
+
+           let statusClass = "status-unanswered";
+           let statusText = "Skipped";
+
+           if (isAttempted) {
+             if (isCorrect) {
+               statusClass = "status-correct";
+               statusText = `Correct (+${config.marksCorrect})`;
+             } else {
+               statusClass = "status-wrong";
+               statusText = `Wrong (${config.marksWrong})`;
+             }
+           }
+
+           return (
+             <div key={q.id} className="review-item">
+               <p style={{whiteSpace: 'pre-wrap'}}><strong>Q{idx+1}:</strong> {qText}</p>
+               <p className={statusClass}>Status: {statusText}</p>
+               <p>Correct: <strong>{options && options[q.correctIndex]}</strong></p>
+               {isAttempted && <p>You Selected: {options && options[userChoice]}</p>}
+               <div className="explanation">
+                 <strong>Explanation:</strong> {exp || "N/A"}
+               </div>
+             </div>
+           );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// --- APP COMPONENT ---
+const App = () => {
+  const session = useMemo(() => {
+    try {
+      const s = localStorage.getItem(SESSION_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch(e) { return null; }
+  }, []);
+
+  const [screen, setScreen] = useState(session && session.isActive ? 'QUIZ' : 'LANDING'); 
+  const [name, setName] = useState(session ? session.name : '');
+  const [lang, setLang] = useState(DEFAULT_LANGUAGE);
+  const [userAnswers, setUserAnswers] = useState({});
+
+  useEffect(() => {
+    if (screen === 'QUIZ') {
+        localStorage.setItem(SESSION_KEY, JSON.stringify({ isActive: true, name: name }));
+    }
+  }, [screen, name]);
+
+  const questions = useMemo(() => {
+    const all = window.__PREPARSED_JSON__ && window.__PREPARSED_JSON__.length > 0 
+      ? window.__PREPARSED_JSON__ 
+      : parseQuizText(DEFAULT_RAW_TEXT);
+      
+    if (!all || all.length === 0) {
+        return [{
+            id: 1, question_bn: "No questions provided.", options_bn: ["A", "B", "C", "D"],
+            explanation_bn: "", question_en: "No questions provided.", options_en: ["A", "B", "C", "D"],
+            explanation_en: "", correctIndex: 0
+        }];
+    }
+    return (DEFAULT_CONFIG.maxQuestions && DEFAULT_CONFIG.maxQuestions > 0) 
+      ? all.slice(0, DEFAULT_CONFIG.maxQuestions) 
+      : all;
+  }, []);
+
+  const handleStart = () => {
+    if (!name.trim()) {
+      alert("Please enter your Name.");
+      return;
+    }
+    // Clear any stale timer/answer data from a previous crashed session
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setScreen('QUIZ');
+  };
+
+  const handleComplete = (answers) => {
+     localStorage.removeItem(SESSION_KEY);
+     localStorage.removeItem(TIMER_KEY);
+     localStorage.removeItem(ANSWERS_KEY);
+     setUserAnswers(answers);
+     setScreen('RESULT');
+  };
+
+  const handleRetake = () => {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TIMER_KEY);
+    localStorage.removeItem(ANSWERS_KEY);
+    setUserAnswers({});
+    setScreen('LANDING');
+  };
+
+  return (
+    <div className="main-wrapper" style={{ minHeight: '100vh', justifyContent: screen === 'LANDING' ? 'center' : 'flex-start' }}>
+      {screen === 'LANDING' && (
+        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+          <h1>{APP_TITLE}</h1>
+          <p className="subtitle">{APP_SUBTITLE}</p>
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px' }}>Student Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+            />
+          </div>
+          
+          <div style={{ textAlign: 'left', marginBottom: '20px' }}>
+             <label style={{ display: 'block', marginBottom: '5px' }}>Language</label>
+             <select 
+               value={lang} 
+               onChange={(e) => setLang(e.target.value)}
+               style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc' }}
+             >
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+             </select>
+          </div>
+
+          <button onClick={handleStart}>Start Quiz</button>
+        </div>
+      )}
+      {screen === 'QUIZ' && (
+        <Quiz 
+          questions={questions}
+          config={DEFAULT_CONFIG}
+          initialLang={lang}
+          onComplete={handleComplete}
+        />
+      )}
+      {screen === 'RESULT' && (
+        <Result 
+          questions={questions}
+          userAnswers={userAnswers}
+          config={DEFAULT_CONFIG}
+          studentName={name}
+          initialLang={lang}
+          onRetake={handleRetake}
+        />
+      )}
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+
+  </script>
+</body>
+</html>
